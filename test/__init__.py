@@ -1,0 +1,1 @@
+from test.stellarmod.test_kuruczspectrum import TestKuruczSpectrum
