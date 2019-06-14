@@ -44,3 +44,21 @@ class TestSpectrum(TestBase):
         spec.plot()
 
         self.save_fig()
+
+    def test_synthflux(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(-0.5, 9600, 4.1)
+        filter = self.get_hsc_filter('r')
+
+        flux = spec.synthflux(filter)
+
+        self.assertEqual(161746063.0325128, flux)
+
+    def test_synthmag(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(-0.5, 9600, 4.1)
+        filter = self.get_hsc_filter('r')
+
+        flux = spec.synthmag(filter)
+
+        self.assertEqual(-11.622084296395686, flux)

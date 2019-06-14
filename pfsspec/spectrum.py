@@ -5,8 +5,12 @@ import pysynphot.binning
 import pysynphot.spectrum
 import pysynphot.reddening
 
-class Spectrum():
+from pfsspec.constants import Constants
+from pfsspec.pfsobject import PfsObject
+
+class Spectrum(PfsObject):
     def __init__(self):
+        super(Spectrum, self).__init__()
         self.wave = None
         self.flux = None
 
@@ -41,13 +45,19 @@ class Spectrum():
 
         return res
 
-    def plot(self, ax=None, xlim=(3750, 12650), labels=True):
-        if ax is None:
-            ax = plt.gca()
+    def synthflux(self, filter):
+        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
+        filt = pysynphot.spectrum.ArraySpectralElement(filter.wave, filter.thru, waveunits='angstrom')
+        obs = pysynphot.observation.Observation(spec, filt)
+        return obs.effstim('Jy')
 
+    def synthmag(self, filter):
+        flux = self.synthflux(filter)
+        return -2.5 * np.log10(flux) + 8.90
+
+    def plot(self, ax=None, xlim=Constants.DEFAULT_PLOT_WAVE_RANGE, ylim=None, labels=True):
+        ax = self.plot_getax(ax, xlim, ylim)
         ax.plot(self.wave, self.flux)
-        if xlim:
-            ax.set_xlim(xlim)
         if labels:
             ax.set_xlabel(r'$\lambda$ [A]')
             ax.set_ylabel(r'$F_\lambda$ [erg s-1 cm-2 A-1]')
