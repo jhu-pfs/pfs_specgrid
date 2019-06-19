@@ -55,6 +55,9 @@ class Spectrum(PfsObject):
         flux = self.synthflux(filter)
         return -2.5 * np.log10(flux) + 8.90
 
+    def load(self, filename):
+        raise NotImplementedError()
+
     def plot(self, ax=None, xlim=Constants.DEFAULT_PLOT_WAVE_RANGE, ylim=None, labels=True):
         ax = self.plot_getax(ax, xlim, ylim)
         ax.plot(self.wave, self.flux)

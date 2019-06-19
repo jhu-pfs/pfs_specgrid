@@ -21,3 +21,6 @@ class TestKuruczSpectrumReader(TestBase):
         path = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/kurucz')
         grid = KuruczSpectrumReader.read_grid(path, 'test')
         self.assertEqual((2, 61, 11, 1221), grid.flux.shape)
+
+    def test_get_filename(self):
+        self.fail()

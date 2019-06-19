@@ -11,6 +11,7 @@ class TestBase(TestCase):
     def setUpClass(self):
         self.PFSSPEC_DATA_PATH = os.environ['PFSSPEC_DATA_PATH'].strip('"')
         self.PFSSPEC_TEST_PATH = os.environ['PFSSPEC_TEST_PATH'].strip('"')
+        self.PFSSPEC_SDSS_DATA_PATH = os.environ['PFSSPEC_SDSS_DATA_PATH'].strip('"')
         self.kurucz_grid = None
         self.hsc_filters = None
 
