@@ -20,6 +20,6 @@ class TrainingSet():
     def load(self, filename):
         with open(filename, 'rb') as f:
             self.params = pickle.load(f)
-            data = np.load(f)
+            data = np.load(f, allow_pickle=True)
             self.wave = data['wave']
             self.flux = data['flux']

@@ -70,7 +70,7 @@ class SdssSpectrumReader(SpectrumReader):
         for index, row in params.iterrows():
             filename = SdssSpectrumReader.get_filename(row['mjd'], row['plate'], row['fiberID'])
             filename = os.path.join(path, filename)
-            with fits.open(filename) as hdus:
+            with fits.open(filename, memmap=False) as hdus:
                 spec = self.read(hdus)
                 dataset.spectra.append(spec)
 
