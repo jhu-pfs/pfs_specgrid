@@ -8,6 +8,10 @@ class TrainingSet():
         self.wave = None
         self.flux = None
 
+    def init_storage(self, wcount, scount):
+        self.wave = np.empty(wcount)
+        self.flux = np.empty((scount, wcount))
+
     def save(self, filename):
         with open(filename, 'wb') as f:
             pickle.dump(self.params, f)

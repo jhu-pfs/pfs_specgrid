@@ -9,10 +9,16 @@ from pfsspec.constants import Constants
 from pfsspec.pfsobject import PfsObject
 
 class Spectrum(PfsObject):
-    def __init__(self):
-        super(Spectrum, self).__init__()
-        self.wave = None
-        self.flux = None
+    def __init__(self, orig=None):
+        super(Spectrum, self).__init__(orig=orig)
+        if orig is None:
+            self.redshift = 0
+            self.wave = None
+            self.flux = None
+        else:
+            self.redshift = orig.redshift
+            self.wave = np.copy(orig.wave)
+            self.flux = np.copy(orig.flux)
 
     def fnu_to_flam(self):
         # ergs/cm**2/s/hz/ster to erg/s/cm^2/A surface flux
@@ -29,11 +35,8 @@ class Spectrum(PfsObject):
         filt = pysynphot.spectrum.ArraySpectralElement(self.wave, np.ones(len(self.wave)), waveunits='angstrom')
         obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
 
-        res = Spectrum()
-        res.wave = obs.binwave
-        res.flux = obs.binflux
-
-        return res
+        self.wave = obs.binwave
+        self.flux = obs.binflux
 
     def redden(self, extval):
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)

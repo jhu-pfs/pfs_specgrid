@@ -34,18 +34,25 @@ class SdssSpectrumReader(SpectrumReader):
     def execute_query(self, sql, context='DR7'):
         return CasJobs.executeQuery(sql=sql, context=context, format="pandas")
 
-    def find_stars(self, top=None, mjd=None, plate=None):
+    def find_stars(self, top=None, mjd=None, plate=None, Fe_H=None, T_eff=None, log_g=None):
 
         where = ''
         if mjd is not None:
             where += "AND s.mjd = {:d} \n".format(mjd)
         if plate is not None:
             where += "AND s.plate = {:d} \n".format(plate)
+        if Fe_H is not None:
+            where += "AND spp.feha BETWEEN {:f} AND {:f} \n".format(Fe_H[0], Fe_H[1])
+        if T_eff is not None:
+            where += "AND spp.teffa BETWEEN {:f} AND {:f} \n".format(T_eff[0], T_eff[1])
+        if log_g is not None:
+            where += "AND spp.logga BETWEEN {:f} AND {:f} \n".format(log_g[0], log_g[1])
 
         sql = \
         """
         SELECT {} 
-        s.specObjID, s.mjd, s.plate, s.fiberID, s.ra, s.dec, s.z
+            s.specObjID, s.mjd, s.plate, s.fiberID, s.ra, s.dec, s.z,
+            spp.feha AS fe_h, spp.teffa AS t_eff, spp.logga AS log_g
         FROM SpecObjAll s
             INNER JOIN sppParams spp ON spp.specobjID = s.specObjID
         WHERE specClass = 1 AND zConf > 0.98 {}

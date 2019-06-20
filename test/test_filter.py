@@ -1,9 +1,7 @@
 from test.testbase import TestBase
-from unittest import TestCase
-import numpy as np
 import os
 
-from pfsspec.filter import Filter
+from pfsspec.obsmod.filter import Filter
 
 class TestFilter(TestBase):
     def test_read(self):

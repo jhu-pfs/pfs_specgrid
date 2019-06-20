@@ -1,10 +1,7 @@
 #!python
 
 import os
-import pickle
 import argparse
-import numpy as np
-import pandas as pd
 import getpass
 import SciServer.Authentication as Authentication
 
@@ -19,6 +16,9 @@ def parse_args():
     parser.add_argument('--out', type=str, help='Output file, must be .npz\n')
     parser.add_argument('--top', type=int, default=None, help='Limit number of results')
     parser.add_argument('--plate', type=int, default=None, help='Limit to a single plate')
+    parser.add_argument('--feh', type=str, default=None, help='Limit [Fe/H]')
+    parser.add_argument('--teff', type=str, default=None, help='Limit T_eff')
+    parser.add_argument('--logg', type=str, default=None, help='Limit log_g')
 
     return parser.parse_args()
 
@@ -49,6 +49,7 @@ def export_spectra(args):
     dataset = reader.load_dataset(args.path, params)
     print(dataset.params.head(10))
     dataset.save(args.out)
+    print('Saved %d spectra.' % len(dataset.spectra))
 
 def __main__(args):
     verb = args.verb[0]

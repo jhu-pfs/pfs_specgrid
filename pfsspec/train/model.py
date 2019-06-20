@@ -1,0 +1,1 @@
+# TODO: build a generic class here with train and predict functions
