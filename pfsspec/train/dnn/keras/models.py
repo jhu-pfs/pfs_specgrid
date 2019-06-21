@@ -3,12 +3,9 @@ import keras.layers as kl
 import keras.regularizers as kr
 import keras.backend as K
 import tensorflow as tf
-from keras.utils.multi_gpu_utils import multi_gpu_model
 
-
-def create_simple_pyramid(input_shape, output_shape, level=4, units=1024, reg=5e-5, gpu='0'):
+def create_dense_pyramid(input_shape, output_shape, level=4, units=1024, reg=5e-5):
     x = inputs = kl.Input((input_shape,))
-
     while level > 0:
         x = kl.Dense(units, )(x)
         x = kl.BatchNormalization()(x)
@@ -17,20 +14,30 @@ def create_simple_pyramid(input_shape, output_shape, level=4, units=1024, reg=5e
         units //= 2
 
     x = kl.Dense(output_shape)(x)
-
     model = km.Model(inputs=inputs, outputs=x)
-    if len(gpu.split(',')) > 1:  # multi gpu model
-        model = multi_gpu_model(model, gpus=len(gpu.split(',')))
-
     return model
 
+def create_cnn_pyramid(input_shape, output_shape, level=4, units=32, padding='same', reg=5e-5, gpu=0):
+    x = inputs = kl.Input((input_shape,))
 
+    while level > 0:
+        x = kl.Conv1D(units, 3, padding=padding,
+                      kernel_regularizer=kr.l2(reg))(x)
+        x = kl.Activation('relu')(kl.BatchNormalization()(x))
+        x = kl.Conv1D(units // 2, 3, padding=padding,
+                      kernel_regularizer=kr.l2(reg))(x)
+        x = kl.Activation('relu')(kl.BatchNormalization()(x))
+        x = kl.Conv1D(units, 3, padding=padding,
+                      kernel_regularizer=kr.l2(reg))(x)
+        x = kl.Activation('relu')(kl.BatchNormalization()(x))
+        x = kl.MaxPooling1D(strides=2)(x)
+        level -= 1
+        units *= 2
 
-
-
-
-
-
+    x = kl.GlobalAveragePooling1D()(x)
+    x = kl.Dense(output_shape)(x)
+    model = km.Model(inputs=inputs, outputs=x)
+    return model
 
 """
     model = Sequential()

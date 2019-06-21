@@ -1,9 +1,13 @@
 from keras.callbacks import ModelCheckpoint, EarlyStopping, LearningRateScheduler
 from keras import optimizers
+from keras.utils.multi_gpu_utils import multi_gpu_model
 
-
-def train_dnn(nn_input, nn_labels, model, epochs=1, steps=1, learning_rate=0, loss='mean_squared_error', patience=0):
+def train_dnn(nn_input, nn_labels, model, gpu='0', epochs=1, steps=1, learning_rate=0, loss='mean_squared_error', patience=0):
     sgd = optimizers.SGD(lr=learning_rate, decay=0, momentum=0.9, nesterov=True)
+
+    if len(gpu.split(',')) > 1:  # multi gpu model
+        model = multi_gpu_model(model, gpus=len(gpu.split(',')))
+
     model.compile(loss=loss, optimizer=sgd, metrics=[loss])
     print(model.summary())
 
