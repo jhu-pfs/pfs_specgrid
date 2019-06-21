@@ -15,11 +15,11 @@ class TrainingSet():
     def save(self, filename):
         with open(filename, 'wb') as f:
             pickle.dump(self.params, f)
-            pickle.dump(self.wave)
-            pickle.dump(self.flux)
+            np.savez(f, wave=self.wave, flux=self.flux)
 
     def load(self, filename):
         with open(filename, 'rb') as f:
             self.params = pickle.load(f)
-            self.wave = pickle.load(f)
-            self.flux = pickle.load(f)
+            data = np.load(f)
+            self.wave = data['wave']
+            self.flux = data['flux']

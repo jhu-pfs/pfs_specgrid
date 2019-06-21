@@ -19,7 +19,7 @@ def train_dnn(nn_input, nn_labels, model, epochs=1, steps=1, learning_rate=0, lo
     #                    verbose=2)
 
     callback_hist = model.fit(nn_input, nn_labels,
-                              epochs=10,
+                              epochs=epochs,
                               validation_split=0.3,
                               shuffle=True,
                               callbacks=[best_model],
