@@ -1,8 +1,7 @@
 from test.testbase import TestBase
-from unittest import TestCase
 import os
 
-from pfsspec.stellarmod.io.kuruczspectrumreader import KuruczSpectrumReader
+from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 class TestKuruczSpectrumReader(TestBase):
     def test_read(self):

@@ -5,7 +5,7 @@ import argparse
 import getpass
 import SciServer.Authentication as Authentication
 
-from pfsspec.survey.io.sdssspectrumreader import SdssSpectrumReader
+from pfsspec.surveys.sdssspectrumreader import SdssSpectrumReader
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -16,9 +16,9 @@ def parse_args():
     parser.add_argument('--out', type=str, help='Output file, must be .npz\n')
     parser.add_argument('--top', type=int, default=None, help='Limit number of results')
     parser.add_argument('--plate', type=int, default=None, help='Limit to a single plate')
-    parser.add_argument('--feh', type=str, default=None, help='Limit [Fe/H]')
-    parser.add_argument('--teff', type=str, default=None, help='Limit T_eff')
-    parser.add_argument('--logg', type=str, default=None, help='Limit log_g')
+    parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
+    parser.add_argument('--teff', type=float, nargs=2, default=None, help='Limit T_eff')
+    parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
 
     return parser.parse_args()
 
@@ -35,17 +35,23 @@ def get_auth_token(args):
     print('SciServer token:', token)
     return token
 
-def export_params(args):
+def get_reader(args):
     reader = SdssSpectrumReader()
     reader.sciserver_token = get_auth_token(args)
-    params = reader.find_stars(top=args.top, plate=args.plate)
+    return reader
+
+def find_stars(reader, args):
+    return reader.find_stars(top=args.top, plate=args.plate, Fe_H=args.feh, T_eff=args.teff, log_g=args.logg)
+
+def export_params(args):
+    reader = get_reader(args)
+    params = find_stars(reader, args)
     print(params.head(10))
     params.to_csv(args.out)
 
 def export_spectra(args):
-    reader = SdssSpectrumReader()
-    reader.sciserver_token = get_auth_token(args)
-    params = reader.find_stars(top=args.top, plate=args.plate)
+    reader = get_reader(args)
+    params = find_stars(reader, args)
     dataset = reader.load_dataset(args.path, params)
     print(dataset.params.head(10))
     dataset.save(args.out)

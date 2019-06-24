@@ -1,11 +1,10 @@
 #!python
 
-import os
 import argparse
 import numpy as np
 
-from pfsspec.survey.dataset import DataSet
-from pfsspec.train.sdsstrainingsetbuilder import SdssTrainingSetBuilder
+from pfsspec.surveys.survey import Survey
+from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 
 def parse_args():
@@ -15,15 +14,15 @@ def parse_args():
     return parser.parse_args()
 
 def process_spectra(args):
-    dataset = DataSet()
+    dataset = Survey()
     dataset.load(args.__dict__['in'])
     print(dataset.params.head(10))
 
     pipeline = SdssBasicPipeline()
-    pipeline.rebin = np.arange(6300, 8500, 2.7)
+    pipeline.rebin = np.arange(3500, 8800, 2.7)
     pipeline.normalize = True
 
-    tsbuilder = SdssTrainingSetBuilder()
+    tsbuilder = SdssDatasetBuilder()
     tsbuilder.dataset = dataset
     tsbuilder.params = dataset.params
     tsbuilder.pipeline = pipeline

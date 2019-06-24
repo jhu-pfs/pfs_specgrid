@@ -1,12 +1,8 @@
 #!python
 
-import os
-import pickle
 import argparse
-import numpy as np
 
-from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.stellarmod.io.kuruczspectrumreader import KuruczSpectrumReader
+from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 def parse_args():
     parser = argparse.ArgumentParser()
