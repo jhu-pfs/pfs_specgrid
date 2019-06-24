@@ -1,11 +1,9 @@
 #!python
 
-import os
 import argparse
-import numpy as np
 
 import tensorflow as tf
-from pfsspec.ml.dataset import Dataset
+from pfsspec.io.dataset import Dataset
 import pfsspec.ml.dnn.keras.models
 import pfsspec.ml.dnn.keras.train
 
