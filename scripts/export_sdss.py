@@ -37,6 +37,7 @@ def get_auth_token(args):
 
 def get_reader(args):
     reader = SdssSpectrumReader()
+    reader.path = args.path
     reader.sciserver_token = get_auth_token(args)
     return reader
 
@@ -52,10 +53,10 @@ def export_params(args):
 def export_spectra(args):
     reader = get_reader(args)
     params = find_stars(reader, args)
-    dataset = reader.load_dataset(args.path, params)
-    print(dataset.params.head(10))
-    dataset.save(args.out)
-    print('Saved %d spectra.' % len(dataset.spectra))
+    survey = reader.load_survey(params)
+    print(survey.params.head(10))
+    survey.save(args.out)
+    print('Saved %d spectra.' % len(survey.spectra))
 
 def __main__(args):
     verb = args.verb[0]

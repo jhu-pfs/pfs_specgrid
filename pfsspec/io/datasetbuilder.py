@@ -1,3 +1,6 @@
+import sys
+import click
+
 from pfsspec.io.dataset import Dataset
 
 class DatasetBuilder():
@@ -15,8 +18,20 @@ class DatasetBuilder():
     def get_wave_count(self):
         raise NotImplementedError()
 
-    def build(self):
+    def create_dataset(self):
         dataset = Dataset()
         dataset.params = self.params
         dataset.init_storage(self.get_wave_count(), self.get_spectrum_count())
+        return dataset
+
+    def process_item(self, i):
+        raise NotImplementedError()
+
+    def build(self):
+        dataset = self.create_dataset()
+
+        with click.progressbar(range(self.get_spectrum_count()), file=sys.stderr) as bar:
+            for i in bar:
+                self.process_item(dataset, i)
+
         return dataset

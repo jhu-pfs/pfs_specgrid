@@ -14,17 +14,17 @@ def parse_args():
     return parser.parse_args()
 
 def process_spectra(args):
-    dataset = Survey()
-    dataset.load(args.__dict__['in'])
-    print(dataset.params.head(10))
+    survey = Survey()
+    survey.load(args.__dict__['in'])
+    print(survey.params.head(10))
 
     pipeline = SdssBasicPipeline()
     pipeline.rebin = np.arange(3500, 8800, 2.7)
     pipeline.normalize = True
 
     tsbuilder = SdssDatasetBuilder()
-    tsbuilder.dataset = dataset
-    tsbuilder.params = dataset.params
+    tsbuilder.dataset = survey
+    tsbuilder.params = survey.params
     tsbuilder.pipeline = pipeline
     ts = tsbuilder.build()
     print(ts.wave.shape, ts.flux.shape)
