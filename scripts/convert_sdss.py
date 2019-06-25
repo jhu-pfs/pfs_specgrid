@@ -23,7 +23,7 @@ def process_spectra(args):
     pipeline.normalize = True
 
     tsbuilder = SdssDatasetBuilder()
-    tsbuilder.dataset = survey
+    tsbuilder.survey = survey
     tsbuilder.params = survey.params
     tsbuilder.pipeline = pipeline
     ts = tsbuilder.build()

@@ -1,5 +1,5 @@
 import sys
-import click
+from pfsspec.parallel import prll_map
 
 from pfsspec.io.dataset import Dataset
 
@@ -19,19 +19,19 @@ class DatasetBuilder():
         raise NotImplementedError()
 
     def create_dataset(self):
-        dataset = Dataset()
-        dataset.params = self.params
-        dataset.init_storage(self.get_wave_count(), self.get_spectrum_count())
-        return dataset
+        self.dataset = Dataset()
+        self.dataset.params = self.params
+        self.dataset.init_storage(self.get_wave_count(), self.get_spectrum_count())
 
     def process_item(self, i):
         raise NotImplementedError()
 
     def build(self):
-        dataset = self.create_dataset()
+        self.create_dataset()
+        prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
 
-        with click.progressbar(range(self.get_spectrum_count()), file=sys.stderr) as bar:
-            for i in bar:
-                self.process_item(dataset, i)
+        #with click.progressbar(range(self.get_spectrum_count()), file=sys.stderr) as bar:
+         #   for i in bar:
+         #       self.process_item(dataset, i)
 
-        return dataset
+        return self.dataset
