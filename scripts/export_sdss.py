@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
     parser.add_argument('--teff', type=float, nargs=2, default=None, help='Limit T_eff')
     parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
+    parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
 
     return parser.parse_args()
 
@@ -43,7 +44,8 @@ def get_reader(args):
     return reader
 
 def find_stars(reader, args):
-    return reader.find_stars(top=args.top, plate=args.plate, Fe_H=args.feh, T_eff=args.teff, log_g=args.logg)
+    return reader.find_stars(top=args.top, plate=args.plate, Fe_H=args.feh, T_eff=args.teff,
+                             log_g=args.logg, a_fe=args.afe)
 
 def export_params(args):
     reader = get_reader(args)
