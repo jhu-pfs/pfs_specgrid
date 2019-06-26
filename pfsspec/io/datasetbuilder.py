@@ -28,7 +28,9 @@ class DatasetBuilder():
 
     def build(self):
         self.create_dataset()
-        prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
+        fluxes = prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
+        for i in range(len(fluxes)):
+            self.dataset.flux[i, :] = fluxes[i]
 
         #with click.progressbar(range(self.get_spectrum_count()), file=sys.stderr) as bar:
          #   for i in bar:
