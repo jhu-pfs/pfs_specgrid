@@ -3,7 +3,7 @@ from unittest import TestCase
 import matplotlib.pyplot as plt
 
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.instmod.hscfilter import HscFilter
+from pfsspec.obsmod.hscfilter import HscFilter
 
 class TestBase(TestCase):
 
