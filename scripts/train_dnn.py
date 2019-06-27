@@ -2,12 +2,15 @@
 
 import os
 import argparse
+import logging
 import numpy as np
 from tensorflow.python.client import device_lib
 
+from pfsspec.util import *
 from pfsspec.io.dataset import Dataset
 from pfsspec.ml.dnn.keras.densepyramid import DensePyramid
 from pfsspec.ml.dnn.keras.cnnpyramid import CnnPyramid
+from pfsspec.surveys.sdssdatasetaugmenter import SdssDatasetAugmenter
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -20,26 +23,11 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs\n')
     parser.add_argument('--batch', type=int, default=None, help='Batch size\n')
     parser.add_argument('--patience', type=int, default=5, help='Number of epochs to wait before early stop.\n')
+    parser.add_argument('--aug', action='store_true', help='Augment data.\n')
     return parser.parse_args()
 
 def train_dnn(args):
-    print('Output directory is {}'.format(args.out))
-    if not os.path.exists(args.out):
-        print('Creating output directory {}'.format(args.out))
-        os.makedirs(args.out)
-
-    ts = Dataset()
-    ts.load(args.__dict__['in'])
-
-    print("Dataset shapes:")
-    print(ts.params.shape, ts.wave.shape, ts.flux.shape)
-    print(ts.params.columns)
-
-    input = ts.flux
-    labels = np.array(ts.params[args.param])
-
-    print("Input and labels shape:")
-    print(input.shape, labels.shape)
+    create_output_dir(args.out)
 
     if args.type == 'dense':
         model = DensePyramid()
@@ -54,21 +42,39 @@ def train_dnn(args):
     model.epochs = args.epochs
     model.batch_size = args.batch
 
-    if args.out is not None:
-        model.checkpoint_path = os.path.join(args.out, 'best_weigths.dat')
+    dataset = Dataset()
+    dataset.load(args.__dict__['in'])
 
-    model.set_model_shapes(input, labels)
-    model.create_model()
-    model.compile_model()
-    model.print()
+    if args.aug:
+        _, ds, vs = dataset.split(args.split)
 
-    model.train(input, labels)
+        data_generator = SdssDatasetAugmenter(ds, [args.param,], batch_size=args.batch)
+        validation_generator = SdssDatasetAugmenter(vs, [args.param,], batch_size=args.batch)
+
+        logging.info("Data input and labels shape:")
+        logging.info(data_generator.input_shape, data_generator.labels_shape)
+        logging.info("Validation input and labels shape:")
+        logging.info(validation_generator.input_shape, validation_generator.labels_shape)
+
+        model.ensure_model(data_generator.input_shape, data_generator.labels_shape)
+        model.print()
+        model.train_with_generator(data_generator, validation_generator)
+    else:
+        input = dataset.flux
+        labels = np.array(dataset.params[args.param])
+
+        logging.info("Input and labels shape:")
+        logging.info(input.shape, labels.shape)
+
+        model.ensure_model(input.shape, labels.shape)
+        model.print()
+        model.train(input, labels)
 
     if args.out is not None:
         model.save(os.path.join(args.out, 'model.json'))
         model.save_history(os.path.join(args.out, 'history.csv'))
 
-    output = model.predict(input)
+    output = model.predict(dataset.flux)    # TODO: could use the data generators here
     np.savez(os.path.join(args.out, 'prediction.npz'), output)
 
 def __main__(args):
