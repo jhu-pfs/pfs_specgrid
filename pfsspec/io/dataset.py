@@ -38,17 +38,15 @@ class Dataset():
         logging.info("  columns:", self.params.columns)
 
     def get_split_index(self, split_value):
-        split_index = int(self.flux.shape[0] * split_value)
+        split_index = int((1 - split_value) *  self.flux.shape[0])
         return split_index
-
-    def create_split(self):
-        return Dataset(), Dataset()
 
     def split(self, split_value):
         split_index = self.get_split_index(split_value)
         a_range = [i for i in range(0, split_index)]
         b_range = [i for i in range(split_index, self.flux.shape[0])]
-        a, b = self.create_split()
+        a = Dataset()
+        b = Dataset()
 
         a.params = self.params.iloc[a_range]
         a.wave = self.wave
