@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument("--in", type=str, help="Training set file\n")
     parser.add_argument("--out", type=str, help="Output directory\n")
     parser.add_argument('--param', type=str, nargs='+', help='Parameter to ml\n')
+    parser.add_argument('--wave', action='store_true', help='Include wavelength vector in training.\n')
     parser.add_argument('--gpus', type=str, help='GPUs to use\n')
     parser.add_argument('--type', type=str, help='Type of network\n')
     parser.add_argument('--levels', type=int, help='Number of levels\n')
@@ -41,6 +42,7 @@ def train_dnn(args):
     if args.units is not None:
         model.units = args.units
 
+    model.include_wave = args.wave
     model.gpus = args.gpus
     model.validation_split = args.split
     model.patience = args.patience
@@ -53,6 +55,7 @@ def train_dnn(args):
     create_output_dir(outdir)
 
     setup_logging(os.path.join(outdir, 'training.log'))
+    dump_json(args, os.path.join(outdir, 'args.json'))
     model.checkpoint_path = os.path.join(outdir, 'best_model_weights.dat')
 
     dataset = Dataset()
