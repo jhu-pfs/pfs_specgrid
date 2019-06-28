@@ -1,8 +1,11 @@
 import os
+import sys
 import logging
 import json
 import numpy as np
 
+logging_console_handler = None
+logging_file_handler = None
 dir_history = []
 
 def create_output_dir(dir):
@@ -36,3 +39,24 @@ def pushd(dir):
 def popd():
     os.chdir(dir_history[-1])
     del dir_history[-1]
+
+def setup_logging(logfile=None):
+    global logging_console_handler
+    global logging_file_handler
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    if logfile is not None and logging_file_handler is None:
+        logging_file_handler = logging.FileHandler(logfile)
+        logging_file_handler.setLevel(logging.INFO)
+        logging_file_handler.setFormatter(formatter)
+        root.addHandler(logging_file_handler)
+
+    if logging_console_handler is None:
+        logging_console_handler = logging.StreamHandler(sys.stdout)
+        logging_console_handler.setLevel(logging.INFO)
+        logging_console_handler.setFormatter(formatter)
+        root.addHandler(logging_console_handler)

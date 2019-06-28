@@ -32,10 +32,10 @@ class Dataset():
             self.flux = data['flux']
 
         logging.info("Loaded dataset with shapes:")
-        logging.info("  params: ", self.params.shape)
-        logging.info("  wave:   ", self.wave.shape)
-        logging.info("  flux:   ", self.flux.shape)
-        logging.info("  columns:", self.params.columns)
+        logging.info("  params:  {}".format(self.params.shape))
+        logging.info("  wave:    {}".format(self.wave.shape))
+        logging.info("  flux:    {}".format(self.flux.shape))
+        logging.info("  columns: {}".format(self.params.columns))
 
     def get_split_index(self, split_value):
         split_index = int((1 - split_value) *  self.flux.shape[0])
