@@ -14,8 +14,9 @@ from pfsspec.surveys.sdssdatasetaugmenter import SdssDatasetAugmenter
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--in", type=str, help="Training set file\n")
-    parser.add_argument("--out", type=str, help="Output directory\n")
+    parser.add_argument("--in", type=str, help="Training set or data file\n")
+    parser.add_argument("--out", type=str, help="Model directory\n")
+    parser.add_argument("--name", type=str, help="Model name prefix\n")
     parser.add_argument('--param', type=str, nargs='+', help='Parameter to ml\n')
     parser.add_argument('--wave', action='store_true', help='Include wavelength vector in training.\n')
     parser.add_argument('--gpus', type=str, help='GPUs to use\n')
@@ -51,9 +52,10 @@ def train_dnn(args):
     model.generate_name()
 
     outdir = model.name + '_' + '_'.join(args.param)
+    if args.name is not None:
+        outdir = args.name + '_' + outdir
     outdir = os.path.join(args.out, outdir)
     create_output_dir(outdir)
-
     setup_logging(os.path.join(outdir, 'training.log'))
     dump_json(args, os.path.join(outdir, 'args.json'))
     model.checkpoint_path = os.path.join(outdir, 'best_model_weights.dat')
@@ -61,39 +63,33 @@ def train_dnn(args):
     dataset = Dataset()
     dataset.load(args.__dict__['in'])
 
-    if args.aug:
-        _, ts, vs = dataset.split(args.split)
+    _, ts, vs = dataset.split(args.split)
 
-        training_generator = SdssDatasetAugmenter(ts, args.param, batch_size=args.batch)
-        training_generator.multiplicative_bias = True
-        training_generator.additive_bias = True
+    training_generator = SdssDatasetAugmenter(ts, args.param, batch_size=args.batch)
+    training_generator.include_wave = args.wave
+    training_generator.multiplicative_bias = True
+    training_generator.additive_bias = True
 
-        validation_generator = SdssDatasetAugmenter(vs, args.param, batch_size=args.batch)
+    validation_generator = SdssDatasetAugmenter(vs, args.param, batch_size=args.batch)
+    validation_generator.include_wave = args.wave
 
-        logging.info("Data input and labels shape: {}, {}"
-                     .format(training_generator.input_shape, training_generator.labels_shape))
-        logging.info("Validation input and labels shape: {}, {}"
-                     .format(validation_generator.input_shape, validation_generator.labels_shape))
+    logging.info("Data input and labels shape: {}, {}"
+                 .format(training_generator.input_shape, training_generator.labels_shape))
+    logging.info("Validation input and labels shape: {}, {}"
+                 .format(validation_generator.input_shape, validation_generator.labels_shape))
 
-        model.ensure_model(training_generator.input_shape, training_generator.labels_shape)
-        model.print()
-        model.train_with_generator(training_generator, validation_generator)
-    else:
-        input = dataset.flux
-        labels = np.array(dataset.params[args.param])
+    model.ensure_model(training_generator.input_shape, training_generator.labels_shape)
+    model.print()
 
-        logging.info("Input and labels shape: {}, {}"
-                     .format(input.shape, labels.shape))
+    model.train_with_generator(training_generator, validation_generator)
+    model.save(os.path.join(outdir, 'model.json'))
+    model.save_history(os.path.join(outdir, 'history.csv'))
 
-        model.ensure_model(input.shape, labels.shape)
-        model.print()
-        model.train(input, labels)
-
-    if args.out is not None:
-        model.save(os.path.join(outdir, 'model.json'))
-        model.save_history(os.path.join(outdir, 'history.csv'))
-
-    output = model.predict(dataset.flux)    # TODO: could use the data generators here
+    predict_generator = SdssDatasetAugmenter(dataset, args.param, batch_size=dataset.flux.shape[0], shuffle=False)
+    predict_generator.shuffle = False
+    predict_generator.include_wave = args.wave
+    flux, params = predict_generator.next_batch(0)
+    output = model.predict(flux)
     np.savez(os.path.join(outdir, 'prediction.npz'), output)
 
     logging.info('Results are written to {}'.format(outdir))

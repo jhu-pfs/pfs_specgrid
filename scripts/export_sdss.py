@@ -10,7 +10,7 @@ from pfsspec.surveys.sdssspectrumreader import SdssSpectrumReader
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('verb', nargs=1, default=os.getcwd())
+    parser.add_argument('verb', nargs=1)
     parser.add_argument('--user', type=str, help='SciServer username\n')
     parser.add_argument('--token', type=str, help='SciServer auth token\n')
     parser.add_argument("--path", type=str, help="Spectrum data directory base path\n")
