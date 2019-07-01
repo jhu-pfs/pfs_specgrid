@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument('--wave', type=float, nargs=2, default=(3400, 8800), help='Wavelength range\n')
     parser.add_argument('--wavebins', type=int, default=2000, help='Number of wavelength bins\n')
     parser.add_argument('--wavelog', type=bool, default=False, help='Logarithmic wavelength binning\n')
+    parser.add_argument('--wavelog', type=bool, default=False, help='Logarithmic wavelength binning\n')
     return parser.parse_args()
 
 def process_spectra(args):
@@ -29,7 +30,7 @@ def process_spectra(args):
 
     pipeline = SdssBasicPipeline()
     if args.wavelog:
-        pipeline.rebin = np.logspace(args.wave[0], args.wave[1], args.wavebins)
+        pipeline.rebin = np.logspace(np.log10(args.wave[0]), np.log10(args.wave[1]), args.wavebins)
     else:
         pipeline.rebin = np.linspace(args.wave[0], args.wave[1], args.wavebins)
     pipeline.normalize = True

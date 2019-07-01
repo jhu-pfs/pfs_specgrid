@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from test.testbase import TestBase
+from test.test_base import TestBase
 
 class TestKuruczSpectrum(TestBase):
     pass

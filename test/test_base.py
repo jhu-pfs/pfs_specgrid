@@ -15,6 +15,9 @@ class TestBase(TestCase):
         self.kurucz_grid = None
         self.hsc_filters = None
 
+    def setUp(self):
+        plt.figure(figsize=(10, 6))
+
     def get_kurucz_grid(self):
         if self.kurucz_grid is None:
             file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')

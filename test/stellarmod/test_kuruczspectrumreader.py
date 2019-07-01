@@ -1,4 +1,4 @@
-from test.testbase import TestBase
+from test.test_base import TestBase
 import os
 
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
