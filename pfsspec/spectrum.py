@@ -13,13 +13,21 @@ class Spectrum(PfsObject):
         super(Spectrum, self).__init__(orig=orig)
         if orig is None:
             self.redshift = 0.0
+            self.redshift_err = 0.0
+            self.snr = 1.0
             self.wave = None
             self.flux = None
+            self.flux_err = None
+            self.flux_sky = None
             self.mask = None
         else:
             self.redshift = orig.redshift
+            self.redshift_err = orig.redshift_err
+            self.snr = orig.snr
             self.wave = np.copy(orig.wave)
             self.flux = np.copy(orig.flux)
+            self.flux_err = np.copy(orig.flux_err)
+            self.flux_sky = np.copy(orig.flux_sky)
             self.mask = np.copy(orig.mask)
 
     def fnu_to_flam(self):
@@ -32,19 +40,33 @@ class Spectrum(PfsObject):
         self.flux *= 3.336e-19 * (self.wave) ** 2 / 4 / np.pi
 
     def set_redshift(self, z):
+        self.redshift += z
         self.wave *= 1 + z
 
     def rebin(self, nwave):
-        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
-        filt = pysynphot.spectrum.ArraySpectralElement(self.wave, np.ones(len(self.wave)), waveunits='angstrom')
-        obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
+        # TODO: how to rebin error and mask?
 
-        self.wave = obs.binwave
+        filt = pysynphot.spectrum.ArraySpectralElement(self.wave, np.ones(len(self.wave)), waveunits='angstrom')
+
+        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True)
+        obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
         self.flux = obs.binflux
+
+        if self.flux_sky is not None:
+            spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux_sky, keepneg=True)
+            obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
+            self.flux_sky = obs.binflux
+
+        self.wave = nwave
+        self.flux_err = None
         self.mask = None
 
     def zero_mask(self):
         self.flux[self.mask != 0] = 0
+        if self.flux_err is not None:
+            self.flux_err[self.mask != 0] = 0
+        if self.flux_sky is not None:
+            self.flux_sky[self.mask != 0] = 0
 
     def redden(self, extval):
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
@@ -55,6 +77,7 @@ class Spectrum(PfsObject):
         self.redden(-extval)
 
     def synthflux(self, filter):
+        # Calculate error from error array?
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
         filt = pysynphot.spectrum.ArraySpectralElement(filter.wave, filter.thru, waveunits='angstrom')
         obs = pysynphot.observation.Observation(spec, filt)
@@ -64,23 +87,19 @@ class Spectrum(PfsObject):
         flux = self.synthflux(filter)
         return -2.5 * np.log10(flux) + 8.90
 
-    def running_filter(self, func, vdisp=Constants.DEFAULT_FILTER_VDISP):
+    def running_filter(wave, data, func, vdisp=Constants.DEFAULT_FILTER_VDISP):
         # Don't care much about edges here, they'll be trimmed when rebinning
         z = vdisp / Constants.SPEED_OF_LIGHT
-        flux = np.empty(self.flux.shape)
-        for i in range(len(self.wave)):
-            mask = ((1 - z) * self.wave[i] < self.wave) & (self.wave < (1 + z) * self.wave[i])
-            flux[i] = func(self.flux[mask])
-        return flux
+        ndata = np.empty(data.shape)
+        for i in range(len(data)):
+            mask = ((1 - z) * wave[i] < wave) & (wave < (1 + z) * wave[i])
+            ndata[i] = func(data[mask])
+        return ndata
 
-    def running_mean(self, vdisp=Constants.DEFAULT_FILTER_VDISP):
-        return self.running_filter(np.mean, vdisp)
-
-    def running_max(self, vdisp=Constants.DEFAULT_FILTER_VDISP):
-        return self.running_filter(np.max, vdisp)
-
-    def running_median(self, vdisp=Constants.DEFAULT_FILTER_VDISP):
-        return self.running_filter(np.median, vdisp)
+    def high_pass_filter(self, func=np.median, vdisp=Constants.DEFAULT_FILTER_VDISP):
+        self.flux -= Spectrum.running_filter(self.wave, self.flux, func, vdisp)
+        if self.flux_sky is not None:
+            self.flux_sky -= Spectrum.running_filter(self.wave, self.flux_sky, func, vdisp)
 
     def load(self, filename):
         raise NotImplementedError()

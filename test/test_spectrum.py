@@ -92,7 +92,7 @@ class TestSpectrum(TestBase):
         spec = grid.get_nearest_model(0.0, 7000, 1.45)
         spec.plot()
 
-        rmean = spec.running_mean()
+        rmean = Spectrum.running_filter(spec.wave, spec.flux, np.mean)
         spec.flux -= rmean
         spec.plot()
         spec.flux = rmean
@@ -105,7 +105,7 @@ class TestSpectrum(TestBase):
         spec = grid.get_nearest_model(0.0, 7000, 1.45)
         spec.plot()
 
-        rmean = spec.running_max()
+        rmean = Spectrum.running_filter(spec.wave, spec.flux, np.max)
         spec.flux -= rmean
         spec.plot()
         spec.flux = rmean
@@ -118,10 +118,20 @@ class TestSpectrum(TestBase):
         spec = grid.get_nearest_model(0.0, 7000, 1.45)
         spec.plot()
 
-        rmean = spec.running_median()
+        rmean = Spectrum.running_filter(spec.wave, spec.flux, np.median)
         spec.flux -= rmean
         spec.plot()
         spec.flux = rmean
+        spec.plot(xlim=(2000, 12000))
+
+        self.save_fig()
+
+    def test_high_pass_filter(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(0.0, 7000, 1.45)
+        spec.plot()
+
+        spec.high_pass_filter()
         spec.plot(xlim=(2000, 12000))
 
         self.save_fig()

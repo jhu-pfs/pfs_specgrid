@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/env python
 
 import os
 import argparse
@@ -6,6 +6,7 @@ import getpass
 import asyncio
 import SciServer.Authentication as Authentication
 
+from pfsspec.util import *
 from pfsspec.surveys.sdssspectrumreader import SdssSpectrumReader
 
 def parse_args():
@@ -14,7 +15,7 @@ def parse_args():
     parser.add_argument('--user', type=str, help='SciServer username\n')
     parser.add_argument('--token', type=str, help='SciServer auth token\n')
     parser.add_argument("--path", type=str, help="Spectrum data directory base path\n")
-    parser.add_argument('--out', type=str, help='Output file, must be .npz\n')
+    parser.add_argument('--out', type=str, help='Output directory\n')
     parser.add_argument('--top', type=int, default=None, help='Limit number of results')
     parser.add_argument('--plate', type=int, default=None, help='Limit to a single plate')
     parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
@@ -25,6 +26,10 @@ def parse_args():
     return parser.parse_args()
 
 def get_auth_token(args):
+    create_output_dir(args.out)
+
+    dump_json(args, os.path.join(args.out, 'args.json'))
+
     if args.token is not None:
         token = args.token
     else:
@@ -51,14 +56,14 @@ def export_params(args):
     reader = get_reader(args)
     params = find_stars(reader, args)
     print(params.head(10))
-    params.to_csv(args.out)
+    params.to_csv(os.path.join(args.out, 'params.csv'))
 
 def export_spectra(args):
     reader = get_reader(args)
     params = find_stars(reader, args)
     survey = reader.load_survey(params)
     print(survey.params.head(10))
-    survey.save(args.out)
+    survey.save(os.path.join(args.out, 'spectra.dat'))
     print('Saved %d spectra.' % len(survey.spectra))
 
 def __main__(args):
