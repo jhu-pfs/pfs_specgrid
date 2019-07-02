@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument("--in", type=str, help="Training set or data file\n")
     parser.add_argument("--out", type=str, help="Model directory\n")
     parser.add_argument("--name", type=str, help="Model name prefix\n")
-    parser.add_argument('--param', type=str, nargs='+', help='Parameter to ml\n')
+    parser.add_argument('--labels', type=str, nargs='+', help='Labels to train for\n')
     parser.add_argument('--wave', action='store_true', help='Include wavelength vector in training.\n')
     parser.add_argument('--gpus', type=str, help='GPUs to use\n')
     parser.add_argument('--type', type=str, help='Type of network\n')
@@ -51,7 +51,9 @@ def train_dnn(args):
     model.batch_size = args.batch
     model.generate_name()
 
-    outdir = model.name + '_' + '_'.join(args.param)
+    labels, coeffs = parse_labels_coeffs(args)
+
+    outdir = model.name + '_' + '_'.join(labels)
     if args.name is not None:
         outdir = args.name + '_' + outdir
     outdir = os.path.join(args.out, outdir)
@@ -65,12 +67,12 @@ def train_dnn(args):
 
     _, ts, vs = dataset.split(args.split)
 
-    training_generator = SdssDatasetAugmenter(ts, args.param, batch_size=args.batch)
+    training_generator = SdssDatasetAugmenter(ts, labels, coeffs, batch_size=args.batch)
     training_generator.include_wave = args.wave
     training_generator.multiplicative_bias = True
     training_generator.additive_bias = True
 
-    validation_generator = SdssDatasetAugmenter(vs, args.param, batch_size=args.batch)
+    validation_generator = SdssDatasetAugmenter(vs, labels, coeffs, batch_size=args.batch)
     validation_generator.include_wave = args.wave
 
     logging.info("Data input and labels shape: {}, {}"
@@ -85,11 +87,11 @@ def train_dnn(args):
     model.save(os.path.join(outdir, 'model.json'))
     model.save_history(os.path.join(outdir, 'history.csv'))
 
-    predict_generator = SdssDatasetAugmenter(dataset, args.param, batch_size=dataset.flux.shape[0], shuffle=False)
+    predict_generator = SdssDatasetAugmenter(dataset, labels, coeffs, batch_size=dataset.flux.shape[0], shuffle=False)
     predict_generator.shuffle = False
     predict_generator.include_wave = args.wave
-    flux, params = predict_generator.next_batch(0)
-    output = model.predict(flux)
+    flux, _ = predict_generator.next_batch(0)
+    output = model.predict(flux) * coeffs
     np.savez(os.path.join(outdir, 'prediction.npz'), output)
 
     logging.info('Results are written to {}'.format(outdir))

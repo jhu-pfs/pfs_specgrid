@@ -60,3 +60,16 @@ def setup_logging(logfile=None):
         logging_console_handler.setLevel(logging.INFO)
         logging_console_handler.setFormatter(formatter)
         root.addHandler(logging_console_handler)
+
+def parse_labels_coeffs(args):
+    labels = []
+    coeffs = []
+    for k in args.labels:
+        if '/' in k:
+            parts = k.split('/')
+            labels.append(parts[0])
+            coeffs.append(float(parts[1]))
+        else:
+            labels.append(k)
+            coeffs.append(1.0)
+    return labels, np.array(coeffs)
