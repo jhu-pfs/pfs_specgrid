@@ -61,7 +61,7 @@ def train_dnn(args):
     model.checkpoint_path = os.path.join(outdir, 'best_model_weights.dat')
 
     dataset = Dataset()
-    dataset.load(args.__dict__['in'])
+    dataset.load(os.path.join(args.__dict__['in'], 'dataset.dat'))
 
     _, ts, vs = dataset.split(args.split)
 
