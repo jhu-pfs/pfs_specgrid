@@ -64,7 +64,9 @@ def setup_logging(logfile=None):
 def parse_labels_coeffs(args):
     labels = []
     coeffs = []
-    for k in args.labels:
+    if type(args) is not dict:
+        args = args.__dict__
+    for k in args['labels']:
         if '/' in k:
             parts = k.split('/')
             labels.append(parts[0])
