@@ -47,6 +47,28 @@ class TestSpectrum(TestBase):
 
         self.save_fig()
 
+    def test_normalize_at(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(0.0, 7000, 1.45)
+        spec.multiply(1e-7)
+        spec.plot()
+
+        spec.normalize_at(5513.7)
+        spec.plot()
+
+        self.save_fig()
+
+    def test_normalize_in(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(0.0, 7000, 1.45)
+        spec.multiply(1e-7)
+        spec.plot()
+
+        spec.normalize_in((5513.7, 6124.2), np.mean)
+        spec.plot()
+
+        self.save_fig()
+
     def test_redden(self):
         grid = self.get_kurucz_grid()
         spec = grid.get_nearest_model(0.0, 7000, 1.45)

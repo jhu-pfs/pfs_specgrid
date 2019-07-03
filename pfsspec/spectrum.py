@@ -68,6 +68,34 @@ class Spectrum(PfsObject):
         if self.flux_sky is not None:
             self.flux_sky[self.mask != 0] = 0
 
+    def multiply(self, a, silent=True):
+        if np.isfinite(a):
+            self.flux *= a
+            if self.flux_err is not None:
+                self.flux_err *= a
+            if self.flux_sky is not None:
+                self.flux_sky *= a
+        elif not silent:
+            raise Exception('Cannot multiply by NaN of Inf')
+
+    def normalize_at(self, lam):
+        idx = np.digitize(lam, self.wave)
+        flux = self.flux[idx]
+        self.multiply(1.0 / flux)
+
+    def normalize_in(self, lam, func=np.median):
+        idx = np.digitize(lam, self.wave)
+        flux = self.flux[idx[0]:idx[1]]
+        if flux.shape[0] < 2:
+            print('redshift', self.redshift)
+            print('wave.shape', self.wave.shape)
+            print('wave.min/max', self.wave.min(), self.wave.max())
+            print('lam', lam)
+            print('idx', idx)
+            raise Exception('Cannot get wavelength interval')
+        flux = func(flux)
+        self.multiply(1.0 / flux)
+
     def redden(self, extval):
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
         obs = spec * pysynphot.reddening.Extinction(extval, 'mwavg')
