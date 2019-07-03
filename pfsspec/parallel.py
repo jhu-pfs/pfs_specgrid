@@ -55,3 +55,12 @@ def prll_map(func_to_apply, items, cpus=None, verbose=False):
     for proc in processes: proc.join()
     # Return results #
     return [x for i, x in sorted(results)]
+
+def srl_map(func_to_apply, items, verbose=False):
+    results = []
+    if verbose:
+        for i in tqdm(items):
+            results.append(func_to_apply(i))
+    else:
+        for i in items:
+            results.append(func_to_apply(i))

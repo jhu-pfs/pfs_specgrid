@@ -1,14 +1,16 @@
 import sys
-from pfsspec.parallel import prll_map
+from pfsspec.parallel import srl_map, prll_map
 
 from pfsspec.io.dataset import Dataset
 
 class DatasetBuilder():
     def __init__(self, orig=None):
         if orig is not None:
+            self.parallel = orig.parallel
             self.params = orig.params
             self.pipeline = orig.pipeline
         else:
+            self.parallel = True
             self.params = None
             self.pipeline = None
 
@@ -28,12 +30,13 @@ class DatasetBuilder():
 
     def build(self):
         self.create_dataset()
-        fluxes = prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
+
+        if self.parallel:
+            fluxes = prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
+        else:
+            fluxes = srl_map(self.process_item, range(self.get_spectrum_count()), verbose=True)
+
         for i in range(len(fluxes)):
             self.dataset.flux[i, :] = fluxes[i]
-
-        #with click.progressbar(range(self.get_spectrum_count()), file=sys.stderr) as bar:
-         #   for i in bar:
-         #       self.process_item(dataset, i)
 
         return self.dataset
