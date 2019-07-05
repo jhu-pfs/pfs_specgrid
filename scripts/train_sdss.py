@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs\n')
     parser.add_argument('--batch', type=int, default=None, help='Batch size\n')
     parser.add_argument('--patience', type=int, default=None, help='Number of epochs to wait before early stop.\n')
+    parser.add_argument('--loss', type=str, default='mse', help='Loss function')
     parser.add_argument('--aug', action='store_true', help='Augment data.\n')
     return parser.parse_args()
 
@@ -49,6 +50,7 @@ def train_dnn(args):
     model.patience = args.patience
     model.epochs = args.epochs
     model.batch_size = args.batch
+    model.loss = args.loss
     model.generate_name()
 
     labels, coeffs = parse_labels_coeffs(args)
