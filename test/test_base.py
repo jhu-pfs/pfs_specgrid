@@ -2,6 +2,7 @@ import os
 from unittest import TestCase
 import matplotlib.pyplot as plt
 
+from pfsspec.io.dataset import Dataset
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.obsmod.hscfilter import HscFilter
 
@@ -13,6 +14,7 @@ class TestBase(TestCase):
         self.PFSSPEC_TEST_PATH = os.environ['PFSSPEC_TEST_PATH'].strip('"')
         self.PFSSPEC_SDSS_DATA_PATH = os.environ['PFSSPEC_SDSS_DATA_PATH'].strip('"')
         self.kurucz_grid = None
+        self.sdss_dataset = None
         self.hsc_filters = None
 
     def setUp(self):
@@ -25,6 +27,14 @@ class TestBase(TestCase):
             self.kurucz_grid.load(file)
 
         return self.kurucz_grid
+
+    def get_sdss_dataset(self):
+        if self.sdss_dataset is None:
+            file = os.path.join(self.PFSSPEC_DATA_PATH, 'pfs_spec_test/sdss_test/dataset.dat')
+            self.sdss_dataset = Dataset()
+            self.sdss_dataset.load(file)
+
+        return self.sdss_dataset
 
     def get_hsc_filter(self, band):
         if self.hsc_filters is None:
