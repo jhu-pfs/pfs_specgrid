@@ -44,7 +44,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def build(self):
         # non-existing models have 0 flux in bin 0
-        self.nonempty = (self.grid.flux[:, :, :, 0] != 0)
+        self.nonempty = (self.grid.flux.max(3) != 0)
         self.index = np.where(self.nonempty)
 
         super(ModelGridDatasetBuilder, self).build()

@@ -65,10 +65,15 @@ def train_dnn(args):
     print('dataset.flux.shape', dataset.flux.shape)
     print('dataset.params.shape', dataset.params.shape)
 
-    _, ts, vs = dataset.split(args.split)
+    # Split doesn't apply here as models are in order
+    # _, ts, vs = dataset.split(args.split)
 
-    training_generator = KuruczGenerativeAugmenter(ts, labels, coeffs, batch_size=args.batch)
-    validation_generator = KuruczGenerativeAugmenter(vs, labels, coeffs, batch_size=args.batch)
+    #training_generator = KuruczGenerativeAugmenter(ts, labels, coeffs, batch_size=args.batch)
+    #validation_generator = KuruczGenerativeAugmenter(vs, labels, coeffs, batch_size=args.batch)
+
+    generator = KuruczGenerativeAugmenter(dataset, labels, coeffs, batch_size=args.batch)
+    training_generator = generator.copy()
+    validation_generator = generator.copy()
 
     logging.info("Data input and labels shape: {}, {}"
                  .format(training_generator.input_shape, training_generator.output_shape))

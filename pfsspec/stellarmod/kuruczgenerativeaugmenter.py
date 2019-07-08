@@ -13,6 +13,11 @@ class KuruczGenerativeAugmenter(KerasDataGenerator):
         super(KuruczGenerativeAugmenter, self).__init__(input_shape, output_shape,
                                                    batch_size=batch_size, shuffle=shuffle, seed=seed)
 
+    def copy(self):
+        new = KuruczGenerativeAugmenter(self.dataset, self.labels, self.coeffs,
+                                        self.batch_size, self.shuffle, self.seed)
+        return new
+
     def next_batch(self, batch_index):
         bs = self.next_batch_size(batch_index)
 
@@ -31,4 +36,7 @@ class KuruczGenerativeAugmenter(KerasDataGenerator):
         return input * self.coeff
 
     def augment_batch(self, wave, input, output):
+        # Add minimal Gaussian noise on output
+        output *= np.random.normal(1, 0.01, output.shape)
+
         return input, output
