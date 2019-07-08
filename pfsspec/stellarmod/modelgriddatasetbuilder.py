@@ -1,6 +1,6 @@
 import numpy as np
 
-from pfsspec.io.datasetbuilder import DatasetBuilder
+from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 
 class ModelGridDatasetBuilder(DatasetBuilder):

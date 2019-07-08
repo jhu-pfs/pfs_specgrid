@@ -7,9 +7,9 @@ import numpy as np
 from tensorflow.python.client import device_lib
 
 from pfsspec.util import *
-from pfsspec.io.dataset import Dataset
-from pfsspec.ml.dnn.keras.densepyramid import DensePyramid
-from pfsspec.ml.dnn.keras.cnnpyramid import CnnPyramid
+from pfsspec.data.dataset import Dataset
+from pfsspec.ml.dnn.keras.denseregression import DenseRegression
+from pfsspec.ml.dnn.keras.cnnregression import CnnRegression
 from pfsspec.surveys.sdssdatasetaugmenter import SdssDatasetAugmenter
 
 def parse_args():
@@ -33,9 +33,9 @@ def parse_args():
 
 def train_dnn(args):
     if args.type == 'dense':
-        model = DensePyramid()
+        model = DenseRegression()
     elif args.type == 'cnn':
-        model = CnnPyramid()
+        model = CnnRegression()
     else:
         raise NotImplementedError()
 
@@ -49,7 +49,6 @@ def train_dnn(args):
     model.validation_split = args.split
     model.patience = args.patience
     model.epochs = args.epochs
-    model.batch_size = args.batch
     model.loss = args.loss
     model.generate_name()
 
@@ -82,18 +81,18 @@ def train_dnn(args):
     logging.info("Validation input and labels shape: {}, {}"
                  .format(validation_generator.input_shape, validation_generator.labels_shape))
 
-    model.ensure_model(training_generator.input_shape, training_generator.labels_shape)
+    model.ensure_model_created(training_generator.input_shape, training_generator.labels_shape)
     model.print()
 
-    model.train_with_generator(training_generator, validation_generator)
+    model.train(training_generator, validation_generator)
     model.save(os.path.join(outdir, 'model.json'))
     model.save_history(os.path.join(outdir, 'history.csv'))
 
-    predict_generator = SdssDatasetAugmenter(dataset, labels, coeffs, batch_size=dataset.flux.shape[0], shuffle=False)
-    predict_generator.shuffle = False
+    # TODO: move this logic to model class
+    predict_generator = SdssDatasetAugmenter(dataset, labels, coeffs, shuffle=False)
     predict_generator.include_wave = args.wave
     flux, _ = predict_generator.next_batch(0)
-    output = model.predict(flux) * coeffs
+    output = model.predict(predict_generator) * coeffs
     np.savez(os.path.join(outdir, 'prediction.npz'), output)
 
     logging.info('Results are written to {}'.format(outdir))

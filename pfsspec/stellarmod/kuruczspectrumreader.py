@@ -3,7 +3,7 @@ import logging
 import math
 import numpy as np
 
-from pfsspec.io.spectrumreader import SpectrumReader
+from pfsspec.data.spectrumreader import SpectrumReader
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 

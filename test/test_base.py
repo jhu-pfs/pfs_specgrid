@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 import matplotlib.pyplot as plt
 
-from pfsspec.io.dataset import Dataset
+from pfsspec.data.dataset import Dataset
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.obsmod.hscfilter import HscFilter
 
