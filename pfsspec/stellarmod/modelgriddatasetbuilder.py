@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
@@ -19,7 +20,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def create_dataset(self):
         super(ModelGridDatasetBuilder, self).create_dataset()
-        self.dataset.wave[:] = self.pipeline.rebin
 
     def process_item(self, i):
         fi = self.index[0][i]
@@ -47,4 +47,14 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.nonempty = (self.grid.flux[:, :, :, 0] != 0)
         self.index = np.where(self.nonempty)
 
-        return super(ModelGridDatasetBuilder, self).build()
+        super(ModelGridDatasetBuilder, self).build()
+
+        self.dataset.wave[:] = self.pipeline.rebin
+        self.dataset.params = pd.DataFrame(list(zip(
+            self.grid.M_H[self.index[0]],
+            self.grid.T_eff[self.index[1]],
+            self.grid.log_g[self.index[2]])),
+            columns=['fe_h', 't_eff', 'log_g']
+        )
+
+        return self.dataset

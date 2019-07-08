@@ -41,8 +41,8 @@ def process_spectra(args):
     tsbuilder.parallel = not args.debug
     tsbuilder.grid = grid
     tsbuilder.pipeline = pipeline
-    ts = tsbuilder.build()
-    ts.save(os.path.join(args.out, 'dataset.dat'))
+    tsbuilder.build()
+    tsbuilder.dataset.save(os.path.join(args.out, 'dataset.dat'))
 
     logging.info('Done.')
 

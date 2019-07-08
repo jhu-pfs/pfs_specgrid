@@ -5,9 +5,9 @@ import argparse
 
 from pfsspec.util import *
 from pfsspec.data.dataset import Dataset
-from pfsspec.ml.dnn.keras.denseregression import DenseRegression
-from pfsspec.ml.dnn.keras.cnnregression import CnnRegression
-from pfsspec.surveys.sdssaugmenter import SdssAugmenter
+from pfsspec.ml.dnn.keras.densegenerative import DenseGenerative
+#from pfsspec.ml.dnn.keras.cnnregression import CnnRegression
+from pfsspec.stellarmod.kuruczgenerativeaugmenter import KuruczGenerativeAugmenter
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -30,9 +30,9 @@ def parse_args():
 
 def train_dnn(args):
     if args.type == 'dense':
-        model = DenseRegression()
-    elif args.type == 'cnn':
-        model = CnnRegression()
+        model = DenseGenerative()
+    #elif args.type == 'cnn':
+        #model = CnnRegression()
     else:
         raise NotImplementedError()
 
@@ -62,16 +62,13 @@ def train_dnn(args):
 
     dataset = Dataset()
     dataset.load(os.path.join(args.__dict__['in'], 'dataset.dat'))
+    print('dataset.flux.shape', dataset.flux.shape)
+    print('dataset.params.shape', dataset.params.shape)
 
     _, ts, vs = dataset.split(args.split)
 
-    training_generator = SdssAugmenter(ts, labels, coeffs, batch_size=args.batch)
-    training_generator.include_wave = args.wave
-    training_generator.multiplicative_bias = True
-    training_generator.additive_bias = True
-
-    validation_generator = SdssAugmenter(vs, labels, coeffs, batch_size=args.batch)
-    validation_generator.include_wave = args.wave
+    training_generator = KuruczGenerativeAugmenter(ts, labels, coeffs, batch_size=args.batch)
+    validation_generator = KuruczGenerativeAugmenter(vs, labels, coeffs, batch_size=args.batch)
 
     logging.info("Data input and labels shape: {}, {}"
                  .format(training_generator.input_shape, training_generator.output_shape))
@@ -86,9 +83,7 @@ def train_dnn(args):
     model.save_history(os.path.join(outdir, 'history.csv'))
 
     # TODO: move this logic to model class
-    predict_generator = SdssAugmenter(dataset, labels, coeffs, shuffle=False)
-    predict_generator.include_wave = args.wave
-    flux, _ = predict_generator.next_batch(0)
+    predict_generator = KuruczGenerativeAugmenter(dataset, labels, coeffs, shuffle=False)
     output = model.predict(predict_generator)
     np.savez(os.path.join(outdir, 'prediction.npz'), output)
 

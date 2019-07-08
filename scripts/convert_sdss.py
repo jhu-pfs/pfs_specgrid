@@ -43,8 +43,8 @@ def process_spectra(args):
     tsbuilder.survey = survey
     tsbuilder.params = survey.params
     tsbuilder.pipeline = pipeline
-    ts = tsbuilder.build()
-    ts.save(os.path.join(args.out, 'dataset.dat'))
+    tsbuilder.build()
+    tsbuilder.dataset.save(os.path.join(args.out, 'dataset.dat'))
 
     logging.info('Done.')
 
