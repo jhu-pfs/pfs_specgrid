@@ -22,7 +22,6 @@ class DatasetBuilder():
 
     def create_dataset(self):
         self.dataset = Dataset()
-        self.dataset.params = self.params
         self.dataset.init_storage(self.get_wave_count(), self.get_spectrum_count())
 
     def process_item(self, i):
@@ -30,6 +29,7 @@ class DatasetBuilder():
 
     def build(self):
         self.create_dataset()
+        self.dataset.params = self.params
 
         if self.parallel:
             fluxes = prll_map(self.process_item, range(self.get_spectrum_count()), verbose=True)

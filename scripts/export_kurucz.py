@@ -2,6 +2,7 @@
 
 import argparse
 
+from pfsspec.util import *
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 def parse_args():
@@ -13,9 +14,15 @@ def parse_args():
 
     return parser.parse_args()
 
-def __main__(args):
+def export_spectra(args):
+    create_output_dir(args.out)
+
+    dump_json(args, os.path.join(args.out, 'args.json'))
+
     grid = KuruczSpectrumReader.read_grid(args.path, args.grid)
-    print("Grid loaded with flux grid shape ", grid.flux.shape)
-    grid.save(args.out)
+    grid.save(os.path.join(args.out, 'spectra.npz'))
+
+def __main__(args):
+    export_spectra(args)
 
 __main__(parse_args())

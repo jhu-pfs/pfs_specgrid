@@ -1,4 +1,5 @@
 import os
+import logging
 import math
 import numpy as np
 
@@ -128,6 +129,9 @@ class KuruczSpectrumReader(SpectrumReader):
                     if grid.wave is None:
                         grid.init_storage(spec.wave)
                     grid.set_flux(spec.M_H, spec.T_eff, spec.log_g, spec.flux)
+
+        logging.info("Grid loaded with flux grid shape ", grid.flux.shape)
+
         return grid
 
     def get_filename(M_H, v_turb, alpha=False, nover=False, odfnew=False):
