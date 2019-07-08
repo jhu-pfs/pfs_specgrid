@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--units', type=int, help='Number of units\n')
     parser.add_argument('--split', type=float, default=0.5, help='Training/validation split\n')
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs\n')
-    parser.add_argument('--batch', type=int, default=None, help='Batch size\n')
+    parser.add_argument('--batch', type=int, default=100, help='Batch size\n')
     parser.add_argument('--patience', type=int, default=None, help='Number of epochs to wait before early stop.\n')
     parser.add_argument('--loss', type=str, default='mse', help='Loss function')
     parser.add_argument('--aug', action='store_true', help='Augment data.\n')
