@@ -5,8 +5,8 @@ import argparse
 
 from pfsspec.util import *
 from pfsspec.data.dataset import Dataset
-from pfsspec.ml.dnn.keras.denseregression import DenseRegression
-from pfsspec.ml.dnn.keras.cnnregression import CnnRegression
+from pfsspec.ml.dnn.keras.denseregressional import DenseRegressional
+from pfsspec.ml.dnn.keras.cnnregressional import CnnRegressional
 from pfsspec.surveys.sdssaugmenter import SdssAugmenter
 
 def parse_args():
@@ -30,9 +30,9 @@ def parse_args():
 
 def train_dnn(args):
     if args.type == 'dense':
-        model = DenseRegression()
+        model = DenseRegressional()
     elif args.type == 'cnn':
-        model = CnnRegression()
+        model = CnnRegressional()
     else:
         raise NotImplementedError()
 
