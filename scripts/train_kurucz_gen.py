@@ -2,12 +2,15 @@
 
 import os
 import argparse
+from keras import optimizers
 
 from pfsspec.util import *
 from pfsspec.data.dataset import Dataset
 from pfsspec.ml.dnn.keras.densegenerative import DenseGenerative
-#from pfsspec.ml.dnn.keras.cnnregression import CnnRegression
+from pfsspec.ml.dnn.keras.cnngenerative import CnnGenerative
 from pfsspec.stellarmod.kuruczgenerativeaugmenter import KuruczGenerativeAugmenter
+from pfsspec.ml.dnn.keras.losses import *
+from pfsspec.ml.dnn.keras.activations import *
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -31,8 +34,8 @@ def parse_args():
 def train_dnn(args):
     if args.type == 'dense':
         model = DenseGenerative()
-    #elif args.type == 'cnn':
-        #model = CnnRegression()
+    elif args.type == 'cnn':
+        model = CnnGenerative()
     else:
         raise NotImplementedError()
 
@@ -48,6 +51,13 @@ def train_dnn(args):
     model.epochs = args.epochs
     model.loss = args.loss
     model.generate_name()
+
+    ######################
+    # Override loss
+    # model.loss = max_absolute_error
+    model.activation = 'relu'
+    model.optimizer = optimizers.SGD(lr=0.1)
+    ######################
 
     labels, coeffs = parse_labels_coeffs(args)
 

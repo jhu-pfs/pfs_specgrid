@@ -25,7 +25,6 @@ class KuruczGenerativeAugmenter(KerasDataGenerator):
         output = np.array(self.dataset.flux[self.index[batch_index * self.batch_size:batch_index * self.batch_size + bs]], copy=True, dtype=np.float)
 
         input, output = self.augment_batch(self.dataset.wave, input, output)
-        input /= self.coeffs
 
         return input, output
 
@@ -37,6 +36,6 @@ class KuruczGenerativeAugmenter(KerasDataGenerator):
 
     def augment_batch(self, wave, input, output):
         # Add minimal Gaussian noise on output
-        output *= np.random.normal(1, 0.01, output.shape)
+        # output *= np.random.normal(1, 0.01, output.shape)
 
         return input, output

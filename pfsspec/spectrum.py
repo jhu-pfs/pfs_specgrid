@@ -78,12 +78,12 @@ class Spectrum(PfsObject):
         elif not silent:
             raise Exception('Cannot multiply by NaN of Inf')
 
-    def normalize_at(self, lam):
+    def normalize_at(self, lam, value=1.0):
         idx = np.digitize(lam, self.wave)
         flux = self.flux[idx]
-        self.multiply(1.0 / flux)
+        self.multiply(value / flux)
 
-    def normalize_in(self, lam, func=np.median):
+    def normalize_in(self, lam, func=np.median, value=1.0):
         idx = np.digitize(lam, self.wave)
         flux = self.flux[idx[0]:idx[1]]
         if flux.shape[0] < 2:
@@ -94,7 +94,7 @@ class Spectrum(PfsObject):
             print('idx', idx)
             raise Exception('Cannot get wavelength interval')
         flux = func(flux)
-        self.multiply(1.0 / flux)
+        self.multiply(value / flux)
 
     def redden(self, extval):
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
