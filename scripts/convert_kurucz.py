@@ -1,11 +1,6 @@
 #!python
 
-import os
-import logging
-import argparse
-import numpy as np
-
-from pfsspec.util import *
+from pfsspec.scripts.utils.util import *
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
 from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline

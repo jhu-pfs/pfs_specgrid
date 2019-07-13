@@ -157,3 +157,23 @@ class TestSpectrum(TestBase):
         spec.plot(xlim=(2000, 12000))
 
         self.save_fig()
+
+    def test_high_pass_filter_dlambda_1(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(0.0, 7000, 1.45)
+        spec.plot()
+
+        spec.high_pass_filter(dlambda=200)
+        spec.plot(xlim=(2000, 12000))
+
+        self.save_fig()
+
+    def test_high_pass_filter_dlambda_2(self):
+        grid = self.get_kurucz_grid()
+        spec = grid.get_nearest_model(0.0, 7000, 1.45)
+        spec.plot()
+
+        spec.high_pass_filter(dlambda=(200, 250))
+        spec.plot(xlim=(2000, 12000))
+
+        self.save_fig()

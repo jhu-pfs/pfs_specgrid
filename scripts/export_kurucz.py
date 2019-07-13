@@ -1,8 +1,6 @@
 #!python
 
-import argparse
-
-from pfsspec.util import *
+from pfsspec.scripts.utils.util import *
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 def parse_args():

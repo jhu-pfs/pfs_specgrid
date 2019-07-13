@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 
-import os
-import argparse
 from keras import optimizers
 
-from pfsspec.util import *
+from pfsspec.scripts.utils.util import *
 from pfsspec.data.dataset import Dataset
 from pfsspec.ml.dnn.keras.densegenerative import DenseGenerative
 from pfsspec.ml.dnn.keras.cnngenerative import CnnGenerative
 from pfsspec.stellarmod.kuruczgenerativeaugmenter import KuruczGenerativeAugmenter
-from pfsspec.ml.dnn.keras.losses import *
-from pfsspec.ml.dnn.keras.activations import *
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -55,6 +52,7 @@ def train_dnn(args):
     ######################
     # Override loss
     # model.loss = max_absolute_error
+    model.dropout_rate = 0
     model.activation = 'relu'
     model.optimizer = optimizers.SGD(lr=0.1)
     ######################
@@ -81,7 +79,11 @@ def train_dnn(args):
     #training_generator = KuruczGenerativeAugmenter(ts, labels, coeffs, batch_size=args.batch)
     #validation_generator = KuruczGenerativeAugmenter(vs, labels, coeffs, batch_size=args.batch)
 
-    generator = KuruczGenerativeAugmenter(dataset, labels, coeffs, batch_size=args.batch)
+    generator = KuruczGenerativeAugmenter(dataset, labels, coeffs, shuffle=True)
+    if args.batch == 0:
+        generator.batch_size = generator.input_shape[0]
+    else:
+        generator.batch_size = args.batch
     training_generator = generator.copy()
     validation_generator = generator.copy()
 
@@ -89,6 +91,8 @@ def train_dnn(args):
                  .format(training_generator.input_shape, training_generator.output_shape))
     logging.info("Validation input and labels shape: {}, {}"
                  .format(validation_generator.input_shape, validation_generator.output_shape))
+    #logging.info('data_generator.steps_per_epoch: {}'.format(data_generator.steps_per_epoch()))
+    #logging.info('validation_generator.steps_per_epoch: {}'.format(validation_generator.steps_per_epoch()))
 
     model.ensure_model_created(training_generator.input_shape, training_generator.output_shape)
     model.print()

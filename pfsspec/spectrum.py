@@ -1,4 +1,5 @@
 import numpy as np
+import collections
 import matplotlib.pyplot as plt
 import pysynphot
 import pysynphot.binning
@@ -115,17 +116,34 @@ class Spectrum(PfsObject):
         flux = self.synthflux(filter)
         return -2.5 * np.log10(flux) + 8.90
 
-    def running_filter(wave, data, func, vdisp=Constants.DEFAULT_FILTER_VDISP):
+    def running_filter(wave, data, func, dlambda=None, vdisp=None):
         # Don't care much about edges here, they'll be trimmed when rebinning
-        z = vdisp / Constants.SPEED_OF_LIGHT
+        if dlambda is not None and vdisp is not None:
+            raise Exception('Only one of dlambda and vdisp can be specified')
+        elif dlambda is None and vdisp is None:
+            vdisp = Constants.DEFAULT_FILTER_VDISP
+
+        if vdisp is not None:
+            z = vdisp / Constants.SPEED_OF_LIGHT
+
         ndata = np.empty(data.shape)
         for i in range(len(data)):
-            mask = ((1 - z) * wave[i] < wave) & (wave < (1 + z) * wave[i])
-            ndata[i] = func(data[mask])
+            if isinstance(dlambda, collections.Iterable):
+                mask = (wave[i] - dlambda[0] <= wave) & (wave < wave[i] + dlambda[1])
+            elif dlambda is not None:
+                mask = (wave[i] - dlambda <= wave) & (wave < wave[i] + dlambda)
+            else:
+                mask = ((1 - z) * wave[i] < wave) & (wave < (1 + z) * wave[i])
+            if mask.size < 2:
+                ndata[i] = data[i]
+            else:
+                ndata[i] = func(data[mask])
+
         return ndata
 
-    def high_pass_filter(self, func=np.median, vdisp=Constants.DEFAULT_FILTER_VDISP):
-        self.flux -= Spectrum.running_filter(self.wave, self.flux, func, vdisp)
+    def high_pass_filter(self, func=np.median, dlambda=None, vdisp=None):
+        # TODO: error array?
+        self.flux -= Spectrum.running_filter(self.wave, self.flux, func, dlambda=dlambda, vdisp=vdisp)
         if self.flux_sky is not None:
             self.flux_sky -= Spectrum.running_filter(self.wave, self.flux_sky, func, vdisp)
 

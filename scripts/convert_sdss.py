@@ -1,11 +1,6 @@
 #!python
 
-import os
-import logging
-import argparse
-import numpy as np
-
-from pfsspec.util import *
+from pfsspec.scripts.utils.util import *
 from pfsspec.surveys.survey import Survey
 from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline

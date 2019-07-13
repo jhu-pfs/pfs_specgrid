@@ -1,5 +1,6 @@
 from test.test_base import TestBase
 import os
+import numpy as np
 
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
@@ -22,9 +23,16 @@ class TestKuruczGrid(TestBase):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
         grid = KuruczGrid()
         grid.load(file)
+
         spec = grid.get_nearest_model(0.11, 4900, 3.1)
         self.assertEqual((1221,), spec.wave.shape)
         self.assertEqual((1221,), spec.flux.shape)
+        self.assertTrue(np.max(spec.flux) > 0)
+
+        spec = grid.get_nearest_model(M_H=-0.1, T_eff=5200, log_g=4)
+        self.assertEqual((1221,), spec.wave.shape)
+        self.assertEqual((1221,), spec.flux.shape)
+        self.assertTrue(np.max(spec.flux) > 0)
 
     def test_interpolate_model(self):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')

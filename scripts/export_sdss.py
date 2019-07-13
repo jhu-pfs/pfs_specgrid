@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-import os
-import argparse
 import getpass
-import asyncio
 import SciServer.Authentication as Authentication
 
-from pfsspec.util import *
+from pfsspec.scripts.utils.util import *
 from pfsspec.surveys.sdssspectrumreader import SdssSpectrumReader
 
 def parse_args():
@@ -76,8 +73,3 @@ def __main__(args):
         raise NotImplementedError()
 
 __main__(parse_args())
-
-#futures = [__main__(parse_args())]
-#loop = asyncio.get_event_loop()
-#loop.run_until_complete(asyncio.wait(futures))
-#loop.close()

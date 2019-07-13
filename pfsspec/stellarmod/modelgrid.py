@@ -99,8 +99,8 @@ class ModelGrid():
         spec.T_eff = self.T_eff[j]
         spec.log_g = self.log_g[k]
 
-        spec.wave = self.wave
-        spec.flux = self.flux[i, j, k, :]
+        spec.wave = np.array(self.wave, copy=True)
+        spec.flux = np.array(self.flux[i, j, k, :], copy=True)
 
         return spec
 
