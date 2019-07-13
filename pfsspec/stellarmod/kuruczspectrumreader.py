@@ -130,7 +130,7 @@ class KuruczSpectrumReader(SpectrumReader):
                         grid.init_storage(spec.wave)
                     grid.set_flux(spec.M_H, spec.T_eff, spec.log_g, spec.flux)
 
-        logging.info("Grid loaded with flux grid shape ", grid.flux.shape)
+        logging.info("Grid loaded with flux grid shape {}".format(grid.flux.shape))
 
         return grid
 
