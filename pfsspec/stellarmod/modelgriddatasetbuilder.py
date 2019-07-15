@@ -7,13 +7,20 @@ from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 class ModelGridDatasetBuilder(DatasetBuilder):
     def __init__(self, orig=None):
         super(ModelGridDatasetBuilder, self).__init__(orig)
-        if orig is not None:
-            self.grid = orig.grid
-        else:
+        if orig is None:
             self.grid = None
+            self.interpolate = False
+            self.spectrum_count = 0
+        else:
+            self.grid = orig.grid
+            self.interpolate = orig.interpolate
+            self.spectrum_count = orig.spectrum_count
 
     def get_spectrum_count(self):
-        return self.index[0].shape[0]
+        if self.interpolate:
+            return self.spectrum_count
+        else:
+            return self.index[0].shape[0]
 
     def get_wave_count(self):
         return self.pipeline.rebin.shape[0]
@@ -22,6 +29,15 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).create_dataset()
 
     def process_item(self, i):
+        if self.interpolate:
+            self.process_interpolating(i)
+        else:
+            self.process_grid(i)
+
+    def process_interpolating(self, i):
+        pass
+
+    def process_grid(self, i):
         fi = self.index[0][i]
         fj = self.index[1][i]
         fk = self.index[2][i]

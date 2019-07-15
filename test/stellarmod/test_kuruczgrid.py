@@ -34,6 +34,24 @@ class TestKuruczGrid(TestBase):
         self.assertEqual((1221,), spec.flux.shape)
         self.assertTrue(np.max(spec.flux) > 0)
 
+    def test_get_nearby_indexes(self):
+        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
+        grid = KuruczGrid()
+        grid.load(file)
+        idx = grid.get_nearby_indexes(0.11, 4900, 3.1)
+        self.assertEqual((13, 5, 6, 14, 6, 7), idx)
+
+    def test_get_nearby_indexes_outside(self):
+        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
+        grid = KuruczGrid()
+        grid.load(file)
+        # These are outside the grid completely
+        idx = grid.get_nearby_indexes(-0.9, 14300, 5.2)
+        self.assertIsNone(idx)
+        # These are outside the parameter space but inside grid
+        idx = grid.get_nearby_indexes(-0.9, 14300, 1.2)
+        self.assertIsNone(idx)
+
     def test_interpolate_model(self):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
         grid = KuruczGrid()
@@ -48,3 +66,11 @@ class TestKuruczGrid(TestBase):
         self.assertEqual((1221,), spec.flux.shape)
         spec.plot()
         self.save_fig()
+
+    def test_interpolate_model_outside(self):
+        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
+        grid = KuruczGrid()
+        grid.load(file)
+        # These are outside the parameter space but inside grid
+        spec = grid.interpolate_model(-0.9, 14300, 1.2)
+        self.assertIsNone(spec)

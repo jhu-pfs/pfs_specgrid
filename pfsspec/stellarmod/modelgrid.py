@@ -3,14 +3,22 @@ from scipy.interpolate import RegularGridInterpolator
 
 class ModelGrid():
     def __init__(self):
+        # TODO: figure out how to have an arbitrary number of grid dimensions
         self.M_H = None
         self.T_eff = None
         self.log_g = None
         self.M_H_idx = None
         self.T_eff_idx = None
         self.log_g_idx = None
+        self.M_H_min = None
+        self.M_H_max = None
+        self.T_eff_min = None
+        self.T_eff_max = None
+        self.log_g_min = None
+        self.log_g_max = None
         self.wave = None
         self.flux = None
+        self.flux_idx = None
 
     def init_storage(self, wave):
         shape = (self.M_H.shape[0], self.T_eff.shape[0], self.log_g.shape[0], wave.shape[0])
@@ -19,8 +27,13 @@ class ModelGrid():
 
     def build_index(self):
         self.M_H_idx = dict((v, i) for i, v in np.ndenumerate(self.M_H))
+        self.M_H_min, self.M_H_max = np.min(self.M_H), np.max(self.M_H)
         self.T_eff_idx = dict((v, i) for i, v in np.ndenumerate(self.T_eff))
+        self.T_eff_min, self.T_eff_max = np.min(self.T_eff), np.max(self.T_eff)
         self.log_g_idx = dict((v, i) for i, v in np.ndenumerate(self.log_g))
+        self.log_g_min, self.log_g_max = np.min(self.log_g), np.max(self.log_g)
+
+        self.flux_idx = (self.flux.max(axis=3) > 0) | (self.flux.min(axis=3) < 0)
 
     def set_flux(self, M_H, T_eff, log_g, flux):
         """
@@ -84,11 +97,17 @@ class ModelGrid():
         else:
             k1, k2 = k1, k1 + 1
 
-        # Verify if inside bounds
+        # Verify if indexes inside bounds
         if i1 < 0 or j1 < 0 or k1 < 0 or \
                 i2 >= self.M_H.shape[0] or \
                 j2 >= self.T_eff.shape[0] or \
                 k2 >= self.log_g.shape[0]:
+            return None
+
+        # Verify if model exists
+        # Here we don't assume that there are holes in the grid
+        # but check if we're outside of covered ranges
+        if not (self.flux_idx[i1, j1, k1] and self.flux_idx[i2, j1, k1]):
             return None
 
         return i1, j1, k1, i2, j2, k2
@@ -124,7 +143,11 @@ class ModelGrid():
         return spec
 
     def interpolate_model(self, M_H, T_eff, log_g):
-        i1, j1, k1, i2, j2, k2 = self.get_nearby_indexes(M_H, T_eff, log_g)
+        idx = self.get_nearby_indexes(M_H, T_eff, log_g)
+        if idx is None:
+            return None
+        else:
+            i1, j1, k1, i2, j2, k2 = idx
 
         x = [self.M_H[i1], self.M_H[i2]]
         y = [self.T_eff[j1], self.T_eff[j2]]
