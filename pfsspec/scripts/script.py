@@ -27,6 +27,10 @@ class Script():
                 return obj.item()
         raise TypeError('Unknown type:', type(obj))
 
+    def dump_json(self, obj, filename):
+        with open(filename, 'w') as f:
+            json.dump(obj.__dict__, f, default=Script.dump_json_default, indent=4)
+
     def dump_args_json(self, filename):
         with open(filename, 'w') as f:
             json.dump(self.args.__dict__, f, default=Script.dump_json_default, indent=4)
@@ -67,7 +71,7 @@ class Script():
             root.addHandler(self.logging_console_handler)
 
     def add_args(self):
-        pass
+        self.parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
 
     def execute(self):
         self.prepare()
@@ -77,6 +81,8 @@ class Script():
         self.setup_logging()
         self.add_args()
         self.parse_args()
+        if self.args.debug:
+            np.seterr(all='raise')
 
     def run(self):
         self.setup_logging(os.path.join(self.outdir, 'training.log'))
