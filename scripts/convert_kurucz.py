@@ -14,6 +14,7 @@ class ConvertKurucz(Convert):
 
     def add_args(self):
         super(ConvertKurucz, self).add_args()
+        self.parser.add_argument('--interp', type=int, default=None, help='Number of interpolations between models\n')
 
     def init_pipeline(self, pipeline):
         super(ConvertKurucz, self).init_pipeline(pipeline)
@@ -32,7 +33,13 @@ class ConvertKurucz(Convert):
         tsbuilder.parallel = not self.args.debug
         tsbuilder.grid = grid
         tsbuilder.pipeline = pipeline
+        if self.args.interp is not None:
+            tsbuilder.interpolate = True
+            tsbuilder.spectrum_count = self.args.interp
         tsbuilder.build()
+
+        logging.info(tsbuilder.dataset.params.head())
+
         tsbuilder.dataset.save(os.path.join(self.args.out, 'dataset.dat'))
 
         logging.info('Done.')

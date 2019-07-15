@@ -33,7 +33,7 @@ class ModelGrid():
         self.log_g_idx = dict((v, i) for i, v in np.ndenumerate(self.log_g))
         self.log_g_min, self.log_g_max = np.min(self.log_g), np.max(self.log_g)
 
-        self.flux_idx = (self.flux.max(axis=3) > 0) | (self.flux.min(axis=3) < 0)
+        self.flux_idx = (self.flux.max(axis=3) != 0) | (self.flux.min(axis=3) != 0)
 
     def set_flux(self, M_H, T_eff, log_g, flux):
         """

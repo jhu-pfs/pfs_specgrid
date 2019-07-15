@@ -64,3 +64,4 @@ def srl_map(func_to_apply, items, verbose=False):
     else:
         for i in items:
             results.append(func_to_apply(i))
+    return results

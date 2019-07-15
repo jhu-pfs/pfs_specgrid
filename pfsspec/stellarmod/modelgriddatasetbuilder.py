@@ -30,47 +30,37 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def process_item(self, i):
         if self.interpolate:
-            self.process_interpolating(i)
+            return self.process_interpolating(i)
         else:
-            self.process_grid(i)
+            return self.process_gridpoint(i)
 
     def process_interpolating(self, i):
-        pass
+        spec = None
+        while spec is None:
+            # Generate random parameters
+            M_H = np.random.uniform(self.grid.M_H_min, self.grid.M_H_max)
+            T_eff = np.random.uniform(self.grid.T_eff_min, self.grid.T_eff_max)
+            log_g = np.random.uniform(self.grid.log_g_min, self.grid.log_g_max)
+            spec = self.grid.interpolate_model(M_H, T_eff, log_g)
 
-    def process_grid(self, i):
+        self.pipeline.run(spec)
+        return spec
+
+    def process_gridpoint(self, i):
         fi = self.index[0][i]
         fj = self.index[1][i]
         fk = self.index[2][i]
 
-        spec = ModelSpectrum()
-        spec.redshift = 0
-        spec.M_H = self.grid.M_H[fi]
-        spec.T_eff = self.grid.T_eff[fj]
-        spec.log_g = self.grid.log_g[fk]
-        spec.alpha = None
-        spec.N_He = None
-        spec.v_turb = None
-        spec.L_H = None
-
-        spec.wave = self.grid.wave
-        spec.flux = self.grid.flux[fi, fj, fk, :]
-
+        spec = self.grid.get_model(fi, fj, fk)
         self.pipeline.run(spec)
-        return spec.flux
+        return spec
 
     def build(self):
-        # non-existing models have 0 flux in bin 0
-        self.nonempty = (self.grid.flux.max(3) != 0)
+        # non-existing models have 0 flux
+        self.nonempty = self.grid.flux_idx
         self.index = np.where(self.nonempty)
 
         super(ModelGridDatasetBuilder, self).build()
 
         self.dataset.wave[:] = self.pipeline.rebin
-        self.dataset.params = pd.DataFrame(list(zip(
-            self.grid.M_H[self.index[0]],
-            self.grid.T_eff[self.index[1]],
-            self.grid.log_g[self.index[2]])),
-            columns=['fe_h', 't_eff', 'log_g']
-        )
-
         return self.dataset

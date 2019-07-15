@@ -31,6 +31,11 @@ class Spectrum(PfsObject):
             self.flux_sky = np.copy(orig.flux_sky)
             self.mask = np.copy(orig.mask)
 
+    def get_param_names(self):
+        return ['redshift',
+                'redshift_err',
+                'snr']
+
     def fnu_to_flam(self):
         # TODO: convert wave ?
         # ergs/cm**2/s/hz/ster to erg/s/cm^2/A surface flux

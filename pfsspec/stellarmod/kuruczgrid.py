@@ -41,4 +41,5 @@ class KuruczGrid(ModelGrid):
         #self.log_g = np.arange(0, 5.1, 0.5)
 
     def create_spectrum(self):
-        return KuruczSpectrum()
+        spec = KuruczSpectrum()
+        return spec
