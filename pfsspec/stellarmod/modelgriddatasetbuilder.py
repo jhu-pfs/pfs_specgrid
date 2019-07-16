@@ -38,10 +38,10 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         spec = None
         while spec is None:
             # Generate random parameters
-            M_H = np.random.uniform(self.grid.M_H_min, self.grid.M_H_max)
+            Fe_H = np.random.uniform(self.grid.Fe_H_min, self.grid.Fe_H_max)
             T_eff = np.random.uniform(self.grid.T_eff_min, self.grid.T_eff_max)
             log_g = np.random.uniform(self.grid.log_g_min, self.grid.log_g_max)
-            spec = self.grid.interpolate_model(M_H, T_eff, log_g)
+            spec = self.grid.interpolate_model(Fe_H, T_eff, log_g)
 
         self.pipeline.run(spec)
         return spec

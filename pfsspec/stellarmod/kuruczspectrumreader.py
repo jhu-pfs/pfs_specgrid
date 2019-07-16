@@ -64,7 +64,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 # oldest format with L/H specified
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
-                spec.M_H = float(parts[6].strip('[]aA'))
+                spec.Fe_H = float(parts[6].strip('[]aA'))
                 spec.alpha = (('a' in parts[6]) or ('A' in parts[6]))
                 spec.N_He = -1
                 spec.v_turb = float(parts[8])
@@ -73,7 +73,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 # oldest format without L/H specified
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
-                spec.M_H = float(parts[6].strip('[]aA'))
+                spec.Fe_H = float(parts[6].strip('[]aA'))
                 spec.alpha = (('a' in parts[6]) or ('A' in parts[6]))
                 spec.N_He = -1
                 spec.v_turb = float(parts[8])
@@ -81,7 +81,7 @@ class KuruczSpectrumReader(SpectrumReader):
             else:
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
-                spec.M_H = float(parts[4].strip('[]aA'))
+                spec.Fe_H = float(parts[4].strip('[]aA'))
                 spec.alpha = (('a' in parts[4]) or ('A' in parts[4]))
                 spec.N_He = float(parts[5].split('=')[1])
                 spec.v_turb = float(parts[6].split('=')[1])
@@ -119,7 +119,7 @@ class KuruczSpectrumReader(SpectrumReader):
         grid = KuruczGrid(model)
         grid.build_index()
 
-        for m_h in grid.M_H:
+        for m_h in grid.Fe_H:
             fn = KuruczSpectrumReader.get_filename(m_h, 2.0, False, False, False)
             fn = os.path.join(path, fn)
             with open(fn) as f:
@@ -134,18 +134,18 @@ class KuruczSpectrumReader(SpectrumReader):
 
         return grid
 
-    def get_filename(M_H, v_turb, alpha=False, nover=False, odfnew=False):
-        mh = "%02d" % (abs(M_H) * 10)
+    def get_filename(Fe_H, v_turb, alpha=False, nover=False, odfnew=False):
+        mh = "%02d" % (abs(Fe_H) * 10)
 
         dir = 'grid'
-        dir += 'm' if M_H < 0 else 'p'
+        dir += 'm' if Fe_H < 0 else 'p'
         dir += mh
         if alpha: dir += 'a'
         if nover: dir += 'nover'
         if odfnew: dir += 'odfnew'
 
         fn = 'f'
-        fn += 'm' if M_H < 0 else 'p'
+        fn += 'm' if Fe_H < 0 else 'p'
         fn += mh
         if alpha: dir += 'a'
         fn += 'k%01d' % (v_turb)

@@ -29,7 +29,7 @@ class TestKuruczGrid(TestBase):
         self.assertEqual((1221,), spec.flux.shape)
         self.assertTrue(np.max(spec.flux) > 0)
 
-        spec = grid.get_nearest_model(M_H=-0.1, T_eff=5200, log_g=4)
+        spec = grid.get_nearest_model(Fe_H=-0.1, T_eff=5200, log_g=4)
         self.assertEqual((1221,), spec.wave.shape)
         self.assertEqual((1221,), spec.flux.shape)
         self.assertTrue(np.max(spec.flux) > 0)

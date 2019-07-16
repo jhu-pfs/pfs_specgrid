@@ -24,9 +24,11 @@ https://github.com/uqfoundation/multiprocess
 
 # Modules #
 import multiprocessing
+import numpy as np
 from tqdm import tqdm
 
 def apply_function(func_to_apply, queue_in, queue_out):
+    np.random.seed()
     while not queue_in.empty():
         num, obj = queue_in.get()
         queue_out.put((num, func_to_apply(obj)))
