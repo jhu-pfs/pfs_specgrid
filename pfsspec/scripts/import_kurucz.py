@@ -21,8 +21,9 @@ class ImportKurucz(Import):
         grid = KuruczSpectrumReader.read_grid(self.args.path, self.args.grid)
         grid.save(os.path.join(self.args.out, 'spectra.npz'))
 
-def __main__():
+def main():
     script = ImportKurucz()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()

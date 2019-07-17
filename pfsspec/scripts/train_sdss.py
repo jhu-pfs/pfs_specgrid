@@ -20,8 +20,9 @@ class TrainSdss(Train):
         self.prediction_generator = SdssAugmenter(self.dataset, self.labels, self.coeffs, batch_size=self.args.batch, shuffle=False)
         self.prediction_generator.include_wave = self.args.wave
 
-def __main__():
+def main():
     script = TrainSdss()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()

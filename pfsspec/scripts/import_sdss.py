@@ -60,8 +60,9 @@ class ImportSdss(Import):
         survey.save(os.path.join(self.args.out, 'spectra.dat'))
         logging.info('Saved %d spectra.' % len(survey.spectra))
 
-def __main__():
+def main():
     script = ImportSdss()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()

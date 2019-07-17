@@ -44,8 +44,9 @@ class ConvertKurucz(Convert):
 
         logging.info('Done.')
 
-def __main__():
+def main():
     script = ConvertKurucz()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()

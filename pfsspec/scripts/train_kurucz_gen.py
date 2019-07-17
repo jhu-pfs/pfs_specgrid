@@ -2,7 +2,6 @@
 
 from keras import optimizers
 
-from pfsspec.scripts.utils.util import *
 from pfsspec.data.dataset import Dataset
 from pfsspec.ml.dnn.keras.densegenerative import DenseGenerative
 from pfsspec.ml.dnn.keras.cnngenerative import CnnGenerative
@@ -108,8 +107,9 @@ def train_dnn(args):
 
     logging.info('Results are written to {}'.format(outdir))
 
-def __main__(args):
+def main(args):
     setup_logging()
     train_dnn(args)
 
-__main__(parse_args())
+if __name__ == "__main__":
+    main()

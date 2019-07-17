@@ -24,10 +24,12 @@ class TrainKurucz(Train):
         self.validation_generator.multiplicative_bias = self.args.aug
         self.validation_generator.additive_bias = self.args.aug
 
-        self.prediction_generator = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs, batch_size=self.args.batch, shuffle=False)
+        self.prediction_generator = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs,
+                                                                batch_size=self.args.batch, shuffle=False)
 
-def __main__():
+def main():
     script = TrainKurucz()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()

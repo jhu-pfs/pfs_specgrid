@@ -40,8 +40,9 @@ class ConvertSdss(Convert):
 
         logging.info('Done.')
 
-def __main__():
+def main():
     script = ConvertSdss()
     script.execute()
 
-__main__()
+if __name__ == "__main__":
+    main()
