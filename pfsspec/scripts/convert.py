@@ -21,18 +21,18 @@ class Convert(Script):
         self.parser.add_argument('--wavelog', action='store_true', help='Logarithmic wavelength binning\n')
 
     def init_pipeline(self, pipeline):
-        pipeline.normalize = self.args.norm
-        if self.args.hipass is not None:
-            pipeline.high_pass_vdisp = self.args.hipass
-        if self.args.wavelog:
-            pipeline.rebin = np.logspace(np.log10(self.args.wave[0]), np.log10(self.args.wave[1]), self.args.wavebins)
+        pipeline.normalize = self.args['norm']
+        if 'hipass' in self.args and self.args['hipass'] is not None:
+            pipeline.high_pass_vdisp = self.args['hipass']
+        if self.args['wavelog']:
+            pipeline.rebin = np.logspace(np.log10(self.args['wave'][0]), np.log10(self.args['wave'][1]), self.args['wavebins'])
         else:
-            pipeline.rebin = np.linspace(self.args.wave[0], self.args.wave[1], self.args.wavebins)
+            pipeline.rebin = np.linspace(self.args['wave'][0], self.args['wave'][1], self.args['wavebins'])
 
     def prepare(self):
         super(Convert, self).prepare()
-        self.outdir = self.args.out
-        self.create_output_dir(self.args.out)
+        self.outdir = self.args['out']
+        self.create_output_dir(self.outdir)
 
     def run(self):
         super(Convert, self).run()

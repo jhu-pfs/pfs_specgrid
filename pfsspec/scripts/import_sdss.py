@@ -27,25 +27,25 @@ class ImportSdss(Import):
         self.parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
 
     def create_auth_token(self):
-        if self.args.token is not None:
-            self.token = self.args.token
+        if 'token' in self.args and self.args['token'] is not None:
+            self.token = self.args['token']
         else:
-            if self.args.user is None:
+            if 'user' in self.args and self.args['user'] is None:
                 self.user = input('SciServer username: ')
             else:
-                self.user = self.args.user
+                self.user = self.args['user']
             password = getpass.getpass()
             self.token = Authentication.login(self.user, password)
         logging.info('SciServer token: {}'.format(self.token))
 
     def create_reader(self):
         self.reader = SdssSpectrumReader()
-        self.reader.path = self.args.path
+        self.reader.path = self.args['path']
         self.reader.sciserver_token = self.token
 
     def find_stars(self):
-        return self.reader.find_stars(top=self.args.top, plate=self.args.plate, Fe_H=self.args.feh,
-                                      T_eff=self.args.teff, log_g=self.args.logg, a_fe=self.args.afe)
+        return self.reader.find_stars(top=self.args['top'], plate=self.args['plate'], Fe_H=self.args['feh'],
+                                      T_eff=self.args['teff'], log_g=self.args['logg'], a_fe=self.args['afe'])
 
     def prepare(self):
         super(ImportSdss, self).prepare()
@@ -57,7 +57,7 @@ class ImportSdss(Import):
         params = self.find_stars()
         logging.info(params.head(10))
         survey = self.reader.load_survey(params)
-        survey.save(os.path.join(self.args.out, 'spectra.dat'))
+        survey.save(os.path.join(self.args['out'], 'spectra.dat'))
         logging.info('Saved %d spectra.' % len(survey.spectra))
 
 def main():

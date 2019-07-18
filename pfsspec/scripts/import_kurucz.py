@@ -18,8 +18,8 @@ class ImportKurucz(Import):
     def run(self):
         super(ImportKurucz, self).run()
 
-        grid = KuruczSpectrumReader.read_grid(self.args.path, self.args.grid)
-        grid.save(os.path.join(self.args.out, 'spectra.npz'))
+        grid = KuruczSpectrumReader.read_grid(self.args['path'], self.args['grid'])
+        grid.save(os.path.join(self.args['out'], 'spectra.npz'))
 
 def main():
     script = ImportKurucz()

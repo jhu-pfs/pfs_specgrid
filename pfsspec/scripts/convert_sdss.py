@@ -18,25 +18,25 @@ class ConvertSdss(Convert):
 
     def init_pipeline(self, pipeline):
         super(ConvertSdss, self).init_pipeline(pipeline)
-        pipeline.restframe = self.args.rest
+        pipeline.restframe = self.args['rest']
 
     def run(self):
         super(ConvertSdss, self).run()
 
         survey = Survey()
-        survey.load(os.path.join(self.args.__dict__['in'], 'spectra.dat'))
+        survey.load(os.path.join(self.args['in'], 'spectra.dat'))
 
         pipeline = SdssBasicPipeline()
         self.init_pipeline(pipeline)
-        self.dump_json(pipeline, os.path.join(self.args.out, 'pipeline.json'))
+        self.dump_json(pipeline, os.path.join(self.args['out'], 'pipeline.json'))
 
         tsbuilder = SdssDatasetBuilder()
-        tsbuilder.parallel = not self.args.debug
+        tsbuilder.parallel = not self.args['debug']
         tsbuilder.survey = survey
         tsbuilder.params = survey.params
         tsbuilder.pipeline = pipeline
         tsbuilder.build()
-        tsbuilder.dataset.save(os.path.join(self.args.out, 'dataset.dat'))
+        tsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.dat.gz'))
 
         logging.info('Done.')
 

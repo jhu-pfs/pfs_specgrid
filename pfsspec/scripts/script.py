@@ -14,7 +14,7 @@ class Script():
         self.dir_history = []
 
     def parse_args(self):
-        self.args = self.parser.parse_args()
+        self.args = self.parser.parse_args().__dict__
 
     def dump_json_default(obj):
         if type(obj).__module__ == np.__name__:
@@ -33,7 +33,7 @@ class Script():
 
     def dump_args_json(self, filename):
         with open(filename, 'w') as f:
-            json.dump(self.args.__dict__, f, default=Script.dump_json_default, indent=4)
+            json.dump(self.args, f, default=Script.dump_json_default, indent=4)
 
     def create_output_dir(self, dir):
         logging.info('Output directory is {}'.format(dir))
@@ -81,7 +81,7 @@ class Script():
         self.setup_logging()
         self.add_args()
         self.parse_args()
-        if self.args.debug:
+        if self.args['debug']:
             np.seterr(all='raise')
 
     def run(self):

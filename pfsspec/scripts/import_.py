@@ -17,8 +17,8 @@ class Import(Script):
 
     def prepare(self):
         super(Import, self).prepare()
-        self.outdir = self.args.out
-        self.create_output_dir(self.args.out)
+        self.outdir = self.args['out']
+        self.create_output_dir(self.args['out'])
 
     def run(self):
         super(Import, self).run()

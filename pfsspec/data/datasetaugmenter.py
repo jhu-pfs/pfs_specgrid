@@ -9,3 +9,9 @@ class DatasetAugmenter(KerasDataGenerator):
         self.coeffs = coeffs
         super(DatasetAugmenter, self).__init__(input_shape, output_shape,
                                                  batch_size=batch_size, shuffle=shuffle, seed=seed)
+
+    def augment_batch(self, batch_index):
+        flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
+        labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
+
+        return flux, labels
