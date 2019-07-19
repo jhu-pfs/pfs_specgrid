@@ -24,8 +24,9 @@ class TrainKurucz(Train):
         self.validation_generator.multiplicative_bias = self.args['aug']
         self.validation_generator.additive_bias = self.args['aug']
 
-        self.prediction_generator = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs,
-                                                                batch_size=self.args['batch'], shuffle=False)
+        # TODO: delete
+        #self.prediction_generator = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs,
+        #                                                        batch_size=self.args['batch'], shuffle=False)
 
 def main():
     script = TrainKurucz()

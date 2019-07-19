@@ -29,11 +29,18 @@ class Script():
 
     def dump_json(self, obj, filename):
         with open(filename, 'w') as f:
-            json.dump(obj.__dict__, f, default=Script.dump_json_default, indent=4)
+            if type(obj) is dict:
+                json.dump(obj, f, default=Script.dump_json_default, indent=4)
+            else:
+                json.dump(obj.__dict__, f, default=Script.dump_json_default, indent=4)
 
     def dump_args_json(self, filename):
         with open(filename, 'w') as f:
             json.dump(self.args, f, default=Script.dump_json_default, indent=4)
+
+    def load_json(self, filename):
+        with open(filename, 'r') as f:
+            return json.load(f)
 
     def create_output_dir(self, dir):
         logging.info('Output directory is {}'.format(dir))
