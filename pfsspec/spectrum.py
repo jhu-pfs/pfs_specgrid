@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 import collections
 import matplotlib.pyplot as plt
 import pysynphot
@@ -12,29 +13,35 @@ from pfsspec.pfsobject import PfsObject
 class Spectrum(PfsObject):
     def __init__(self, orig=None):
         super(Spectrum, self).__init__(orig=orig)
-        if orig is None:
-            self.redshift = 0.0
-            self.redshift_err = 0.0
-            self.snr = 1.0
-            self.wave = None
-            self.flux = None
-            self.flux_err = None
-            self.flux_sky = None
-            self.mask = None
-        else:
+        if isinstance(orig, Spectrum):
             self.redshift = orig.redshift
             self.redshift_err = orig.redshift_err
             self.snr = orig.snr
+            self.mag = orig.mag
             self.wave = np.copy(orig.wave)
             self.flux = np.copy(orig.flux)
             self.flux_err = np.copy(orig.flux_err)
             self.flux_sky = np.copy(orig.flux_sky)
             self.mask = np.copy(orig.mask)
+        else:
+            self.redshift = 0.0
+            self.redshift_err = 0.0
+            self.snr = 0
+            self.mag = 0
+            self.wave = None
+            self.flux = None
+            self.flux_err = None
+            self.flux_sky = None
+            self.mask = None
+
+    def copy(self, orig):
+        return Spectrum(orig=orig)
 
     def get_param_names(self):
         return ['redshift',
                 'redshift_err',
-                'snr']
+                'snr',
+                'mag']
 
     def fnu_to_flam(self):
         # TODO: convert wave ?
@@ -51,20 +58,27 @@ class Spectrum(PfsObject):
 
     def rebin(self, nwave):
         # TODO: how to rebin error and mask?
+        # mask should be combined if flux comes from multiple bins
 
         filt = pysynphot.spectrum.ArraySpectralElement(self.wave, np.ones(len(self.wave)), waveunits='angstrom')
 
-        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True)
-        obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
-        self.flux = obs.binflux
+        if self.flux is not None:
+            spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True)
+            obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
+            self.flux = obs.binflux
 
         if self.flux_sky is not None:
             spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux_sky, keepneg=True)
             obs = pysynphot.observation.Observation(spec, filt, binset=nwave, force='taper')
             self.flux_sky = obs.binflux
 
+        # For the error vector, use nearest-neighbor interpolations
+        # later we can figure out how to do this correctly and add correlated noise, etc.
+        if self.flux_err is not None:
+            ip = interp1d(self.wave, self.flux_err, kind='nearest')
+            self.flux_err = interp1d(nwave)
+
         self.wave = nwave
-        self.flux_err = None
         self.mask = None
 
     def zero_mask(self):
@@ -102,6 +116,24 @@ class Spectrum(PfsObject):
         flux = func(flux)
         self.multiply(value / flux)
 
+    def normalize_to_mag(self, filt, mag):
+        m = self.synthmag(filt)
+        DM = mag - m
+        D = 10 ** (DM / 5)
+
+        if self.flux is not None:
+            self.flux = self.flux / D**2
+        if self.flux_err is not None:
+            self.flux_err = self.flux_err / D**2
+
+        self.mag = mag
+
+    def add_noise(self, noise):
+        err = np.random.normal(size=self.flux.shape) * noise.noise
+        self.snr = np.sum(self.flux**2) / np.sum(err**2)
+        self.flux_err = noise.noise
+        self.flux = self.flux + err
+
     def redden(self, extval):
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
         obs = spec * pysynphot.reddening.Extinction(extval, 'mwavg')
@@ -112,8 +144,9 @@ class Spectrum(PfsObject):
 
     def synthflux(self, filter):
         # Calculate error from error array?
-        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux)
+        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, fluxunits='flam')
         filt = pysynphot.spectrum.ArraySpectralElement(filter.wave, filter.thru, waveunits='angstrom')
+        filt.binset = spec.wave     # supress warning from pysynphot
         obs = pysynphot.observation.Observation(spec, filt)
         return obs.effstim('Jy')
 

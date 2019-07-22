@@ -2,11 +2,13 @@
 
 import os
 import logging
+import numpy as np
 
 from pfsspec.scripts.convert import Convert
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
 from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
+from pfsspec.obsmod.noise import Noise
 
 class ConvertKurucz(Convert):
     def __init__(self):
@@ -20,16 +22,31 @@ class ConvertKurucz(Convert):
         self.parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
         self.parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
 
+        self.parser.add_argument('--rndz', type=float, default=None, help='Radial velocity dispersion')
+        self.parser.add_argument('--rndm', type=float, nargs=2, default=None, help='Apparent magnitude mean and sigma')
+        self.parser.add_argument('--noiz', type=str, default=None, help='Noise model')
+
     def init_pipeline(self, pipeline):
         super(ConvertKurucz, self).init_pipeline(pipeline)
+
+        if self.args['rndz'] is not None:
+             pipeline.random_redshift = lambda: np.random.normal(0, self.args['rndz'])
+
+        if self.args['rndm'] is not None:
+            pipeline.normalize = True
+            pipeline.normalize_mag = None
+            pipeline.random_mag = lambda: np.random.normal(self.args['rndm'][0], self.args['rndm'][1])
+
+        if self.args['noiz'] is not None:
+            pipeline.noise = Noise()
+            pipeline.noise.read(self.args['noiz'])
+            pipeline.noise.resample(pipeline.rebin)
 
     def run(self):
         super(ConvertKurucz, self).run()
 
         grid = KuruczGrid()
         grid.load(os.path.join(self.args['in'], 'spectra.npz'))
-
-
 
         pipeline = KuruczBasicPipeline()
         self.init_pipeline(pipeline)
@@ -62,6 +79,13 @@ class ConvertKurucz(Convert):
         logging.info(tsbuilder.dataset.params.head())
 
         tsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.dat.gz'))
+
+        self.execute_notebook(r'nb/eval_dataset.ipynb',
+                              'eval_dataset.ipynb',
+                              'eval_dataset.html',
+                              {
+                                  'DATASET_PATH': self.args['out']
+                              })
 
         logging.info('Done.')
 

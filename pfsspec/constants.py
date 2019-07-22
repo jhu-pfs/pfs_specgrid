@@ -1,3 +1,5 @@
+import numpy as np
+
 class Constants():
     DEFAULT_PLOT_WAVE_RANGE = (3750, 12650)
     DEFAULT_FILTER_VDISP = 5000
@@ -25,3 +27,9 @@ class Constants():
     SDSS_SP_MASK_BADSKYCHI = 0x8000000  # Chi^2 > 4 in sky residuals at this wavelength
     SDSS_SP_MASK_REDMONSTER = 0x10000000  # Contiguous region of bad chi^2 in sky residuals
     SDSS_SP_MASK_EMLINE = 0x40000000  # Emission line detected here
+
+    PFS_WAVE_BLUE = np.arange(3800, 6502.5, 2.7)
+    PFS_WAVE_RED = np.arange(6300, 9702, 2.7)
+    PFS_WAVE_NIR = np.arange(9402.5, 12600, 2.7)
+    PFS_WAVE_ALL = np.arange(3800, 12600, 2.7)
+    PFS_LOG_WAVE_ALL = np.linspace(np.log10(3800), np.log10(12600), 3260)

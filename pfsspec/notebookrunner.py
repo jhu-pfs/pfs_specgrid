@@ -1,0 +1,74 @@
+import os
+import sys
+from shutil import copyfile
+from nbparameterise import extract_parameters, parameter_values, replace_definitions
+import nbformat
+from nbconvert.preprocessors import ExecutePreprocessor
+from nbconvert import HTMLExporter
+
+class NotebookRunner():
+    def __init__(self):
+        self.input_notebook = None
+        self.working_dir = None
+        self.output_notebook = None
+        self.output_html = None
+        self.parameters = None
+        self.kernel = None
+        self.nb = None
+
+    def copy_notebook(self):
+        copyfile(self.input_notebook, self.output_notebook)
+
+    def open_notebook(self):
+        with open(self.output_notebook, 'r') as f:
+            self.nb = nbformat.read(f, as_version=4)
+
+    def set_kernel(self):
+        if self.kernel is not None:
+            ks = self.nb.metadata.get('kernelspec', {})
+            ks['name'] = self.kernel
+
+    def set_params(self):
+        orig_params = extract_parameters(self.nb)
+        new_params = parameter_values(orig_params, **self.parameters)
+        self.nb = replace_definitions(self.nb, new_params, execute=False)
+
+    def convert_html(self):
+        if self.output_html is not None:
+            html_exporter = HTMLExporter()
+            html_exporter.template_file = 'basic'
+            (body, resources) = html_exporter.from_notebook_node(self.nb)
+            with open(self.output_html, 'w') as f:
+                f.write(body)
+
+    def execute_notebook(self):
+        resources = {
+            'metadata': {
+                'path': self.working_dir
+            }
+        }
+        self.nb, resources = ExecutePreprocessor().preprocess(self.nb, resources)
+
+    def save_notebook(self):
+        with open(self.output_notebook, 'w') as f:
+            nbformat.write(self.nb, f)
+
+    def run(self):
+        self.copy_notebook()
+        self.open_notebook()
+        self.set_kernel()
+        self.set_params()
+        self.execute_notebook()
+        self.save_notebook()
+        self.convert_html()
+
+if __name__ == "__main__":
+    nr = NotebookRunner()
+    nr.input_notebook = r'H:\project\pfs_spec_dnn\nb\eval_ts.ipynb'
+    nr.output_notebook = r'H:\project\pfs_spec_dnn\test.ipynb'
+    nr.output_html = r'H:\project\pfs_spec_dnn\test.html'
+    nr.parameters = {
+        'DATASET_PATH': 'test'
+    }
+    nr.kernel = 'python3'
+    nr.execute()

@@ -5,6 +5,8 @@ import logging
 import argparse
 import numpy as np
 
+from pfsspec.notebookrunner import NotebookRunner
+
 class Script():
     def __init__(self):
         self.parser = argparse.ArgumentParser()
@@ -25,7 +27,7 @@ class Script():
                     return "(not serialized)"
             else:
                 return obj.item()
-        raise TypeError('Unknown type:', type(obj))
+        return "(not serialized)"
 
     def dump_json(self, obj, filename):
         with open(filename, 'w') as f:
@@ -94,3 +96,22 @@ class Script():
     def run(self):
         self.setup_logging(os.path.join(self.outdir, 'training.log'))
         self.dump_args_json(os.path.join(self.outdir, 'args.json'))
+
+    def execute_notebook(self, input_notebook, output_notebook, output_html=None, parameters={}, kernel='python3'):
+        # Note that jupyter kernels in the current env might be different from the ones
+        # in the jupyterhub environment
+
+        logging.info('Executing notebook {}'.format(output_notebook))
+
+        # Project path is added so that the pfsspec lib can be called without
+        # installing it
+        if 'PROJECT_PATH' not in parameters:
+            parameters['PROJECT_PATH'] = os.getcwd()
+
+        nr = NotebookRunner()
+        nr.input_notebook = input_notebook
+        nr.output_notebook = os.path.join(self.args['out'], output_notebook)
+        nr.output_html = os.path.join(self.args['out'], output_html)
+        nr.parameters = parameters
+        nr.kernel = kernel
+        nr.run()
