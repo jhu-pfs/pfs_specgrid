@@ -76,7 +76,7 @@ class Spectrum(PfsObject):
         # later we can figure out how to do this correctly and add correlated noise, etc.
         if self.flux_err is not None:
             ip = interp1d(self.wave, self.flux_err, kind='nearest')
-            self.flux_err = interp1d(nwave)
+            self.flux_err = ip(nwave)
 
         self.wave = nwave
         self.mask = None

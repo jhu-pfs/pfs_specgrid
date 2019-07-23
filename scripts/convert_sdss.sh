@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.convert_kurucz $@
+python -m pfsspec.scripts.convert_sdss $@
