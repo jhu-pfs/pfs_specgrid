@@ -90,11 +90,11 @@ class Spectrum(PfsObject):
 
     def multiply(self, a, silent=True):
         if np.isfinite(a):
-            self.flux *= a
+            self.flux = self.flux * a
             if self.flux_err is not None:
-                self.flux_err *= a
+                self.flux_err = self.flux_err * a
             if self.flux_sky is not None:
-                self.flux_sky *= a
+                self.flux_sky = self.flux_sky * a
         elif not silent:
             raise Exception('Cannot multiply by NaN of Inf')
 
@@ -105,16 +105,11 @@ class Spectrum(PfsObject):
 
     def normalize_in(self, lam, func=np.median, value=1.0):
         idx = np.digitize(lam, self.wave)
-        flux = self.flux[idx[0]:idx[1]]
-        if flux.shape[0] < 2:
-            print('redshift', self.redshift)
-            print('wave.shape', self.wave.shape)
-            print('wave.min/max', self.wave.min(), self.wave.max())
-            print('lam', lam)
-            print('idx', idx)
+        fl = self.flux[idx[0]:idx[1]]
+        if fl.shape[0] < 2:
             raise Exception('Cannot get wavelength interval')
-        flux = func(flux)
-        self.multiply(value / flux)
+        fl = func(fl)
+        self.multiply(value / fl)
 
     def normalize_to_mag(self, filt, mag):
         m = self.synthmag(filt)
@@ -129,8 +124,9 @@ class Spectrum(PfsObject):
         self.mag = mag
 
     def add_noise(self, noise):
+        # Assume noise is rebinned to the spectrum
         err = np.random.normal(size=self.flux.shape) * noise.noise
-        self.snr = np.sum(self.flux**2) / np.sum(err**2)
+        self.snr = np.max(self.flux) / np.std(err)
         self.flux_err = noise.noise
         self.flux = self.flux + err
 

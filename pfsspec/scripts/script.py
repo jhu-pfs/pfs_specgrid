@@ -85,6 +85,7 @@ class Script():
     def execute(self):
         self.prepare()
         self.run()
+        self.finish()
 
     def prepare(self):
         self.setup_logging()
@@ -97,11 +98,20 @@ class Script():
         self.setup_logging(os.path.join(self.outdir, 'training.log'))
         self.dump_args_json(os.path.join(self.outdir, 'args.json'))
 
-    def execute_notebook(self, input_notebook, output_notebook, output_html=None, parameters={}, kernel='python3'):
+    def finish(self):
+        self.execute_notebooks()
+
+    def execute_notebooks(self):
+        pass
+
+    def execute_notebook(self, notebook_name, output_html=True, parameters={}, kernel='python3', outdir=None):
         # Note that jupyter kernels in the current env might be different from the ones
         # in the jupyterhub environment
 
-        logging.info('Executing notebook {}'.format(output_notebook))
+        logging.info('Executing notebook {}'.format(notebook_name))
+
+        if outdir is None:
+            outdir = self.args['out']
 
         # Project path is added so that the pfsspec lib can be called without
         # installing it
@@ -109,9 +119,10 @@ class Script():
             parameters['PROJECT_PATH'] = os.getcwd()
 
         nr = NotebookRunner()
-        nr.input_notebook = input_notebook
-        nr.output_notebook = os.path.join(self.args['out'], output_notebook)
-        nr.output_html = os.path.join(self.args['out'], output_html)
+        nr.input_notebook = os.path.join('nb', notebook_name + '.ipynb')
+        nr.output_notebook = os.path.join(outdir, notebook_name + '.ipynb')
+        if output_html:
+            nr.output_html = os.path.join(outdir, notebook_name + '.html')
         nr.parameters = parameters
         nr.kernel = kernel
         nr.run()

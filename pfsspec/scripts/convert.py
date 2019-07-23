@@ -24,10 +24,11 @@ class Convert(Script):
         self.parser.add_argument('--wavelog', action='store_true', help='Logarithmic wavelength binning\n')
 
     def init_pipeline(self, pipeline):
+        # Normalize in wavelength rage
+        # TODO: could provide wavelength range here instead of boolean
         pipeline.normalize = self.args['norm']
 
         if self.args['normfilt'] is not None:
-            pipeline.normalize = True
             pipeline.normalize_filter = Filter()
             pipeline.normalize_filter.read(self.args['normfilt'])
             pipeline.normalize_mag = self.args['normmag']
@@ -47,3 +48,10 @@ class Convert(Script):
 
     def run(self):
         super(Convert, self).run()
+
+    def execute_notebooks(self):
+        super(Convert, self).execute_notebooks()
+
+        self.execute_notebook('eval_dataset', parameters={
+                                  'DATASET_PATH': self.args['out']
+                              })

@@ -33,7 +33,6 @@ class ConvertKurucz(Convert):
              pipeline.random_redshift = lambda: np.random.normal(0, self.args['rndz'])
 
         if self.args['rndm'] is not None:
-            pipeline.normalize = True
             pipeline.normalize_mag = None
             pipeline.random_mag = lambda: np.random.normal(self.args['rndm'][0], self.args['rndm'][1])
 
@@ -80,14 +79,7 @@ class ConvertKurucz(Convert):
 
         tsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.dat.gz'))
 
-        self.execute_notebook(r'nb/eval_dataset.ipynb',
-                              'eval_dataset.ipynb',
-                              'eval_dataset.html',
-                              {
-                                  'DATASET_PATH': self.args['out']
-                              })
-
-        logging.info('Done.')
+        logging.info('Results are written to {}'.format(self.args['out']))
 
 def main():
     script = ConvertKurucz()

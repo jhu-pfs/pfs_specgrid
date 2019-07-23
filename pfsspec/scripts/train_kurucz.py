@@ -24,9 +24,13 @@ class TrainKurucz(Train):
         self.validation_generator.multiplicative_bias = self.args['aug']
         self.validation_generator.additive_bias = self.args['aug']
 
-        # TODO: delete
-        #self.prediction_generator = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs,
-        #                                                        batch_size=self.args['batch'], shuffle=False)
+    def execute_notebooks(self):
+        super(TrainKurucz, self).execute_notebooks()
+
+        self.execute_notebook('eval_train_kurucz', parameters={
+                                  'TRAIN_PATH': self.outdir
+                              },
+                              outdir=self.outdir)
 
 def main():
     script = TrainKurucz()
