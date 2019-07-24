@@ -1,9 +1,11 @@
 import os
 import sys
+import logging
 from shutil import copyfile
 from nbparameterise import extract_parameters, parameter_values, replace_definitions
 import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
+from nbconvert.preprocessors import ClearOutputPreprocessor, ClearMetadataPreprocessor
+from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
 from nbconvert import HTMLExporter
 
 class NotebookRunner():
@@ -36,10 +38,14 @@ class NotebookRunner():
     def convert_html(self):
         if self.output_html is not None:
             html_exporter = HTMLExporter()
-            html_exporter.template_file = 'basic'
+            #html_exporter.template_file = 'basic'
             (body, resources) = html_exporter.from_notebook_node(self.nb)
             with open(self.output_html, 'w') as f:
                 f.write(body)
+
+    def clear_all_output(self):
+        cpp = ClearOutputPreprocessor()
+        self.nb, resources = cpp.preprocess(self.nb, None)
 
     def execute_notebook(self):
         resources = {
@@ -47,7 +53,12 @@ class NotebookRunner():
                 'path': self.working_dir
             }
         }
-        self.nb, resources = ExecutePreprocessor().preprocess(self.nb, resources)
+        epp = ExecutePreprocessor()
+        try:
+            self.nb, resources = epp.preprocess(self.nb, resources)
+        except CellExecutionError as ex:
+            logging.error('An error has occured while execution notebook {}'.format(self.input_notebook))
+            # Error is not propagated to allow saving notebook
 
     def save_notebook(self):
         with open(self.output_notebook, 'w') as f:
@@ -58,6 +69,7 @@ class NotebookRunner():
         self.open_notebook()
         self.set_kernel()
         self.set_params()
+        self.clear_all_output()
         self.execute_notebook()
         self.save_notebook()
         self.convert_html()
