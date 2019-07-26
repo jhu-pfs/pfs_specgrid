@@ -1,4 +1,4 @@
-from pfsspec.spectrum import Spectrum
+from pfsspec.obsmod.spectrum import Spectrum
 
 class ModelSpectrum(Spectrum):
     def __init__(self):

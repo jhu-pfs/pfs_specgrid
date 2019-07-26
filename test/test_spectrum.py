@@ -1,8 +1,7 @@
 from test.test_base import TestBase
-from unittest import TestCase
 import numpy as np
 
-from pfsspec.spectrum import Spectrum
+from pfsspec.obsmod.spectrum import Spectrum
 
 class TestSpectrum(TestBase):
     def test_fnu_to_flam(self):
