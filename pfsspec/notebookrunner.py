@@ -53,7 +53,7 @@ class NotebookRunner():
                 'path': self.working_dir
             }
         }
-        epp = ExecutePreprocessor()
+        epp = ExecutePreprocessor(timeout=None)
         try:
             self.nb, resources = epp.preprocess(self.nb, resources)
         except CellExecutionError as ex:
