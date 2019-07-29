@@ -3,12 +3,33 @@ import numpy as np
 from pfsspec.ml.dnn.keras.kerasdatagenerator import KerasDataGenerator
 
 class DatasetAugmenter(KerasDataGenerator):
-    def __init__(self, dataset, labels, coeffs, input_shape, output_shape, batch_size=1, shuffle=True, seed=None):
-        self.dataset = dataset
-        self.labels = labels
-        self.coeffs = coeffs
-        super(DatasetAugmenter, self).__init__(input_shape, output_shape,
-                                                 batch_size=batch_size, shuffle=shuffle, seed=seed)
+    def __init__(self):
+        super(DatasetAugmenter, self).__init__()
+        self.dataset = None
+        self.labels = None
+        self.coeffs = None
+
+        self.multiplicative_bias = False
+        self.additive_bias = False
+        self.include_wave = False
+
+    @classmethod
+    def from_dataset(cls, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
+        input_shape = dataset.flux.shape
+        output_shape = (len(labels),)
+        d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, batch_size=batch_size, shuffle=shuffle, seed=seed)
+        d.dataset = dataset
+        d.labels = labels
+        d.coeffs = coeffs
+
+        return d
+
+    def add_args(self, parser):
+        parser.add_argument('--aug', action='store_true', help='Augment data.\n')
+
+    def init_from_args(self, args, mode):
+        self.multiplicative_bias = args['aug']
+        self.additive_bias = args['aug']
 
     def augment_batch(self, batch_index):
         flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)

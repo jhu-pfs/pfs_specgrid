@@ -3,22 +3,46 @@ import numpy as np
 from pfsspec.data.datasetaugmenter import DatasetAugmenter
 
 class KuruczRegressionalAugmenter(DatasetAugmenter):
-    def __init__(self, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
-        input_shape = dataset.flux.shape
-        output_shape = (len(labels),)
-        super(KuruczRegressionalAugmenter, self).__init__(dataset, labels, coeffs,
-                                                        input_shape, output_shape,
-                                                        batch_size=batch_size, shuffle=shuffle, seed=seed)
-
+    def __init__(self):
+        super(KuruczRegressionalAugmenter, self).__init__()
         self.multiplicative_bias = False
         self.additive_bias = False
         self.noise = None
         self.noise_scheduler = None
 
-    def copy(self):
-        new = KuruczRegressionalAugmenter(self.dataset, self.labels, self.coeffs,
-                                        self.batch_size, self.shuffle, self.seed)
-        return new
+    @classmethod
+    def from_dataset(cls, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
+        input_shape = dataset.flux.shape
+        output_shape = (len(labels),)
+        d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs,
+                                  input_shape, output_shape,
+                                  batch_size=batch_size, shuffle=shuffle, seed=seed)
+        return d
+
+    def add_args(self, parser):
+        super(KuruczRegressionalAugmenter, self).add_args(parser)
+        parser.add_argument('--noiz', type=str, help='Add noise.\n')
+
+    def init_from_args(self, args, mode):
+        super(KuruczRegressionalAugmenter, self).init_from_args(args, mode)
+
+        if mode == 'train':
+            if 'noiz' not in args or args['noiz'] is None or args['noiz'] == 'no':
+                self.noise = 0
+            elif args['noiz'] == 'full':
+                self.noise = 1.0
+            elif args['noiz'] == 'prog':
+                # progressively increasing noise
+                self.noise_scheduler = 'linear'
+            else:
+                self.noise = float(args['noiz'])
+        elif mode == 'test' or mode == 'predict':
+            if 'noiz' in args and args['noiz'] == 'no':
+                self.noise = 0
+            else:
+                self.noise = 1.0
+        else:
+            raise NotImplementedError()
 
     def scale_output(self, output):
         return output / self.coeffs
@@ -32,11 +56,12 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
         labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
 
         if self.noise_scheduler == 'linear':
-            break_point = int(0.2 * self.total_epochs)
-            if self.current_epoch < break_point:
+            break_point_1 = int(0.2 * self.total_epochs)
+            break_point_2 = int(0.5 * self.total_epochs)
+            if self.current_epoch < break_point_1:
                 self.noise = 0.0
-            elif self.current_epoch < self.total_epochs - break_point:
-                self.noise = (self.current_epoch - break_point) / (self.total_epochs - break_point - break_point)
+            elif self.current_epoch < break_point_2:
+                self.noise = (self.current_epoch - break_point_1) / (self.total_epochs - break_point_1 - break_point_2)
             else:
                 self.noise = 1.0
 

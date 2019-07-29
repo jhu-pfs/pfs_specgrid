@@ -18,6 +18,13 @@ class Script():
     def parse_args(self):
         self.args = self.parser.parse_args().__dict__
 
+    def add_subparsers(self, parser):
+        # Default behavior doesn't user subparsers
+        self.add_args(parser)
+
+    def add_args(self, parser):
+        parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
+
     def dump_json_default(obj):
         if type(obj).__module__ == np.__name__:
             if isinstance(obj, np.ndarray):
@@ -79,9 +86,6 @@ class Script():
             self.logging_console_handler.setFormatter(formatter)
             root.addHandler(self.logging_console_handler)
 
-    def add_args(self):
-        self.parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
-
     def execute(self):
         self.prepare()
         self.run()
@@ -89,7 +93,7 @@ class Script():
 
     def prepare(self):
         self.setup_logging()
-        self.add_args()
+        self.add_subparsers(self.parser)
         self.parse_args()
         if self.args['debug']:
             np.seterr(all='raise')
