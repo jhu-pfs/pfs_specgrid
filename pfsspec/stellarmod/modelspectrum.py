@@ -1,15 +1,17 @@
+import numpy as np
+
 from pfsspec.obsmod.spectrum import Spectrum
 
 class ModelSpectrum(Spectrum):
     def __init__(self):
         super(ModelSpectrum, self).__init__()
-        self.T_eff = None
-        self.log_g = None
-        self.Fe_H = None
-        self.a_Fe = None
-        self.N_He = None
-        self.v_turb = None
-        self.L_H = None
+        self.T_eff = np.nan
+        self.log_g = np.nan
+        self.Fe_H = np.nan
+        self.a_Fe = np.nan
+        self.N_He = np.nan
+        self.v_turb = np.nan
+        self.L_H = np.nan
 
     def get_param_names(self):
         params = super(ModelSpectrum, self).get_param_names()

@@ -77,7 +77,7 @@ class ConvertKurucz(Convert):
 
         logging.info(tsbuilder.dataset.params.head())
 
-        tsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.dat.gz'))
+        tsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.h5'), 'h5')
 
         logging.info('Results are written to {}'.format(self.args['out']))
 
