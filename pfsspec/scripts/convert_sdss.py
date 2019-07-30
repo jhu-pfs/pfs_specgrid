@@ -11,7 +11,6 @@ from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 class ConvertSdss(Convert):
     def __init__(self):
         super(ConvertSdss, self).__init__()
-        self.PIPELINE_TYPES = { 'basic': SdssBasicPipeline}
 
     def create_pipeline(self):
         return SdssBasicPipeline()

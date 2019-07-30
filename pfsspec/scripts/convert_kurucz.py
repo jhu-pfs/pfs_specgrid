@@ -12,7 +12,6 @@ from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
 class ConvertKurucz(Convert):
     def __init__(self):
         super(ConvertKurucz, self).__init__()
-        self.PIPELINE_TYPES = {'basic': KuruczBasicPipeline}
 
     def create_pipeline(self):
         return KuruczBasicPipeline()

@@ -12,10 +12,7 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
 
     @classmethod
     def from_dataset(cls, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
-        input_shape = dataset.flux.shape
-        output_shape = (len(labels),)
         d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs,
-                                  input_shape, output_shape,
                                   batch_size=batch_size, shuffle=shuffle, seed=seed)
         return d
 

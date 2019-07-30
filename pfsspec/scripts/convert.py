@@ -4,20 +4,41 @@ import numpy as np
 
 from pfsspec.data.dataset import Dataset
 from pfsspec.scripts.script import Script
+from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
+from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
+from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
+from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
 
 class Convert(Script):
+
+
     def __init__(self):
         super(Convert, self).__init__()
+
+        self.CONVERTER_TYPES = {
+            'sdss': SdssDatasetBuilder,
+            'kurucz': ModelGridDatasetBuilder
+        }
+
+        self.PIPELINE_TYPES = {
+            'sdss': { 'basic': SdssBasicPipeline },
+            'kurucz': { 'basic': KuruczBasicPipeline }
+        }
+
         self.outdir = None
         self.pipeline = None
         self.tsbuilder = None
 
     def add_subparsers(self, parser):
-        subparsers = self.parser.add_subparsers(dest='pipeline')
-        for k in self.PIPELINE_TYPES:
-            p = subparsers.add_parser(k)
-            self.add_args(p)
-            self.PIPELINE_TYPES[k]().add_args(p)
+        spc = self.parser.add_subparsers(dest='dataset')
+        for kc in self.CONVERTER_TYPES:
+            pc = spc.add_parser(kc)
+            spp = pc.add_subparsers(dest='pipeline')
+            for kp in self.PIPELINE_TYPES[kc]:
+                pp = spp.add_parser(kp)
+                self.add_args(pp)
+                self.CONVERTER_TYPES[kc]().add_args(pp)
+                self.PIPELINE_TYPES[kc][kp]().add_args(pp)
 
     def add_args(self, parser):
         super(Convert, self).add_args(parser)
@@ -34,6 +55,7 @@ class Convert(Script):
         raise NotImplementedError()
 
     def init_tsbuilder(self, tsbuilder):
+        tsbuilder.pipeline = self.pipeline
         tsbuilder.init_from_args(self.args)
 
     def prepare(self):
@@ -46,7 +68,7 @@ class Convert(Script):
         self.dump_json(self.pipeline, os.path.join(self.args['out'], 'pipeline.json'))
 
         self.tsbuilder = self.create_tsbuilder()
-        self.tsbuilder.pipeline = self.pipeline
+        self.init_tsbuilder(self.tsbuilder)
 
     def run(self):
         super(Convert, self).run()
