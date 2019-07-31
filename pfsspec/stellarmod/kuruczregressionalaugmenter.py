@@ -11,8 +11,8 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
         self.noise_scheduler = None
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
-        d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs,
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
+        d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
                                   batch_size=batch_size, shuffle=shuffle, seed=seed)
         return d
 
@@ -52,6 +52,11 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
         error = np.array(self.dataset.error[batch_index], copy=True, dtype=np.float)
         labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
 
+        if self.weight is not None:
+            weight = np.array(self.dataset.params[self.weight].iloc[batch_index], copy=True, dtype=np.float)
+        else:
+            weight = None
+
         if self.noise_scheduler == 'linear':
             break_point_1 = int(0.2 * self.total_epochs)
             break_point_2 = int(0.5 * self.total_epochs)
@@ -80,4 +85,4 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
             bias = np.random.normal(0, 1.0, (flux.shape[0], 1))
             flux = flux + bias
 
-        return flux, labels
+        return flux, labels, weight

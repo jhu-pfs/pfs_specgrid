@@ -8,19 +8,21 @@ class DatasetAugmenter(KerasDataGenerator):
         self.dataset = None
         self.labels = None
         self.coeffs = None
+        self.weight = None
 
         self.multiplicative_bias = False
         self.additive_bias = False
         self.include_wave = False
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, batch_size=1, shuffle=True, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
         input_shape = dataset.flux.shape
         output_shape = (len(labels),)
         d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, batch_size=batch_size, shuffle=shuffle, seed=seed)
         d.dataset = dataset
         d.labels = labels
         d.coeffs = coeffs
+        d.weight = weight
 
         return d
 
@@ -35,4 +37,9 @@ class DatasetAugmenter(KerasDataGenerator):
         flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
         labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
 
-        return flux, labels
+        if self.weight is not None:
+            weight = np.array(self.dataset.params[self.weight].iloc[batch_index], copy=True, dtype=np.float)
+        else:
+            weight = None
+
+        return flux, labels, weight
