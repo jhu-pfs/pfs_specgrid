@@ -47,25 +47,35 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
     def rescale_output(self, output):
         return output * self.coeffs
 
+    def noise_scheduler_linear_onestep(self):
+        break_point = int(0.5 * self.total_epochs)
+        if self.current_epoch < break_point:
+            return self.current_epoch / break_point
+        else:
+            return 1.0
+
+    def noise_scheduler_linear_twostep(self):
+        break_point_1 = int(0.2 * self.total_epochs)
+        break_point_2 = int(0.5 * self.total_epochs)
+        if self.current_epoch < break_point_1:
+            return 0.0
+        elif self.current_epoch < break_point_2:
+            return (self.current_epoch - break_point_1) / (self.total_epochs - break_point_1 - break_point_2)
+        else:
+            return 1.0
+
     def augment_batch(self, batch_index):
         flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
         error = np.array(self.dataset.error[batch_index], copy=True, dtype=np.float)
         labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
 
         if self.weight is not None:
-            weight = np.array(self.dataset.params[self.weight].iloc[batch_index], copy=True, dtype=np.float)
+            weight = np.array(self.dataset.params['weight'].iloc[batch_index], copy=True, dtype=np.float)
         else:
             weight = None
 
         if self.noise_scheduler == 'linear':
-            break_point_1 = int(0.2 * self.total_epochs)
-            break_point_2 = int(0.5 * self.total_epochs)
-            if self.current_epoch < break_point_1:
-                self.noise = 0.0
-            elif self.current_epoch < break_point_2:
-                self.noise = (self.current_epoch - break_point_1) / (self.total_epochs - break_point_1 - break_point_2)
-            else:
-                self.noise = 1.0
+            self.noise = self.noise_scheduler_linear_onestep()
 
         if self.noise is not None and self.noise > 0.0:
             if error is not None:
@@ -79,10 +89,10 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
 
         # Additive and multiplicative bias, two numbers per spectrum
         if self.multiplicative_bias:
-            bias = np.random.uniform(0.8, 1.2, (flux.shape[0], 1))
+            bias = np.random.uniform(0.95, 0.05, (flux.shape[0], 1))
             flux = flux * bias
         if self.additive_bias:
-            bias = np.random.normal(0, 1.0, (flux.shape[0], 1))
+            bias = np.random.normal(0, 0.01, (flux.shape[0], 1))
             flux = flux + bias
 
         return flux, labels, weight

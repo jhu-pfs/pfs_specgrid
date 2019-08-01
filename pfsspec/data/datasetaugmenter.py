@@ -33,12 +33,20 @@ class DatasetAugmenter(KerasDataGenerator):
         self.multiplicative_bias = args['aug']
         self.additive_bias = args['aug']
 
+        # Copy weight column to new column called weight and normalize
+        # We use the median since SNR is exponentially distributed
+        # the clip normalized weights at 1
+        if self.weight is not None and 'weight' not in self.dataset.params.columns:
+            m = self.dataset.params[self.weight].median()
+            self.dataset.params['weight'] = 0.5 * self.dataset.params[self.weight] / m
+            self.dataset.params['weight'][self.dataset.params['weight'] > 1] = 1
+
     def augment_batch(self, batch_index):
         flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
         labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
 
         if self.weight is not None:
-            weight = np.array(self.dataset.params[self.weight].iloc[batch_index], copy=True, dtype=np.float)
+            weight = np.array(self.dataset.params['weight'].iloc[batch_index], copy=True, dtype=np.float)
         else:
             weight = None
 

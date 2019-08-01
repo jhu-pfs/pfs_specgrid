@@ -16,7 +16,8 @@ class Script():
         self.dir_history = []
 
     def parse_args(self):
-        self.args = self.parser.parse_args().__dict__
+        if self.args is None:
+            self.args = self.parser.parse_args().__dict__
 
     def add_subparsers(self, parser):
         # Default behavior doesn't user subparsers
@@ -85,6 +86,14 @@ class Script():
             self.logging_console_handler.setLevel(logging.INFO)
             self.logging_console_handler.setFormatter(formatter)
             root.addHandler(self.logging_console_handler)
+
+    def suspend_logging(self):
+        if self.logging_console_handler is not None:
+            self.logging_console_handler.setLevel(logging.ERROR)
+
+    def resume_logging(self):
+        if self.logging_console_handler is not None:
+            self.logging_console_handler.setLevel(logging.INFO)
 
     def execute(self):
         self.prepare()
