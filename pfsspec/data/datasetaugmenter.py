@@ -27,11 +27,16 @@ class DatasetAugmenter(KerasDataGenerator):
         return d
 
     def add_args(self, parser):
-        parser.add_argument('--aug', action='store_true', help='Augment data.\n')
+        parser.add_argument('--aug', type=str, default=None, help='Augment data.\n')
 
     def init_from_args(self, args, mode):
-        self.multiplicative_bias = args['aug']
-        self.additive_bias = args['aug']
+        # TODO: extend with more options
+        if 'aug' in args and args['aug'] == 'no':
+            self.multiplicative_bias = False
+            self.additive_bias = False
+        else:
+            self.multiplicative_bias = True
+            self.additive_bias = True
 
         # Copy weight column to new column called weight and normalize
         # We use the median since SNR is exponentially distributed

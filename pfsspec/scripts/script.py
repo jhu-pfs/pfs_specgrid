@@ -95,6 +95,10 @@ class Script():
         if self.logging_console_handler is not None:
             self.logging_console_handler.setLevel(logging.INFO)
 
+    def save_command_line(self, filename):
+        with open(filename, 'w') as f:
+            f.write(' '.join(sys.argv))
+
     def execute(self):
         self.prepare()
         self.run()
@@ -117,7 +121,7 @@ class Script():
     def execute_notebooks(self):
         pass
 
-    def execute_notebook(self, notebook_name, output_html=True, parameters={}, kernel='python3', outdir=None):
+    def execute_notebook(self, notebook_name, output_notebook_name=None, output_html=True, parameters={}, kernel='python3', outdir=None):
         # Note that jupyter kernels in the current env might be different from the ones
         # in the jupyterhub environment
 
@@ -131,11 +135,14 @@ class Script():
         if 'PROJECT_PATH' not in parameters:
             parameters['PROJECT_PATH'] = os.getcwd()
 
+        if output_notebook_name is None:
+            output_notebook_name = notebook_name
+
         nr = NotebookRunner()
         nr.input_notebook = os.path.join('nb', notebook_name + '.ipynb')
-        nr.output_notebook = os.path.join(outdir, notebook_name + '.ipynb')
+        nr.output_notebook = os.path.join(outdir, output_notebook_name + '.ipynb')
         if output_html:
-            nr.output_html = os.path.join(outdir, notebook_name + '.html')
+            nr.output_html = os.path.join(outdir, output_notebook_name + '.html')
         nr.parameters = parameters
         nr.kernel = kernel
         nr.run()
