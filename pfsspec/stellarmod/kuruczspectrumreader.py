@@ -119,7 +119,7 @@ class KuruczSpectrumReader(SpectrumReader):
         grid = KuruczGrid(model)
         grid.build_index()
 
-        for m_h in grid.Fe_H:
+        for m_h in grid.params['Fe_H'].values:
             fn = KuruczSpectrumReader.get_filename(m_h, 2.0, False, False, False)
             fn = os.path.join(path, fn)
             with open(fn) as f:
@@ -128,7 +128,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 for spec in specs:
                     if grid.wave is None:
                         grid.init_storage(spec.wave)
-                    grid.set_flux(spec.Fe_H, spec.T_eff, spec.log_g, spec.flux)
+                    grid.set_flux(spec.flux, Fe_H=spec.Fe_H, T_eff=spec.T_eff, log_g=spec.log_g)
 
         logging.info("Grid loaded with flux grid shape {}".format(grid.flux.shape))
 

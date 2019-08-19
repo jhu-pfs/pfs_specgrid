@@ -1,72 +1,53 @@
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+import itertools
+
+from pfsspec.stellarmod.modelparam import ModelParam
 
 class ModelGrid():
     def __init__(self):
-        # TODO: figure out how to have an arbitrary number of grid dimensions
-        self.Fe_H = None
-        self.T_eff = None
-        self.log_g = None
-        self.Fe_H_idx = None
-        self.T_eff_idx = None
-        self.log_g_idx = None
-        self.Fe_H_min = None
-        self.Fe_H_max = None
-        self.T_eff_min = None
-        self.T_eff_max = None
-        self.log_g_min = None
-        self.log_g_max = None
+        self.params = {
+            'Fe_H': None,
+            'T_eff': None,
+            'log_g': None
+        }
         self.wave = None
         self.flux = None
         self.flux_idx = None
 
     def init_storage(self, wave):
-        shape = (self.Fe_H.shape[0], self.T_eff.shape[0], self.log_g.shape[0], wave.shape[0])
+        shape = [self.params[p].values.shape[0] for p in self.params]
+        shape.append(wave.shape[0])
         self.wave = wave
         self.flux = np.empty(shape)
 
     def build_index(self):
-        self.Fe_H_idx = dict((v, i) for i, v in np.ndenumerate(self.Fe_H))
-        self.Fe_H_min, self.Fe_H_max = np.min(self.Fe_H), np.max(self.Fe_H)
-        self.T_eff_idx = dict((v, i) for i, v in np.ndenumerate(self.T_eff))
-        self.T_eff_min, self.T_eff_max = np.min(self.T_eff), np.max(self.T_eff)
-        self.log_g_idx = dict((v, i) for i, v in np.ndenumerate(self.log_g))
-        self.log_g_min, self.log_g_max = np.min(self.log_g), np.max(self.log_g)
-
+        for p in self.params:
+            self.params[p].build_index()
+        axis = len(self.params)
         if self.flux is not None:
-            self.flux_idx = (self.flux.max(axis=3) != 0) | (self.flux.min(axis=3) != 0)
+            self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
 
-    def set_flux(self, Fe_H, T_eff, log_g, flux):
+    def set_flux(self, flux, **kwargs):
         """
         Sets the flux at a given point of the grid
 
         Parameters must exactly match grid coordinates.
-
-        Parameters
-        ----------
-        :param Fe_H: float
-            Metallicity [M/H]
-        :param T_eff: float
-            Effective temperature
-        :param log_g: float
-            surface gravity
         """
-
-        i = self.Fe_H_idx[Fe_H]
-        j = self.T_eff_idx[T_eff]
-        k = self.log_g_idx[log_g]
-        self.flux[i, j, k, :] = flux
+        idx = [self.params[p].index[kwargs[p]] for p in self.params]
+        idx.append(slice(None, None, 1))
+        self.flux[idx] = flux
 
     def save(self, filename):
+        params = {p: self.params[p].values for p in self.params}
         np.savez(filename,
-                 Fe_H=self.Fe_H, T_eff=self.T_eff, log_g=self.log_g,
+                 **params,
                  wave=self.wave, flux=self.flux)
 
     def load(self, filename):
         data = np.load(filename)
-        self.Fe_H = data['Fe_H']
-        self.T_eff = data['T_eff']
-        self.log_g = data['log_g']
+        for p in self.params:
+            self.params[p] = ModelParam(p, data[p])
         self.wave = data['wave']
         self.flux = data['flux']
         self.build_index()
@@ -74,106 +55,110 @@ class ModelGrid():
     def create_spectrum(self):
         raise NotImplementedError()
 
-    def get_nearest_index(self, Fe_H, T_eff, log_g):
-        i = np.abs(self.Fe_H - Fe_H).argmin()
-        j = np.abs(self.T_eff - T_eff).argmin()
-        k = np.abs(self.log_g - log_g).argmin()
-        return i, j, k
+    def get_nearest_index(self, **kwargs):
+        idx = tuple(self.params[p].get_nearest_index(kwargs[p]) for p in self.params)
+        return idx
 
-    def get_nearby_indexes(self, Fe_H, T_eff, log_g):
-        i1, j1, k1 = self.get_nearest_index(Fe_H, T_eff, log_g)
+    def get_nearby_indexes(self, **kwargs):
+        idx1 = list(self.get_nearest_index(**kwargs))
+        idx2 = list((0, ) * len(idx1))
 
-        if Fe_H < self.Fe_H[i1]:
-            i1, i2 = i1 - 1, i1
-        else:
-            i1, i2 = i1, i1 + 1
+        i = 0
+        for p in self.params:
+            if kwargs[p] < self.params[p].values[idx1[i]]:
+                idx1[i], idx2[i] = idx1[i] - 1, idx1[i]
+            else:
+                idx1[i], idx2[i] = idx1[i], idx1[i] + 1
 
-        if T_eff < self.T_eff[j1]:
-            j1, j2 = j1 - 1, j1
-        else:
-            j1, j2 = j1, j1 + 1
+            # Verify if indexes are inside bounds
+            if idx1[i] < 0 or idx2[i] < 0 or \
+               idx1[i] >= self.params[p].values.shape[0] or \
+               idx2[i] >= self.params[p].values.shape[0]:
+                return None
 
-        if log_g < self.log_g[k1]:
-            k1, k2 = k1 - 1, k1
-        else:
-            k1, k2 = k1, k1 + 1
+            i += 1
 
-        # Verify if indexes inside bounds
-        if i1 < 0 or j1 < 0 or k1 < 0 or \
-                i2 >= self.Fe_H.shape[0] or \
-                j2 >= self.T_eff.shape[0] or \
-                k2 >= self.log_g.shape[0]:
-            return None
+        idx1 = tuple(idx1)
+        idx2 = tuple(idx2)
 
         # Verify if model exists
         # Here we don't assume that there are holes in the grid
         # but check if we're outside of covered ranges
-        if not (self.flux_idx[i1, j1, k1] and self.flux_idx[i2, j1, k1]):
+        if not (self.flux_idx[idx1] and self.flux_idx[idx2]):
             return None
 
-        return i1, j1, k1, i2, j2, k2
+        return idx1, idx2
 
-    def get_model(self, i, j, k):
+    def get_model(self, idx):
         spec = self.create_spectrum()
-        spec.Fe_H = self.Fe_H[i]
-        spec.T_eff = self.T_eff[j]
-        spec.log_g = self.log_g[k]
-
+        i = 0
+        for i, p in enumerate(self.params):
+            setattr(spec, p, self.params[p].values[idx[i]])
+        idx = list(idx)
+        idx.append(slice(None, None, 1))
         spec.wave = np.array(self.wave, copy=True)
-        spec.flux = np.array(self.flux[i, j, k, :], copy=True)
+        spec.flux = np.array(self.flux[idx], copy=True)
 
         return spec
 
-    def get_nearest_model(self, Fe_H, T_eff, log_g):
+    def get_nearest_model(self, **kwargs):
         """
         Finds grid point closest to the parameters specified
-
-        Parameters
-        ----------
-        :param Fe_H: float
-            Metallicity [M/H]
-        :param T_eff: float
-            Effective temperature
-        :param log_g: float
-            surface gravity
-        :return:
-            Flux density of model
         """
-        i, j, k = self.get_nearest_index(Fe_H, T_eff, log_g)
-        spec = self.get_model(i, j, k)
+        idx = self.get_nearest_index(**kwargs)
+        spec = self.get_model(idx)
         return spec
 
-    def interpolate_model(self, Fe_H, T_eff, log_g):
-        idx = self.get_nearby_indexes(Fe_H, T_eff, log_g)
+    def interpolate_model(self, **kwargs):
+        idx = self.get_nearby_indexes(**kwargs)
         if idx is None:
             return None
         else:
-            i1, j1, k1, i2, j2, k2 = idx
+            idx1, idx2 = idx
 
-        x = [self.Fe_H[i1], self.Fe_H[i2]]
-        y = [self.T_eff[j1], self.T_eff[j2]]
-        z = [self.log_g[k1], self.log_g[k2]]
-        V = np.empty((2, 2, 2, self.wave.shape[0]))
+        # Parameter values to interpolate between
+        x = tuple([[self.params[p].values[idx1[i]], self.params[p].values[idx2[i]]] for i, p in enumerate(self.params)])
 
-        i = 0
-        for ii in (i1, i2):
-            j = 0
-            for jj in (j1, j2):
-                k = 0
-                for kk in (k1, k2):
-                    V[i, j, k] = self.flux[ii, jj, kk, :]
-                    k += 1
-                j += 1
-            i += 1
+        # Will hold flux values
+        s = [2, ] * len(x)
+        s.append(self.wave.shape[0])
+        V = np.empty(s)
 
-        fn = RegularGridInterpolator((x, y, z), V)
+        ii = tuple(np.array(tuple(itertools.product(*([[0, 1],] * len(x))))).transpose())
+        kk = tuple(np.array(tuple(itertools.product(*[[idx1[i], idx2[i]] for i in range(3)]))).transpose())
+
+        V[ii] = self.flux[kk]
+
+        #V = np.empty((2, 2, 2, self.wave.shape[0]))
+
+        #ii = list(itertools.product(*([[0, 1],] * len(x))))
+        #ii = np.array(ii)
+        #ii.append(slice(None, None, 1))
+
+        #V[ii] = self.flux_idx[ii]
+
+        #xx = list(itertools.product(*x))
+
+        #i = 0
+        #for ii in (i1, i2):
+        #    j = 0
+        #    for jj in (j1, j2):
+        #        k = 0
+        #        for kk in (k1, k2):
+        #            V[i, j, k] = self.flux[ii, jj, kk, :]
+        #            k += 1
+        #        j += 1
+        #    i += 1
+
+        fn = RegularGridInterpolator(x, V)
+
+        #fn = RegularGridInterpolator((x, y, z), V)
 
         spec = self.create_spectrum()
-        spec.Fe_H = Fe_H
-        spec.T_eff = T_eff
-        spec.log_g = log_g
+        for p in self.params:
+            setattr(spec, p, kwargs[p])
 
         spec.wave = self.wave
-        spec.flux = fn((Fe_H, T_eff, log_g))
+        spec.flux = fn(tuple([kwargs[p] for p in self.params]))
 
         return spec
