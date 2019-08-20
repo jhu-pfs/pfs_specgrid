@@ -9,9 +9,9 @@ class ImportKurucz(Import):
     def __init__(self):
         super(ImportKurucz, self).__init__()
 
-    def add_args(self):
-        super(ImportKurucz, self).add_args()
-        self.parser.add_argument("--grid", type=str,
+    def add_args(self, parser):
+        super(ImportKurucz, self).add_args(parser)
+        parser.add_argument("--grid", type=str,
                                  choices=['kurucz', 'nover', 'anover', 'odfnew', 'aodfnew'],
                                  default='kurucz', help="Model subtype\n")
 

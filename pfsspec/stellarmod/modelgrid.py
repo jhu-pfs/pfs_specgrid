@@ -36,6 +36,7 @@ class ModelGrid():
         """
         idx = [self.params[p].index[kwargs[p]] for p in self.params]
         idx.append(slice(None, None, 1))
+        idx = tuple(idx)
         self.flux[idx] = flux
 
     def save(self, filename):

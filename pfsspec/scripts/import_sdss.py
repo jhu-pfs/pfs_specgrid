@@ -15,16 +15,16 @@ class ImportSdss(Import):
         self.token = None
         self.reader = None
 
-    def add_args(self):
-        super(ImportSdss, self).add_args()
-        self.parser.add_argument('--user', type=str, help='SciServer username\n')
-        self.parser.add_argument('--token', type=str, help='SciServer auth token\n')
-        self.parser.add_argument('--top', type=int, default=None, help='Limit number of results')
-        self.parser.add_argument('--plate', type=int, default=None, help='Limit to a single plate')
-        self.parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
-        self.parser.add_argument('--teff', type=float, nargs=2, default=None, help='Limit T_eff')
-        self.parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
-        self.parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
+    def add_args(self, parser):
+        super(ImportSdss, self).add_args(parser)
+        parser.add_argument('--user', type=str, help='SciServer username\n')
+        parser.add_argument('--token', type=str, help='SciServer auth token\n')
+        parser.add_argument('--top', type=int, default=None, help='Limit number of results')
+        parser.add_argument('--plate', type=int, default=None, help='Limit to a single plate')
+        parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
+        parser.add_argument('--teff', type=float, nargs=2, default=None, help='Limit T_eff')
+        parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
+        parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
 
     def create_auth_token(self):
         if 'token' in self.args and self.args['token'] is not None:
