@@ -97,6 +97,7 @@ class ModelGrid():
             setattr(spec, p, self.params[p].values[idx[i]])
         idx = list(idx)
         idx.append(slice(None, None, 1))
+        idx = tuple(idx)
         spec.wave = np.array(self.wave, copy=True)
         spec.flux = np.array(self.flux[idx], copy=True)
 

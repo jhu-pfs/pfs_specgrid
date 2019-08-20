@@ -57,6 +57,8 @@ class BoszSpectrumReader(SpectrumReader):
                                     grid.init_storage(spec.wave)
                                 grid.set_flux(spec.flux, Fe_H=fe_h, T_eff=t_eff, log_g=log_g,
                                               C_M=c_m, alpha_M=a_m)
+                            else:
+                                logging.info('Cannot find file {}'.format(fn))
 
         logging.info("Grid loaded with flux grid shape {}".format(grid.flux.shape))
 
@@ -70,15 +72,15 @@ class BoszSpectrumReader(SpectrumReader):
 
         fn += 'm'
         fn += 'm' if Fe_H < 0 else 'p'
-        fn += '%02d' % (int(Fe_H + 0.05) * 10)
+        fn += '%02d' % (int(abs(Fe_H) * 10 + 0.5))
 
         fn += 'c'
         fn += 'm' if C_M < 0 else 'p'
-        fn += '%02d' % (int(C_M + 0.05) * 10)
+        fn += '%02d' % (int(abs(C_M) * 10 + 0.5))
 
         fn += 'o'
         fn += 'm' if alpha_M < 0 else 'p'
-        fn += '%02d' % (int(alpha_M + 0.05) * 10)
+        fn += '%02d' % (int(abs(alpha_M) * 10 + 0.5))
 
         fn += 't'
         fn += '%d' % (int(T_eff))
