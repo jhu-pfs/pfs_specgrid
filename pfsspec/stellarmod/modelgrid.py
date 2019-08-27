@@ -5,13 +5,15 @@ import itertools
 from pfsspec.stellarmod.modelparam import ModelParam
 
 class ModelGrid():
-    def __init__(self):
+    def __init__(self, use_cont=False):
+        self.use_cont = use_cont
         self.params = {
             'Fe_H': None,
             'T_eff': None,
             'log_g': None
         }
         self.wave = None
+        self.cont = None
         self.flux = None
         self.flux_idx = None
 
@@ -20,6 +22,8 @@ class ModelGrid():
         shape.append(wave.shape[0])
         self.wave = wave
         self.flux = np.empty(shape)
+        if self.use_cont:
+            self.cont = np.empty(shape)
 
     def build_index(self):
         for p in self.params:
@@ -28,7 +32,7 @@ class ModelGrid():
         if self.flux is not None:
             self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
 
-    def set_flux(self, flux, **kwargs):
+    def set_flux(self, flux, cont=None, **kwargs):
         """
         Sets the flux at a given point of the grid
 
@@ -38,12 +42,14 @@ class ModelGrid():
         idx.append(slice(None, None, 1))
         idx = tuple(idx)
         self.flux[idx] = flux
+        if self.cont is not None and cont is not None:
+            self.cont[idx] = cont
 
     def save(self, filename):
         params = {p: self.params[p].values for p in self.params}
         np.savez(filename,
                  **params,
-                 wave=self.wave, flux=self.flux)
+                 wave=self.wave, flux=self.flux, cont=self.cont)
 
     def load(self, filename):
         data = np.load(filename)
@@ -51,6 +57,7 @@ class ModelGrid():
             self.params[p] = ModelParam(p, data[p])
         self.wave = data['wave']
         self.flux = data['flux']
+        self.cont = data['cont']
         self.build_index()
 
     def create_spectrum(self):
@@ -100,6 +107,8 @@ class ModelGrid():
         idx = tuple(idx)
         spec.wave = np.array(self.wave, copy=True)
         spec.flux = np.array(self.flux[idx], copy=True)
+        if self.cont is not None:
+            spec.cont = np.array(self.cont[idx], copy=True)
 
         return spec
 
@@ -112,6 +121,8 @@ class ModelGrid():
         return spec
 
     def interpolate_model(self, **kwargs):
+        # TODO: interpolate continuum, if available
+
         idx = self.get_nearby_indexes(**kwargs)
         if idx is None:
             return None
@@ -131,30 +142,7 @@ class ModelGrid():
 
         V[ii] = self.flux[kk]
 
-        #V = np.empty((2, 2, 2, self.wave.shape[0]))
-
-        #ii = list(itertools.product(*([[0, 1],] * len(x))))
-        #ii = np.array(ii)
-        #ii.append(slice(None, None, 1))
-
-        #V[ii] = self.flux_idx[ii]
-
-        #xx = list(itertools.product(*x))
-
-        #i = 0
-        #for ii in (i1, i2):
-        #    j = 0
-        #    for jj in (j1, j2):
-        #        k = 0
-        #        for kk in (k1, k2):
-        #            V[i, j, k] = self.flux[ii, jj, kk, :]
-        #            k += 1
-        #        j += 1
-        #    i += 1
-
         fn = RegularGridInterpolator(x, V)
-
-        #fn = RegularGridInterpolator((x, y, z), V)
 
         spec = self.create_spectrum()
         for p in self.params:

@@ -36,6 +36,7 @@ class BoszSpectrumReader(SpectrumReader):
 
         spec = KuruczSpectrum()
         spec.wave = np.array(df['wave'][filt])
+        spec.cont = np.array(df['cont'][filt])
         spec.flux = np.array(df['flux'][filt])
 
         return spec
@@ -44,19 +45,21 @@ class BoszSpectrumReader(SpectrumReader):
         grid = BoszGrid()
         grid.build_index()
 
+        i = 0
         for fe_h in grid.params['Fe_H'].values:
             for t_eff in grid.params['T_eff'].values:
                 for log_g in grid.params['log_g'].values:
                     for c_m in grid.params['C_M'].values:
-                        for a_m in grid.params['alpha_M'].values:
+                        for a_m in grid.params['a_Fe'].values:
                             fn = BoszSpectrumReader.get_filename(fe_h, c_m, a_m, t_eff, log_g)
                             fn = os.path.join(path, fn)
                             if os.path.isfile(fn):
                                 spec = self.read(fn)
                                 if grid.wave is None:
                                     grid.init_storage(spec.wave)
-                                grid.set_flux(spec.flux, Fe_H=fe_h, T_eff=t_eff, log_g=log_g,
-                                              C_M=c_m, alpha_M=a_m)
+                                grid.set_flux(spec.flux, spec.cont, Fe_H=fe_h, T_eff=t_eff, log_g=log_g,
+                                              C_M=c_m, a_Fe=a_m)
+                                i += 1
                             else:
                                 logging.info('Cannot find file {}'.format(fn))
 

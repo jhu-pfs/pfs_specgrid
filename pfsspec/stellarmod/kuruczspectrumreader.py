@@ -65,7 +65,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
                 spec.Fe_H = float(parts[6].strip('[]aA'))
-                spec.alpha = (('a' in parts[6]) or ('A' in parts[6]))
+                spec.a_Fe = (('a' in parts[6]) or ('A' in parts[6]))
                 spec.N_He = -1
                 spec.v_turb = float(parts[8])
                 spec.L_H = float(parts[11])
@@ -74,7 +74,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
                 spec.Fe_H = float(parts[6].strip('[]aA'))
-                spec.alpha = (('a' in parts[6]) or ('A' in parts[6]))
+                spec.a_Fe = (('a' in parts[6]) or ('A' in parts[6]))
                 spec.N_He = -1
                 spec.v_turb = float(parts[8])
                 spec.L_H = -1
@@ -82,7 +82,7 @@ class KuruczSpectrumReader(SpectrumReader):
                 spec.T_eff = float(parts[1])
                 spec.log_g = float(parts[3])
                 spec.Fe_H = float(parts[4].strip('[]aA'))
-                spec.alpha = (('a' in parts[4]) or ('A' in parts[4]))
+                spec.a_Fe = (('a' in parts[4]) or ('A' in parts[4]))
                 spec.N_He = float(parts[5].split('=')[1])
                 spec.v_turb = float(parts[6].split('=')[1])
                 spec.L_H = float(parts[7].split('=')[1])
