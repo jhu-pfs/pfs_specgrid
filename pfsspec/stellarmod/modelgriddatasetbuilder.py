@@ -20,10 +20,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).add_args(parser)
 
         parser.add_argument('--interp', type=int, default=None, help='Number of interpolations between models\n')
-        parser.add_argument('--feh', type=float, nargs=2, default=None, help='Limit [Fe/H]')
-        parser.add_argument('--teff', type=float, nargs=2, default=None, help='Limit T_eff')
-        parser.add_argument('--logg', type=float, nargs=2, default=None, help='Limit log_g')
-        parser.add_argument('--afe', type=float, nargs=2, default=None, help='Limit [a/Fe]')
+
+        for k in self.grid.params:
+            parser.add_argument('--' + k, type=float, nargs=2, default=None, help='Limit ' + k)
 
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
@@ -33,18 +32,10 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.spectrum_count = args['interp']
 
             # Override grid range when interpolation is turned on and limits are set
-            if args['feh'] is not None:
-                self.grid.Fe_H_min = args['feh'][0]
-                self.grid.Fe_H_max = args['feh'][1]
-            if args['teff'] is not None:
-                self.grid.T_eff_min = args['teff'][0]
-                self.grid.T_eff_max = args['teff'][1]
-            if args['logg'] is not None:
-                self.grid.log_g_min = args['logg'][0]
-                self.grid.log_g_max = args['logg'][1]
-            if args['afe'] is not None:
-                self.grid.a_Fe_min = args['afe'][0]
-                self.grid.a_Fe_max = args['afe'][1]
+            for k in self.grid.params:
+                if args[k] is not None:
+                    self.grid.params[k].min = args[k][0]
+                    self.grid.params[k].max = args[k][1]
 
     def get_spectrum_count(self):
         if self.interpolate:
@@ -65,6 +56,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             return self.process_gridpoint(i)
 
     def process_interpolating(self, i):
+
+        ## TODO: rewrite this
+
         spec = None
         while spec is None:
             # Generate random parameters
@@ -75,6 +69,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
         self.pipeline.run(spec)
         return spec
+
+    # TODO: add non-interpolating random gridpoint sampling
 
     def process_gridpoint(self, i):
         fi = self.index[0][i]

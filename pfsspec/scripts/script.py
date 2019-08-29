@@ -108,7 +108,7 @@ class Script():
         self.setup_logging()
         self.add_subparsers(self.parser)
         self.parse_args()
-        if self.args['debug']:
+        if 'debug' in self.args and self.args['debug']:
             np.seterr(all='raise')
 
     def run(self):
