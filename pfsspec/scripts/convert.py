@@ -94,9 +94,6 @@ class Convert(Script):
         dsbuilder.pipeline = self.pipeline
         dsbuilder.init_from_args(self.args)
 
-        print(self.args)
-        quit()
-
     def prepare(self):
         super(Convert, self).prepare()
         self.outdir = self.args['out']

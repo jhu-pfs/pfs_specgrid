@@ -1,6 +1,7 @@
+import logging
+import itertools
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-import itertools
 
 from pfsspec.stellarmod.modelparam import ModelParam
 
@@ -60,6 +61,8 @@ class ModelGrid():
         self.cont = data['cont']
         self.build_index()
 
+        logging.info('Loaded model grid with shape {} containing {} valid spectra.'.format(self.flux.shape, np.sum(self.flux_idx)))
+
     def create_spectrum(self):
         raise NotImplementedError()
 
@@ -98,19 +101,21 @@ class ModelGrid():
         return idx1, idx2
 
     def get_model(self, idx):
-        spec = self.create_spectrum()
-        i = 0
-        for i, p in enumerate(self.params):
-            setattr(spec, p, self.params[p].values[idx[i]])
-        idx = list(idx)
-        idx.append(slice(None, None, 1))
-        idx = tuple(idx)
-        spec.wave = np.array(self.wave, copy=True)
-        spec.flux = np.array(self.flux[idx], copy=True)
-        if self.cont is not None:
-            spec.cont = np.array(self.cont[idx], copy=True)
-
-        return spec
+        if self.flux_idx[idx]:
+            spec = self.create_spectrum()
+            i = 0
+            for i, p in enumerate(self.params):
+                setattr(spec, p, self.params[p].values[idx[i]])
+            idx = list(idx)
+            idx.append(slice(None, None, 1))
+            idx = tuple(idx)
+            spec.wave = np.array(self.wave, copy=True)
+            spec.flux = np.array(self.flux[idx], copy=True)
+            if self.cont is not None:
+                spec.cont = np.array(self.cont[idx], copy=True)
+            return spec
+        else:
+            return None
 
     def get_nearest_model(self, **kwargs):
         """

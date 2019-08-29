@@ -9,17 +9,18 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).__init__(orig)
         if orig is None:
             self.grid = None
-            self.interpolate = False
-            self.spectrum_count = 0
+            self.sample_mode = None
+            self.sample_count = 0
         else:
             self.grid = orig.grid
-            self.interpolate = orig.interpolate
-            self.spectrum_count = orig.spectrum_count
+            self.sample_mode = orig.sample_mode
+            self.sample_count = orig.sample_count
 
     def add_args(self, parser):
         super(ModelGridDatasetBuilder, self).add_args(parser)
 
-        parser.add_argument('--interp', type=int, default=None, help='Number of interpolations between models\n')
+        parser.add_argument('--sample-mode', type=str, choices=['all', 'grid', 'interp'], default='all', help='Sampling mode\n')
+        parser.add_argument('--sample-count', type=int, default=None, help='Number of interpolations between models\n')
 
         for k in self.grid.params:
             parser.add_argument('--' + k, type=float, nargs=2, default=None, help='Limit ' + k)
@@ -27,21 +28,25 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
 
-        if 'interp' in args and args['interp'] is not None:
-            self.interpolate = True
-            self.spectrum_count = args['interp']
+        self.sample_mode = args['sample_mode']
+        self.sample_count = args['sample_count']
 
-            # Override grid range when interpolation is turned on and limits are set
-            for k in self.grid.params:
-                if args[k] is not None:
-                    self.grid.params[k].min = args[k][0]
-                    self.grid.params[k].max = args[k][1]
+        # Override grid range if specified
+        # TODO: extend this to sample physically meaningful models only
+        for k in self.grid.params:
+            if args[k] is not None:
+                self.grid.params[k].min = args[k][0]
+                self.grid.params[k].max = args[k][1]
 
     def get_spectrum_count(self):
-        if self.interpolate:
-            return self.spectrum_count
+        if self.sample_mode in ('grid', 'interp'):
+            return self.sample_count
+        elif self.sample_mode == 'all':
+            # TODO: how to deal with parameters limits?
+            # return self.index[0].shape[0]
+            raise NotImplementedError()
         else:
-            return self.index[0].shape[0]
+            raise NotImplementedError()
 
     def get_wave_count(self):
         return self.pipeline.rebin.shape[0]
@@ -50,35 +55,46 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).create_dataset()
 
     def process_item(self, i):
-        if self.interpolate:
-            return self.process_interpolating(i)
+        if self.sample_mode == 'grid':
+            spec = self.process_sample_grid(i)
+        elif self.sample_mode == 'interp':
+            spec = self.process_sample_interp(i)
+        elif self.sample_mode == 'all':
+            spec = self.process_gridpoint(i)
         else:
-            return self.process_gridpoint(i)
-
-    def process_interpolating(self, i):
-
-        ## TODO: rewrite this
-
-        spec = None
-        while spec is None:
-            # Generate random parameters
-            Fe_H = np.random.uniform(self.grid.Fe_H_min, self.grid.Fe_H_max)
-            T_eff = np.random.uniform(self.grid.T_eff_min, self.grid.T_eff_max)
-            log_g = np.random.uniform(self.grid.log_g_min, self.grid.log_g_max)
-            spec = self.grid.interpolate_model(Fe_H, T_eff, log_g)
+            raise NotImplementedError()
 
         self.pipeline.run(spec)
         return spec
 
-    # TODO: add non-interpolating random gridpoint sampling
+    def get_random_params(self):
+        params = {}
+        for p in self.grid.params:
+            params[p] = np.random.uniform(self.grid.params[p].min, self.grid.params[p].max)
+        return params
+
+    def process_sample_grid(self, i):
+        spec = None
+        while spec is None:
+            params = self.get_random_params()
+            spec = self.grid.get_nearest_model(**params)
+        return spec
+
+    def process_sample_interp(self, i):
+        spec = None
+        while spec is None:
+            params = self.get_random_params()
+            spec = self.grid.interpolate_model(**params)
+        return spec
 
     def process_gridpoint(self, i):
+        # TODO: rewrite this to use index of grid
+        #       and to observer parameter limits
         fi = self.index[0][i]
         fj = self.index[1][i]
         fk = self.index[2][i]
 
         spec = self.grid.get_model(fi, fj, fk)
-        self.pipeline.run(spec)
         return spec
 
     def build(self):
