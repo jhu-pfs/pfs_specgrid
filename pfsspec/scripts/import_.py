@@ -12,8 +12,8 @@ class Import(Script):
 
     def add_args(self, parser):
         super(Import, self).add_args(parser)
-        parser.add_argument("--path", type=str, help="Model/data directory base path\n")
-        parser.add_argument("--out", type=str, help="Output file, must be .npz\n")
+        parser.add_argument("--path", type=str, required=True, help="Model/data directory base path\n")
+        parser.add_argument("--out", type=str, required=True, help="Output file, must be .npz\n")
 
     def prepare(self):
         super(Import, self).prepare()
