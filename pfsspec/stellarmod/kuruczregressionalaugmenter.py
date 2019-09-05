@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 from pfsspec.data.datasetaugmenter import DatasetAugmenter
@@ -9,6 +10,8 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
         self.additive_bias = False
         self.noise = None
         self.noise_scheduler = None
+        self.normalize_weights = None
+        self.normalize = None
 
     @classmethod
     def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
@@ -19,6 +22,7 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
     def add_args(self, parser):
         super(KuruczRegressionalAugmenter, self).add_args(parser)
         parser.add_argument('--noiz', type=str, help='Add noise.\n')
+        parser.add_argument('--norm', type=str, default=None, help='Normalize with continuum.')
 
     def init_from_args(self, args, mode):
         super(KuruczRegressionalAugmenter, self).init_from_args(args, mode)
@@ -40,6 +44,10 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
                 self.noise = 1.0
         else:
             raise NotImplementedError()
+
+        if 'norm' in args and args['norm'] is not None:
+            self.normalize = args['norm']
+            self.normalize_weights = np.loadtxt(os.path.join(args['in'], 'weights.dat'))[:, 2].squeeze()
 
     def scale_output(self, output):
         return output / self.coeffs
@@ -86,6 +94,14 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
                 # Simple additive noise, one random number per bin
                 err = np.random.uniform(0, self.noise, flux.shape)
                 flux = flux + err
+
+        # Fit continuum, if requested
+        # TODO: figure out how to vectorize fitting
+        if self.normalize == 'poly':
+            for i in range(flux.shape[0]):
+                poly = np.polyfit(self.dataset.wave, flux[i, :], 4, w=1/self.normalize_weights)
+                cont = np.polyval(poly, self.dataset.wave)
+                flux[i, :] = flux[i, :] / cont
 
         # Additive and multiplicative bias, two numbers per spectrum
         if self.multiplicative_bias:

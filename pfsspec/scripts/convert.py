@@ -48,7 +48,7 @@ class Convert(Script):
         self.dsbuilder = None
 
     def add_subparsers(self, parser):
-        spc = self.parser.add_subparsers(dest='dataset')
+        spc = parser.add_subparsers(dest='dataset')
         for ds in self.DATASET_TYPES:
             pc = spc.add_parser(ds)
             spp = pc.add_subparsers(dest='pipeline')
