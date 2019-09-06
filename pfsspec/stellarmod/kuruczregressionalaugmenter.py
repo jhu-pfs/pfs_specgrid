@@ -1,9 +1,9 @@
 import os
 import numpy as np
 
-from pfsspec.data.datasetaugmenter import DatasetAugmenter
+from pfsspec.data.regressionaldatasetaugmenter import RegressionalDatasetAugmenter
 
-class KuruczRegressionalAugmenter(DatasetAugmenter):
+class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
     def __init__(self):
         super(KuruczRegressionalAugmenter, self).__init__()
         self.multiplicative_bias = False
@@ -49,12 +49,6 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
             self.normalize = args['norm']
             self.normalize_weights = np.loadtxt(os.path.join(args['in'], 'weights.dat'))[:, 2].squeeze()
 
-    def scale_output(self, output):
-        return output / self.coeffs
-
-    def rescale_output(self, output):
-        return output * self.coeffs
-
     def noise_scheduler_linear_onestep(self):
         break_point = int(0.5 * self.total_epochs)
         if self.current_epoch < break_point:
@@ -73,14 +67,8 @@ class KuruczRegressionalAugmenter(DatasetAugmenter):
             return 1.0
 
     def augment_batch(self, batch_index):
-        flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
+        flux, labels, weight = super(KuruczRegressionalAugmenter, self).augment_batch(batch_index)
         error = np.array(self.dataset.error[batch_index], copy=True, dtype=np.float)
-        labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
-
-        if self.weight is not None:
-            weight = np.array(self.dataset.params['weight'].iloc[batch_index], copy=True, dtype=np.float)
-        else:
-            weight = None
 
         if self.noise_scheduler == 'linear':
             self.noise = self.noise_scheduler_linear_onestep()

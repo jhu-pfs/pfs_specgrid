@@ -15,9 +15,7 @@ class DatasetAugmenter(KerasDataGenerator):
         self.include_wave = False
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
-        input_shape = dataset.flux.shape
-        output_shape = (len(labels),)
+    def from_dataset(cls, input_shape, output_shape, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
         d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, batch_size=batch_size, shuffle=shuffle, seed=seed)
         d.dataset = dataset
         d.labels = labels
@@ -47,15 +45,15 @@ class DatasetAugmenter(KerasDataGenerator):
             self.dataset.params['weight'][self.dataset.params['weight'] > 1] = 1
 
     def augment_batch(self, batch_index):
-        flux = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
-        labels = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
+        input = None
+        output = None
 
         if self.weight is not None:
             weight = np.array(self.dataset.params['weight'].iloc[batch_index], copy=True, dtype=np.float)
         else:
             weight = None
 
-        return flux, labels, weight
+        return input, output, weight
 
     def get_average(self):
-        return np.mean(np.array(self.dataset.params[self.labels]), axis=0) / self.coeffs
+        raise NotImplementedError()
