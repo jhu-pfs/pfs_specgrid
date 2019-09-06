@@ -56,3 +56,6 @@ class DatasetAugmenter(KerasDataGenerator):
             weight = None
 
         return flux, labels, weight
+
+    def get_average(self):
+        return np.mean(np.array(self.dataset.params[self.labels]), axis=0) / self.coeffs
