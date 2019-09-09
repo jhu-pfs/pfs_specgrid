@@ -125,6 +125,9 @@ class ModelGrid():
         spec = self.get_model(idx)
         return spec
 
+    def interpolate_model_spline(self):
+        pass
+
     def interpolate_model(self, **kwargs):
         # TODO: interpolate continuum, if available
 
