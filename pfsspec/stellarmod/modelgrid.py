@@ -125,8 +125,23 @@ class ModelGrid():
         spec = self.get_model(idx)
         return spec
 
-    def interpolate_model_spline(self):
-        pass
+
+    def float_spec(self, **kwargs, free_param_name):
+        list_para = list(self.params.keys())
+        free_idx = list_para.index(free_param_name)
+        spec = list(self.get_nearest_index(**kwargs))
+        spec[free_idx] = slice(None)
+        spec = tuple(spec)
+        #spectp: 5-dims tuple slice of 5-dims parameter space
+        valid_flux_bool = self.flux_idx[spec]
+        para_wave = self.flux[spec][valid_flux_bool]
+        free_para_val = self.params[free_param_name].values[valid_flux_bool]
+        return para_wave, free_para_val
+
+    def interpolate_model_spline(self,para_wave, free_para_val):
+        x,y = para_wave, free_para_val
+        cs = CubicSpline(x,y)
+        return cs
 
     def interpolate_model(self, **kwargs):
         # TODO: interpolate continuum, if available
