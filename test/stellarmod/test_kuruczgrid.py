@@ -52,25 +52,40 @@ class TestKuruczGrid(TestBase):
         idx = grid.get_nearby_indexes(Fe_H=-0.9, T_eff=14300, log_g=1.2)
         self.assertIsNone(idx)
 
-    def test_interpolate_model(self):
+    def test_interpolate_linear_model(self):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
         grid = KuruczGrid()
         grid.load(file)
-        idx1, idx2 = grid.get_nearby_indexes(Fe_H=0.11, T_eff=4900, log_g=3.1)
+        idx1, idx2 = grid.get_nearby_indexes(Fe_H=0.01, T_eff=4567, log_g=3.1)
         a = grid.get_model(idx1)
         b = grid.get_model(idx2)
         a.plot()
         b.plot()
-        spec = grid.interpolate_model(Fe_H=0.11, T_eff=4900, log_g=3.1)
+        spec = grid.interpolate_model_linear(Fe_H=0.01, T_eff=4567, log_g=3.1)
         self.assertEqual((1221,), spec.wave.shape)
         self.assertEqual((1221,), spec.flux.shape)
         spec.plot()
         self.save_fig()
 
-    def test_interpolate_model_outside(self):
+    def test_interpolate_model_linear_outside(self):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
         grid = KuruczGrid()
         grid.load(file)
         # These are outside the parameter space but inside grid
-        spec = grid.interpolate_model(Fe_H=-0.9, T_eff=14300, log_g=1.2)
+        spec = grid.interpolate_model_linear(Fe_H=-0.9, T_eff=14300, log_g=1.2)
         self.assertIsNone(spec)
+
+    def test_interpolate_model_spline(self):
+        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
+        grid = KuruczGrid()
+        grid.load(file)
+
+        idx1, idx2 = grid.get_nearby_indexes(Fe_H=0.01, T_eff=4567, log_g=3.1)
+        a = grid.get_model(idx1)
+        b = grid.get_model(idx2)
+        a.plot()
+        b.plot()
+
+        spec = grid.interpolate_model_spline('T_eff', Fe_H=0.01, T_eff=4567, log_g=3.1)
+        spec.plot()
+        self.save_fig()

@@ -1,7 +1,7 @@
 import logging
 import itertools
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, CubicSpline
 
 from pfsspec.stellarmod.modelparam import ModelParam
 
@@ -58,7 +58,8 @@ class ModelGrid():
             self.params[p] = ModelParam(p, data[p])
         self.wave = data['wave']
         self.flux = data['flux']
-        self.cont = data['cont']
+        if 'cont' in data:
+            self.cont = data['cont']
         self.build_index()
 
         logging.info('Loaded model grid with shape {} containing {} valid spectra.'.format(self.flux.shape, np.sum(self.flux_idx)))
@@ -125,25 +126,51 @@ class ModelGrid():
         spec = self.get_model(idx)
         return spec
 
+    def get_parameterized_spec(self, fn, **kwargs):
+        spec = self.create_spectrum()
+        for p in self.params:
+            setattr(spec, p, kwargs[p])
+        spec.wave = self.wave
+        return spec
 
-    def float_spec(self, **kwargs, free_param_name):
+    def interpolate_model_spline(self, free_param_name, **kwargs):
         list_para = list(self.params.keys())
         free_idx = list_para.index(free_param_name)
-        spec = list(self.get_nearest_index(**kwargs))
-        spec[free_idx] = slice(None)
-        spec = tuple(spec)
-        #spectp: 5-dims tuple slice of 5-dims parameter space
-        valid_flux_bool = self.flux_idx[spec]
-        para_wave = self.flux[spec][valid_flux_bool]
-        free_para_val = self.params[free_param_name].values[valid_flux_bool]
-        return para_wave, free_para_val
 
-    def interpolate_model_spline(self,para_wave, free_para_val):
-        x,y = para_wave, free_para_val
-        cs = CubicSpline(x,y)
-        return cs
+        # Find nearest model to requested parameters
+        idx = list(self.get_nearest_index(**kwargs))
+        if idx is None:
+            return None
 
-    def interpolate_model(self, **kwargs):
+        # Set all params to nearest value except the one in which we interpolate
+        for i, p in enumerate(self.params):
+            if p != free_param_name:
+                kwargs[p] = self.params[p].values[idx[i]]
+
+        # Determine index of models
+        idx[free_idx] = slice(None)
+        idx = tuple(idx)
+
+        # Find index of models that actually exists
+        valid_flux = self.flux_idx[idx]
+        pars = self.params[free_param_name].values[valid_flux]
+        flux = self.flux[idx][valid_flux]
+
+        # If we are at the edge of the grid, it might happen that we try to
+        # interpolate over zero valid parameters, in this case return None and
+        # the calling code will generate another set of random parameters
+        if pars.shape[0] < 1:
+            return None
+
+        # Do as many parallel cubic spline interpolations as many wavelength bins we have
+        x, y = pars, flux
+        fn = CubicSpline(x, y)
+        spec = self.get_parameterized_spec(fn, **kwargs)
+        spec.flux = fn(kwargs[free_param_name])
+
+        return spec
+
+    def interpolate_model_linear(self, **kwargs):
         # TODO: interpolate continuum, if available
 
         idx = self.get_nearby_indexes(**kwargs)
@@ -166,12 +193,7 @@ class ModelGrid():
         V[ii] = self.flux[kk]
 
         fn = RegularGridInterpolator(x, V)
-
-        spec = self.create_spectrum()
-        for p in self.params:
-            setattr(spec, p, kwargs[p])
-
-        spec.wave = self.wave
+        spec = self.get_parameterized_spec(fn, **kwargs)
         spec.flux = fn(tuple([kwargs[p] for p in self.params]))
 
         return spec
