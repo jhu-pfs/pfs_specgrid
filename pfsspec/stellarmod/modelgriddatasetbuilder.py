@@ -26,7 +26,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--sample-mode', type=str, choices=['all', 'random'], default='all', help='Sampling mode\n')
         parser.add_argument('--sample-count', type=int, default=None, help='Number of interpolations between models\n')
         parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline'], default='grid', help='Type of interpolation\n')
-        parser.add_argument('--interp-param', type=str, default=None, help='Parameter direction of interpolation\n')
+        parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
 
         for k in self.grid.params:
             parser.add_argument('--' + k, type=float, nargs=2, default=None, help='Limit ' + k)

@@ -1,6 +1,7 @@
 import logging
 import itertools
 import numpy as np
+from random import choice
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
 
 from pfsspec.stellarmod.modelparam import ModelParam
@@ -135,7 +136,10 @@ class ModelGrid():
 
     def interpolate_model_spline(self, free_param_name, **kwargs):
         list_para = list(self.params.keys())
-        free_idx = list_para.index(free_param_name)
+        if free_param_name not in list_para:
+            free_param_name = choice(list_para)
+        else:
+            free_idx = list_para.index(free_param_name)
 
         # Find nearest model to requested parameters
         idx = list(self.get_nearest_index(**kwargs))
