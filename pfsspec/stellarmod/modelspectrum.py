@@ -14,6 +14,7 @@ class ModelSpectrum(Spectrum):
             self.N_He = orig.N_He
             self.v_turb = orig.v_turb
             self.L_H = orig.L_H
+            self.C_M = orig.C_M
         else:
             self.cont = None
             self.T_eff = np.nan
@@ -23,6 +24,7 @@ class ModelSpectrum(Spectrum):
             self.N_He = np.nan
             self.v_turb = np.nan
             self.L_H = np.nan
+            self.C_M = np.nan
 
     def get_param_names(self):
         params = super(ModelSpectrum, self).get_param_names()
@@ -32,7 +34,8 @@ class ModelSpectrum(Spectrum):
                            'a_Fe',
                            'N_He',
                            'v_turb',
-                           'L_H']
+                           'L_H',
+                           'C_M']
         return params
 
     def print_info(self):
@@ -44,6 +47,7 @@ class ModelSpectrum(Spectrum):
         print('N(He)=', self.N_He)
         print('v_turb=', self.v_turb)
         print('L/H=', self.L_H)
+        print('[C/M]=', self.C_M)
 
     def rebin(self, nwave):
         self.cont = Spectrum.rebin_vector(self.wave, nwave, self.cont)
