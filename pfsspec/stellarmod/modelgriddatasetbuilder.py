@@ -27,6 +27,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--sample-count', type=int, default=None, help='Number of interpolations between models\n')
         parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline'], default='grid', help='Type of interpolation\n')
         parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
+        parser.add_argument('--random-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
 
         for k in self.grid.params:
             parser.add_argument('--' + k, type=float, nargs=2, default=None, help='Limit ' + k)
@@ -38,6 +39,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.sample_count = args['sample_count']
         self.interp_mode = args['interp_mode']
         self.interp_param = args['interp_param']
+        self.random_dist = args['random_dist']
 
         # Override grid range if specified
         # TODO: extend this to sample physically meaningful models only
@@ -64,25 +66,31 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def process_item(self, i):
         if self.sample_mode == 'all':
-            spec = self.get_gridpoint(i)
+            spec = self.get_gridpoint_model(i)
         elif self.sample_mode == 'random':
-            spec = self.draw_sample(i)
+            spec = self.get_interpolated_model(i)
         else:
             raise NotImplementedError()
 
         self.pipeline.run(spec)
         return spec
 
-    def get_random_params(self):
+    def draw_random_params(self):
         params = {}
         for p in self.grid.params:
-            params[p] = np.random.uniform(self.grid.params[p].min, self.grid.params[p].max)
+            if self.random_dist == 'uniform':
+                r = np.random.uniform(0, 1)
+            elif self.random_dist == 'beta':
+                r = np.random.beta(0.7, 0.7)    # Add a bit more weight to the tails
+            else:
+                raise NotImplementedError()
+            params[p] = self.grid.params[p].min + r * (self.grid.params[p].max - self.grid.params[p].min)
         return params
 
-    def draw_sample(self, i):
+    def get_interpolated_model(self, i):
         spec = None
         while spec is None:
-            params = self.get_random_params()
+            params = self.draw_random_params()
             if self.interp_mode == 'grid':
                 spec = self.grid.get_nearest_model(**params)
             elif self.interp_mode == 'linear':
@@ -94,15 +102,16 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
         return spec
 
-    def get_gridpoint(self, i):
+    def get_gridpoint_model(self, i):
         # TODO: rewrite this to use index of grid
         #       and to observer parameter limits
-        fi = self.index[0][i]
-        fj = self.index[1][i]
-        fk = self.index[2][i]
+        #fi = self.index[0][i]
+        #fj = self.index[1][i]
+        #fk = self.index[2][i]
 
-        spec = self.grid.get_model(fi, fj, fk)
-        return spec
+        #spec = self.grid.get_model(fi, fj, fk)
+        #return spec
+        raise NotImplementedError()
 
     def build(self):
         # non-existing models have 0 flux
