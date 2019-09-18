@@ -65,15 +65,21 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).create_dataset()
 
     def process_item(self, i):
-        if self.sample_mode == 'all':
-            spec = self.get_gridpoint_model(i)
-        elif self.sample_mode == 'random':
-            spec = self.get_interpolated_model(i)
-        else:
-            raise NotImplementedError()
+        spec = None
 
-        self.pipeline.run(spec)
-        return spec
+        while spec is None:
+            if self.sample_mode == 'all':
+                spec = self.get_gridpoint_model(i)
+            elif self.sample_mode == 'random':
+                spec = self.get_interpolated_model(i)
+            else:
+                raise NotImplementedError()
+
+            try:
+                self.pipeline.run(spec)
+                return spec
+            except Exception as e:
+                spec = None
 
     def draw_random_params(self):
         params = {}
