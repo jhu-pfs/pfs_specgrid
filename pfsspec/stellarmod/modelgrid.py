@@ -163,7 +163,7 @@ class ModelGrid():
         # If we are at the edge of the grid, it might happen that we try to
         # interpolate over zero valid parameters, in this case return None and
         # the calling code will generate another set of random parameters
-        if pars.shape[0] < 1:
+        if pars.shape[0] < 2:
             return None
 
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
