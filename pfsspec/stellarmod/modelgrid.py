@@ -138,8 +138,8 @@ class ModelGrid():
         list_para = list(self.params.keys())
         if free_param_name not in list_para:
             free_param_name = choice(list_para)
-        else:
-            free_idx = list_para.index(free_param_name)
+
+        free_idx = list_para.index(free_param_name)
 
         # Find nearest model to requested parameters
         idx = list(self.get_nearest_index(**kwargs))
