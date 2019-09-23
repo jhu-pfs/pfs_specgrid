@@ -98,6 +98,7 @@ class Convert(Script):
         super(Convert, self).prepare()
         self.outdir = self.args['out']
         self.create_output_dir(self.outdir)
+        self.save_command_line(os.path.join(self.outdir, 'command.sh'))
 
         self.pipeline = self.create_pipeline(self.args['dataset'], self.args['pipeline'])
         self.init_pipeline(self.pipeline)
