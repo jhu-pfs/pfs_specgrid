@@ -5,6 +5,7 @@ import logging
 import argparse
 import numpy as np
 import tensorflow as tf
+import multiprocessing
 from keras.backend.tensorflow_backend import set_session
 
 from pfsspec.notebookrunner import NotebookRunner
@@ -17,6 +18,10 @@ class Script():
         self.logging_file_handler = None
         self.dir_history = []
         self.is_batch = 'SLURM_JOBID' in os.environ
+        if 'SLURM_CPUS_PER_TASK' in os.environ:
+            self.threads = int(os.environ['SLURM_CPUS_PER_TASK'])
+        else:
+            self.threads = multiprocessing.cpu_count()
 
     def parse_args(self):
         if self.args is None:
@@ -106,7 +111,8 @@ class Script():
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         # config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
-        config.gpu_options.visible_device_list = self.args['gpus']
+        if 'gpus' in self.args and self.args['gpus'] is not None:
+            config.gpu_options.visible_device_list = self.args['gpus']
         session = tf.Session(config=config)
         set_session(session)
 
