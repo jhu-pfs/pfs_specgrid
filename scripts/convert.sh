@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.convert $@
+exec python -m pfsspec.scripts.convert $@

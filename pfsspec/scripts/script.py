@@ -4,6 +4,8 @@ import json
 import logging
 import argparse
 import numpy as np
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
 from pfsspec.notebookrunner import NotebookRunner
 
@@ -14,6 +16,7 @@ class Script():
         self.logging_console_handler = None
         self.logging_file_handler = None
         self.dir_history = []
+        self.is_batch = 'SLURM_JOBID' in os.environ
 
     def parse_args(self):
         if self.args is None:
@@ -98,6 +101,14 @@ class Script():
     def save_command_line(self, filename):
         with open(filename, 'w') as f:
             f.write(' '.join(sys.argv))
+
+    def init_tensorflow(self):
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        # config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
+        config.gpu_options.visible_device_list = self.args['gpus']
+        session = tf.Session(config=config)
+        set_session(session)
 
     def execute(self):
         self.prepare()

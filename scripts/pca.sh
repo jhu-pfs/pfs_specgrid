@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.pca $@
+exec python -m pfsspec.scripts.pca $@

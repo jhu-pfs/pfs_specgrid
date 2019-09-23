@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.predict_kurucz $@
+exec python -m pfsspec.scripts.predict_kurucz $@

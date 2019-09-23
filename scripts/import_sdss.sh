@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.import_sdss $@
+exec python -m pfsspec.scripts.import_sdss $@

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pfsspec.scripts.import_bosz $@
+exec python -m pfsspec.scripts.import_bosz $@
