@@ -127,7 +127,7 @@ class ModelGrid():
         spec = self.get_model(idx)
         return spec
 
-    def get_parameterized_spec(self, fn, **kwargs):
+    def get_parameterized_spec(self, **kwargs):
         spec = self.create_spectrum()
         for p in self.params:
             setattr(spec, p, kwargs[p])
@@ -169,7 +169,7 @@ class ModelGrid():
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
         x, y = pars, flux
         fn = CubicSpline(x, y)
-        spec = self.get_parameterized_spec(fn, **kwargs)
+        spec = self.get_parameterized_spec(**kwargs)
         spec.flux = fn(kwargs[free_param_name])
 
         return spec
@@ -197,7 +197,7 @@ class ModelGrid():
         V[ii] = self.flux[kk]
 
         fn = RegularGridInterpolator(x, V)
-        spec = self.get_parameterized_spec(fn, **kwargs)
+        spec = self.get_parameterized_spec(**kwargs)
         spec.flux = fn(tuple([kwargs[p] for p in self.params]))
 
         return spec
