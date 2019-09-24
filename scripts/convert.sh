@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec python -m pfsspec.scripts.convert $@
+./scripts/run.sh "python -m pfsspec.scripts.convert" $@
