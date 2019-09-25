@@ -56,6 +56,11 @@ class Script():
         with open(filename, 'w') as f:
             json.dump(self.args, f, default=Script.dump_json_default, indent=4)
 
+    def dump_env(self, filename):
+        with open(filename, 'w') as f:
+            for k in os.environ:
+                f.write('{}="{}"\n'.format(k, os.environ[k]))
+
     def load_json(self, filename):
         with open(filename, 'r') as f:
             return json.load(f)
@@ -130,6 +135,7 @@ class Script():
 
     def run(self):
         self.setup_logging(os.path.join(self.outdir, 'training.log'))
+        self.dump_env(os.path.join(self.outdir, 'env.sh'))
         self.dump_args_json(os.path.join(self.outdir, 'args.json'))
 
     def finish(self):
