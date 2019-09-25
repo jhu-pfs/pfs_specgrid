@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Work around issues with saving weights when running on multiple threads
+export HDF5_USE_FILE_LOCKING=FALSE
+
 PARAMS=""
 COMMAND="$1"
 shift
@@ -27,7 +30,7 @@ if [[ $1 == "sbatch" ]] || [[ $1 == "srun" ]]; then
                 SBATCH_GPUS=$2
                 shift 2
                 ;;
-            -c|--cpus-per-task)
+            -c|--cpus-per-task|--cpus)
                 SBATCH_CPUS_PER_TASK=$2
                 shift 2
                 ;;
