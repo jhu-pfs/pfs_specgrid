@@ -13,7 +13,7 @@ if [[ $1 == "sbatch" ]] || [[ $1 == "srun" ]]; then
 
     SBATCH_PARTITION=default
     SBATCH_MEM=16G
-    SBATCH_GPUS=1
+    SBATCH_GPUS=0
     SBATCH_CPUS_PER_TASK=8
 
     while (( "$#" )); do
