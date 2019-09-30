@@ -41,7 +41,7 @@ class BoszSpectrumReader(SpectrumReader):
 
         return spec
 
-    def read_grid(self, path):
+    def read_grid(self, path, stop=None):
         grid = BoszGrid()
         grid.build_index()
 
@@ -62,6 +62,9 @@ class BoszSpectrumReader(SpectrumReader):
                                 i += 1
                             else:
                                 logging.info('Cannot find file {}'.format(fn))
+                            if i == stop:
+                                logging.info('Stopped loading at i={}.'.format(i))
+                                return grid
 
         logging.info("Grid loaded with flux grid shape {}".format(grid.flux.shape))
 
