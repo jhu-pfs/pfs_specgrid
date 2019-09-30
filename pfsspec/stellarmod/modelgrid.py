@@ -4,9 +4,9 @@ import numpy as np
 from random import choice
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
 
-from pfsspec.stellarmod.modelparam import ModelParam
+from pfsspec.pfsobject import PfsObject
 
-class ModelGrid():
+class ModelGrid(PfsObject):
     def __init__(self, use_cont=False):
         self.use_cont = use_cont
         self.params = {
@@ -47,23 +47,23 @@ class ModelGrid():
         if self.cont is not None and cont is not None:
             self.cont[idx] = cont
 
-    def save(self, filename):
-        params = {p: self.params[p].values for p in self.params}
-        np.savez(filename,
-                 **params,
-                 wave=self.wave, flux=self.flux, cont=self.cont)
-
-    def load(self, filename):
-        data = np.load(filename)
+    def save_items(self):
         for p in self.params:
-            self.params[p] = ModelParam(p, data[p])
-        self.wave = data['wave']
-        self.flux = data['flux']
-        if 'cont' in data:
-            self.cont = data['cont']
+            self.save_item(p, self.params[p].values)
+        self.save_item('wave', self.wave)
+        self.save_item('flux', self.flux)
+        self.save_item('cont', self.cont)
+
+    def load(self, filename, format='pickle'):
+        super(ModelGrid, self).load(filename, format)
         self.build_index()
 
-        logging.info('Loaded model grid with shape {} containing {} valid spectra.'.format(self.flux.shape, np.sum(self.flux_idx)))
+    def load_items(self):
+        for p in self.params:
+            self.params[p].values = self.load_item(p, np.ndarray)
+        self.wave = self.load_item('wave', np.ndarray)
+        self.flux = self.load_item('flux', np.ndarray)
+        self.cont = self.load_item('cont', np.ndarray)
 
     def create_spectrum(self):
         raise NotImplementedError()
