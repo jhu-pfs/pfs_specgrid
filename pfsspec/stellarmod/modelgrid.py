@@ -41,6 +41,10 @@ class ModelGrid(PfsObject):
         Parameters must exactly match grid coordinates.
         """
         idx = [self.params[p].index[kwargs[p]] for p in self.params]
+        self.set_flux_idx(idx, flux, cont=None)
+
+    def set_flux_idx(self, idx, flux, cont=None):
+        idx = list(idx)
         idx.append(slice(None, None, 1))
         idx = tuple(idx)
         self.flux[idx] = flux

@@ -4,24 +4,25 @@ import math
 import numpy as np
 import pandas as pd
 
-from pfsspec.data.spectrumreader import SpectrumReader
+from pfsspec.stellarmod.modelgridspectrumreader import ModelGridSpectrumReader
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.boszgrid import BoszGrid
 
-class BoszSpectrumReader(SpectrumReader):
+class BoszSpectrumReader(ModelGridSpectrumReader):
 
     # TODO: Unify file open/close logig with other readers and
     # figure out how to use instance/class functions
 
-    def __init__(self, file=None, wave_lim=None):
-        super(BoszSpectrumReader, self).__init__()
-        self.file = file
+    def __init__(self, grid, path=None, wave_lim=None, max=None):
+        super(BoszSpectrumReader, self).__init__(grid)
+        self.path = path
         self.wave_lim = wave_lim
+        self.max = max
 
     def read(self, file=None):
         compression = None
         if file is None:
-            file = self.file
+            file = self.path
         if type(file) is str:
             fn, ext = os.path.splitext(file)
             if ext == '.bz2':
@@ -41,36 +42,19 @@ class BoszSpectrumReader(SpectrumReader):
 
         return spec
 
-    def read_grid(self, path, stop=None):
-        grid = BoszGrid()
-        grid.build_index()
+    def process_item(self, i):
+        index, params = i
+        fn = BoszSpectrumReader.get_filename(**params)
+        fn = os.path.join(self.path, fn)
 
-        i = 0
-        for fe_h in grid.params['Fe_H'].values:
-            for t_eff in grid.params['T_eff'].values:
-                for log_g in grid.params['log_g'].values:
-                    for c_m in grid.params['C_M'].values:
-                        for a_m in grid.params['a_Fe'].values:
-                            fn = BoszSpectrumReader.get_filename(fe_h, c_m, a_m, t_eff, log_g)
-                            fn = os.path.join(path, fn)
-                            if os.path.isfile(fn):
-                                spec = self.read(fn)
-                                if grid.wave is None:
-                                    grid.init_storage(spec.wave)
-                                grid.set_flux(spec.flux, spec.cont, Fe_H=fe_h, T_eff=t_eff, log_g=log_g,
-                                              C_M=c_m, a_Fe=a_m)
-                                i += 1
-                            else:
-                                logging.info('Cannot find file {}'.format(fn))
-                            if i == stop:
-                                logging.info('Stopped loading at i={}.'.format(i))
-                                return grid
+        if os.path.isfile(fn):
+            spec = self.read(fn)
+            return index, params, spec
+        else:
+            logging.debug('Cannot find file {}'.format(fn))
+            return None
 
-        logging.info("Grid loaded with flux grid shape {}".format(grid.flux.shape))
-
-        return grid
-
-    def get_filename(Fe_H, C_M, alpha_M, T_eff, log_g, v_turb=0.2, v_rot=0, R=5000):
+    def get_filename(Fe_H, C_M, a_Fe, T_eff, log_g, v_turb=0.2, v_rot=0, R=5000):
 
         # amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2
 
@@ -85,8 +69,8 @@ class BoszSpectrumReader(SpectrumReader):
         fn += '%02d' % (int(abs(C_M) * 10 + 0.5))
 
         fn += 'o'
-        fn += 'm' if alpha_M < 0 else 'p'
-        fn += '%02d' % (int(abs(alpha_M) * 10 + 0.5))
+        fn += 'm' if a_Fe < 0 else 'p'
+        fn += '%02d' % (int(abs(a_Fe) * 10 + 0.5))
 
         fn += 't'
         fn += '%d' % (int(T_eff))
