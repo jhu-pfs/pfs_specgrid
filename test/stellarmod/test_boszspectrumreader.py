@@ -25,3 +25,29 @@ class TestBoszSpectrumReader(TestBase):
 
     def test_get_filename(self):
         self.fail()
+
+    def test_parse_filename(self):
+        fn = 'amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2'
+        p = BoszSpectrumReader.parse_filename(fn)
+        self.assertEqual(-0.25, p['Fe_H'])
+        self.assertEqual(-0.25, p['C_M'])
+        self.assertEqual(-0.25, p['O_M'])
+        self.assertEqual(3500, p['T_eff'])
+        self.assertEqual(2.5, p['log_g'])
+
+    def test_enum_parameters(self):
+        print('Executing test_enum_parameters')
+
+        grid = BoszGrid()
+        r = BoszSpectrumReader(grid)
+
+        g = BoszSpectrumReader.EnumParamsGenerator(grid)
+        k = 0
+        for i in g:
+            k += 1
+
+        s = 1
+        for p in grid.params:
+            s *= grid.params[p].values.shape[0]
+
+        self.assertEqual(s, k)

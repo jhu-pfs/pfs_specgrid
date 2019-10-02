@@ -13,6 +13,9 @@ class ModelParam():
         self.min = np.min(self.values)
         self.max = np.max(self.values)
 
+    def get_index(self, value):
+        return self.index[value]
+
     def get_nearest_index(self, value):
         return np.abs(self.values - value).argmin()
 

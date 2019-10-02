@@ -5,7 +5,7 @@ from pfsspec.data.spectrumreader import SpectrumReader
 
 class ModelGridSpectrumReader(SpectrumReader):
     class EnumParamsGenerator():
-        def __init__(self, grid, max=None):
+        def __init__(self, grid=None, max=None):
             self.grid = grid
             self.limits = [grid.params[p].values.shape[0] for p in grid.params]
             self.i = 0
@@ -66,4 +66,28 @@ class ModelGridSpectrumReader(SpectrumReader):
         logging.info("Grid loaded with flux grid shape {}".format(self.grid.flux.shape))
 
     def process_item(self, i):
+        raise NotImplementedError()
+
+    def read_files(self, files, stop=None):
+        self.grid.build_index()
+
+        logging.info("Loading grid with flux grid shape {}".format(self.grid.flux.shape))
+        if self.max is not None:
+            logging.info("Loading will stop after {} spectra".format(self.max))
+
+        if self.parallel:
+            res = prll_map(self.process_file, files, verbose=True)
+        else:
+            res = srl_map(self.process_file, files, verbose=True)
+
+        k = 0
+        for r in res:
+            if r is not None:
+                k += 1
+                index, params, spec = r
+                self.grid.set_flux_idx(index, spec.flux, spec.cont)
+
+        logging.info('{} files loaded.'.format(k))
+
+    def process_file(self, file):
         raise NotImplementedError()

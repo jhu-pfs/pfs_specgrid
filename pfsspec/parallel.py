@@ -23,11 +23,14 @@ https://github.com/uqfoundation/multiprocess
 """
 
 # Modules #
+import logging
 import multiprocessing
 import numpy as np
 from tqdm import tqdm
 
 def apply_function(func_to_apply, queue_in, queue_out):
+    logger = multiprocessing.log_to_stderr()
+    logger.setLevel(logging.DEBUG)
     np.random.seed()
     while not queue_in.empty():
         num, obj = queue_in.get()
@@ -40,7 +43,7 @@ def prll_map(func_to_apply, items, cpus=None, verbose=False):
     q_in  = multiprocessing.Queue()
     q_out = multiprocessing.Queue()
     # Process list #
-    new_proc  = lambda t,a: multiprocessing.Process(target=t, args=a)
+    new_proc  = lambda t, a: multiprocessing.Process(target=t, args=a)
     processes = [new_proc(apply_function, (func_to_apply, q_in, q_out)) for x in range(cpus)]
     # Put all the items (objects) in the queue #
     sent = [q_in.put((i, x)) for i, x in enumerate(items)]
@@ -53,8 +56,10 @@ def prll_map(func_to_apply, items, cpus=None, verbose=False):
         results = [q_out.get() for x in tqdm(range(len(sent)))]
     else:
         results = [q_out.get() for x in range(len(sent))]
+
     # Wait for them to finish #
-    for proc in processes: proc.join()
+    #for proc in processes: proc.join()
+
     # Return results #
     return [x for i, x in sorted(results)]
 

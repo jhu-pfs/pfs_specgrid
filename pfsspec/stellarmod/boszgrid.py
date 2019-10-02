@@ -14,7 +14,7 @@ class BoszGrid(ModelGrid):
                                                               np.arange(20000, 36000, 1000))))
         self.params['log_g'] = ModelParam('log_g', np.arange(0, 5.5, 0.5))
         self.params['C_M'] = ModelParam('C_M', np.arange(-0.75, 0.75, 0.25))
-        self.params['a_Fe'] = ModelParam('a_Fe', np.arange(-0.25, 0.75, 0.25))
+        self.params['O_M'] = ModelParam('O_M', np.arange(-0.25, 0.75, 0.25))
 
     def create_spectrum(self):
         spec = KuruczSpectrum()

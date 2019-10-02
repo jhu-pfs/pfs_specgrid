@@ -72,6 +72,10 @@ class ModelGrid(PfsObject):
     def create_spectrum(self):
         raise NotImplementedError()
 
+    def get_index(self, **kwargs):
+        idx = tuple(self.params[p].get_index(kwargs[p]) for p in self.params)
+        return idx
+
     def get_nearest_index(self, **kwargs):
         idx = tuple(self.params[p].get_nearest_index(kwargs[p]) for p in self.params)
         return idx
