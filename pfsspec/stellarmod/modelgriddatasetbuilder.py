@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import logging
 
 from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
@@ -79,6 +80,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 self.pipeline.run(spec)
                 return spec
             except Exception as e:
+                logging.exception(e)
                 spec = None
 
     def draw_random_params(self):

@@ -77,6 +77,7 @@ class ModelGrid(PfsObject):
         return idx
 
     def get_nearest_index(self, **kwargs):
+        logging.debug('Finding nearest model to {}'.format(kwargs))
         idx = tuple(self.params[p].get_nearest_index(kwargs[p]) for p in self.params)
         return idx
 
@@ -152,6 +153,7 @@ class ModelGrid(PfsObject):
         # Find nearest model to requested parameters
         idx = list(self.get_nearest_index(**kwargs))
         if idx is None:
+            logging.debug('No nearest model found.')
             return None
 
         # Set all params to nearest value except the one in which we interpolate
@@ -172,7 +174,10 @@ class ModelGrid(PfsObject):
         # interpolate over zero valid parameters, in this case return None and
         # the calling code will generate another set of random parameters
         if pars.shape[0] < 2:
+            logging.debug('Parameters are at the edge of grid, no interpolation possible.')
             return None
+
+        logging.debug('Interpolating model to {} using cubic splines along {}.'.format(kwargs, free_param_name))
 
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
         x, y = pars, flux

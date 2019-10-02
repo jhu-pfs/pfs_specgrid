@@ -22,9 +22,9 @@ class TestBase(TestCase):
 
     def get_kurucz_grid(self):
         if self.kurucz_grid is None:
-            file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npz')
-            self.kurucz_grid = KuruczGrid()
-            self.kurucz_grid.load(file)
+            file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.npy.gz')
+            self.kurucz_grid = KuruczGrid(model='test')
+            self.kurucz_grid.load(file, 'numpy')
 
         return self.kurucz_grid
 

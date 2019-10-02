@@ -30,7 +30,7 @@ from tqdm import tqdm
 
 def apply_function(func_to_apply, queue_in, queue_out):
     logger = multiprocessing.log_to_stderr()
-    logger.setLevel(logging.DEBUG)
+    #logger.setLevel(logging.DEBUG)
     np.random.seed()
     while not queue_in.empty():
         num, obj = queue_in.get()

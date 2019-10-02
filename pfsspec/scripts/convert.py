@@ -86,7 +86,7 @@ class Convert(Script):
             dsbuilder.survey.load(os.path.join(self.args['in'], 'spectra.dat'))
             dsbuilder.params = dsbuilder.survey.params
         elif 'grid' in ds:
-            dsbuilder.grid.load(os.path.join(self.args['in'], 'spectra.npz'))
+            dsbuilder.grid.load(os.path.join(self.args['in'], 'spectra.h5'), 'h5')
         else:
             raise NotImplementedError()
 

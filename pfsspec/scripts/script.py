@@ -82,21 +82,27 @@ class Script():
         os.chdir(self.dir_history[-1])
         del self.dir_history[-1]
 
+    def get_logging_level(self):
+        if 'debug' in self.args and self.args['debug']:
+            return logging.DEBUG
+        else:
+            return logging.INFO
+
     def setup_logging(self, logfile=None):
         root = logging.getLogger()
-        root.setLevel(logging.INFO)
+        root.setLevel(self.get_logging_level())
 
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
         if logfile is not None and self.logging_file_handler is None:
             self.logging_file_handler = logging.FileHandler(logfile)
-            self.logging_file_handler.setLevel(logging.INFO)
+            self.logging_file_handler.setLevel(self.get_logging_level())
             self.logging_file_handler.setFormatter(formatter)
             root.addHandler(self.logging_file_handler)
 
         if self.logging_console_handler is None:
             self.logging_console_handler = logging.StreamHandler(sys.stdout)
-            self.logging_console_handler.setLevel(logging.INFO)
+            self.logging_console_handler.setLevel(self.get_logging_level())
             self.logging_console_handler.setFormatter(formatter)
             root.addHandler(self.logging_console_handler)
 
@@ -106,7 +112,7 @@ class Script():
 
     def resume_logging(self):
         if self.logging_console_handler is not None:
-            self.logging_console_handler.setLevel(logging.INFO)
+            self.logging_console_handler.setLevel(self.get_logging_level())
 
     def save_command_line(self, filename):
         with open(filename, 'w') as f:
@@ -127,9 +133,9 @@ class Script():
         self.finish()
 
     def prepare(self):
-        self.setup_logging()
         self.add_subparsers(self.parser)
         self.parse_args()
+        self.setup_logging()
         if 'debug' in self.args and self.args['debug']:
             np.seterr(all='raise')
 
