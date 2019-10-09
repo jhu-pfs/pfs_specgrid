@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 import tensorflow as tf
 import multiprocessing
+import socket
 from keras.backend.tensorflow_backend import set_session
 
 from pfsspec.notebookrunner import NotebookRunner
@@ -105,6 +106,8 @@ class Script():
             self.logging_console_handler.setLevel(self.get_logging_level())
             self.logging_console_handler.setFormatter(formatter)
             root.addHandler(self.logging_console_handler)
+
+        logging.info('Running script on {}'.format(socket.gethostname()))
 
     def suspend_logging(self):
         if self.logging_console_handler is not None:
