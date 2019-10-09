@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+from pfsspec.util import *
 from pfsspec.data.regressionaldatasetaugmenter import RegressionalDatasetAugmenter
 
 class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
@@ -40,6 +41,8 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
         elif mode == 'test' or mode == 'predict':
             if 'noiz' in args and args['noiz'] == 'no':
                 self.noise = 0
+            elif is_float(args['noiz']):
+                self.noise = float(args['noiz'])
             else:
                 self.noise = 1.0
         else:
