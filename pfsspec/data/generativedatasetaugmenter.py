@@ -19,10 +19,12 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         return d
 
     def scale_input(self, input):
-        return input / self.coeffs
+        values = input / self.coeffs
+        return super(GenerativeDatasetAugmenter, self).scale_input(values)
 
     def rescale_input(self, input):
-        return input * self.coeff
+        values = input * self.coeff
+        return super(GenerativeDatasetAugmenter, self).rescale_input(values)
 
     def augment_batch(self, batch_index):
         input, output, weight = super(GenerativeDatasetAugmenter, self).augment_batch(batch_index)

@@ -19,10 +19,12 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         return d
 
     def scale_output(self, output):
-        return output / self.coeffs
+        values = output / self.coeffs
+        return super(RegressionalDatasetAugmenter, self).scale_output(values)
 
     def rescale_output(self, output):
-        return output * self.coeffs
+        values = output * self.coeffs
+        return super(RegressionalDatasetAugmenter, self).rescale_output(values)
 
     def augment_batch(self, batch_index):
         input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(batch_index)
