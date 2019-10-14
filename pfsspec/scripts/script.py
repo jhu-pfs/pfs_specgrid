@@ -8,6 +8,7 @@ import tensorflow as tf
 import multiprocessing
 import socket
 from keras.backend.tensorflow_backend import set_session
+from keras import backend as K
 
 from pfsspec.notebookrunner import NotebookRunner
 
@@ -136,6 +137,9 @@ class Script():
             config.gpu_options.visible_device_list = self.args['gpus']
         session = tf.Session(config=config)
         set_session(session)
+
+    def release_tensorflow(self):
+        K.clear_session()
 
     def init_logging(self, outdir):
         self.setup_logging(os.path.join(outdir, type(self).__name__ + '.log'))
