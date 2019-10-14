@@ -18,6 +18,7 @@ class Script():
         self.logging_console_handler = None
         self.logging_file_handler = None
         self.dir_history = []
+        self.outdir = None
         self.is_batch = 'SLURM_JOBID' in os.environ
         if 'SLURM_CPUS_PER_TASK' in os.environ:
             self.threads = int(os.environ['SLURM_CPUS_PER_TASK'])
@@ -66,9 +67,14 @@ class Script():
         with open(filename, 'r') as f:
             return json.load(f)
 
-    def create_output_dir(self, dir):
+    def create_output_dir(self, dir, cont=False):
         logging.info('Output directory is {}'.format(dir))
-        if os.path.exists(dir):
+        if cont:
+            if os.path.exists(dir):
+                logging.info('Found output directory.')
+            else:
+                raise Exception("Output directory doesn't exist, can't continue.")
+        elif os.path.exists(dir):
             if len(os.listdir(dir)) != 0:
                 raise Exception('Output directory is not empty.')
         else:
@@ -118,7 +124,8 @@ class Script():
             self.logging_console_handler.setLevel(self.get_logging_level())
 
     def save_command_line(self, filename):
-        with open(filename, 'w') as f:
+        mode = 'a' if os.path.isfile(filename) else 'w'
+        with open(filename, 'a') as f:
             f.write(' '.join(sys.argv))
 
     def init_tensorflow(self):
@@ -129,6 +136,12 @@ class Script():
             config.gpu_options.visible_device_list = self.args['gpus']
         session = tf.Session(config=config)
         set_session(session)
+
+    def init_logging(self, outdir):
+        self.setup_logging(os.path.join(outdir, type(self).__name__ + '.log'))
+        self.save_command_line(os.path.join(outdir, 'command.sh'))
+        self.dump_env(os.path.join(outdir, 'env.sh'))
+        self.dump_args_json(os.path.join(outdir, 'args.json'))
 
     def execute(self):
         self.prepare()
@@ -143,9 +156,7 @@ class Script():
             np.seterr(all='raise')
 
     def run(self):
-        self.setup_logging(os.path.join(self.outdir, 'training.log'))
-        self.dump_env(os.path.join(self.outdir, 'env.sh'))
-        self.dump_args_json(os.path.join(self.outdir, 'args.json'))
+        raise NotImplementedError()
 
     def finish(self):
         self.execute_notebooks()

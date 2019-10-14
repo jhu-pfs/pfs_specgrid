@@ -50,6 +50,8 @@ class PfsObject():
                 item.to_hdf(self.filename, name, mode='a')
             elif isinstance(item, np.ndarray):
                 with h5py.File(self.filename, 'a') as f:
+                    if name in f:
+                        del f[name]
                     f.create_dataset(name, data=item)
             else:
                 raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))

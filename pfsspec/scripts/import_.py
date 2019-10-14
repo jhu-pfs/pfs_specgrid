@@ -21,4 +21,4 @@ class Import(Script):
         self.create_output_dir(self.args['out'])
 
     def run(self):
-        super(Import, self).run()
+        self.init_logging(self.outdir)

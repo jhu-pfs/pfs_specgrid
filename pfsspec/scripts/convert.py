@@ -109,8 +109,7 @@ class Convert(Script):
         self.init_dsbuilder(self.dsbuilder)
 
     def run(self):
-        super(Convert, self).run()
-
+        self.init_logging(self.outdir)
         self.dsbuilder.build()
         self.dsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.h5'), 'h5')
 
