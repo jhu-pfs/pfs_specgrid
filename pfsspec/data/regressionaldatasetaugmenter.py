@@ -26,11 +26,11 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         values = output * self.coeffs
         return super(RegressionalDatasetAugmenter, self).rescale_output(values)
 
-    def augment_batch(self, batch_index):
-        input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(batch_index)
+    def augment_batch(self, batch_id):
+        input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(batch_id)
 
-        input = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
-        output = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
+        input = np.array(self.dataset.flux[batch_id], copy=True, dtype=np.float)
+        output = np.array(self.dataset.params[self.labels].iloc[batch_id], copy=True, dtype=np.float)
 
         return input, output, weight
 

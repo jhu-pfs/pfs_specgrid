@@ -44,12 +44,12 @@ class DatasetAugmenter(KerasDataGenerator):
             self.dataset.params['weight'] = 0.5 * self.dataset.params[self.weight] / m
             self.dataset.params['weight'][self.dataset.params['weight'] > 1] = 1
 
-    def augment_batch(self, batch_index):
+    def augment_batch(self, batch_id):
         input = None
         output = None
 
         if self.weight is not None:
-            weight = np.array(self.dataset.params['weight'].iloc[batch_index], copy=True, dtype=np.float)
+            weight = np.array(self.dataset.params['weight'].iloc[batch_id], copy=True, dtype=np.float)
         else:
             weight = None
 

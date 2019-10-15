@@ -126,7 +126,10 @@ class Script():
 
     def save_command_line(self, filename):
         mode = 'a' if os.path.isfile(filename) else 'w'
-        with open(filename, 'a') as f:
+        with open(filename, mode) as f:
+            if mode == 'a':
+                f.write('\n')
+                f.write('\n')
             f.write(' '.join(sys.argv))
 
     def init_tensorflow(self):

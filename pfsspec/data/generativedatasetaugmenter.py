@@ -26,11 +26,11 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         values = input * self.coeff
         return super(GenerativeDatasetAugmenter, self).rescale_input(values)
 
-    def augment_batch(self, batch_index):
-        input, output, weight = super(GenerativeDatasetAugmenter, self).augment_batch(batch_index)
+    def augment_batch(self, batch_id):
+        input, output, weight = super(GenerativeDatasetAugmenter, self).augment_batch(batch_id)
 
-        input = np.array(self.dataset.params[self.labels].iloc[batch_index], copy=True, dtype=np.float)
-        output = np.array(self.dataset.flux[batch_index], copy=True, dtype=np.float)
+        input = np.array(self.dataset.params[self.labels].iloc[batch_id], copy=True, dtype=np.float)
+        output = np.array(self.dataset.flux[batch_id], copy=True, dtype=np.float)
 
         return input, output, weight
 

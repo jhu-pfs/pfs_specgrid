@@ -19,8 +19,8 @@ class KuruczGenerativeAugmenter(GenerativeDatasetAugmenter):
                                         self.batch_size, self.shuffle, self.seed)
         return new
 
-    def augment_batch(self, batch_index):
-        labels, flux, weight = super(KuruczGenerativeAugmenter, self).augment_batch(batch_index)
+    def augment_batch(self, batch_id):
+        labels, flux, weight = super(KuruczGenerativeAugmenter, self).augment_batch(batch_id)
 
         # Add minimal Gaussian noise on output
         # output *= np.random.normal(1, 0.01, output.shape)
