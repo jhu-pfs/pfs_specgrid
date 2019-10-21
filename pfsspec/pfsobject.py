@@ -13,6 +13,7 @@ class PfsObject():
         self.file = None
         self.filename = None
         self.fileformat = None
+        self.filedata = None
 
     def save(self, filename, format='pickle'):
         logging.info("Saving {} to file {}...".format(type(self).__name__, filename))
@@ -25,6 +26,11 @@ class PfsObject():
                 self.file = f
                 self.save_items()
                 self.file = None
+        elif self.fileformat == 'npz':
+            self.filedata = {}
+            self.save_items()
+            np.savez(filename, **self.filedata)
+            self.filedata = None
         elif self.fileformat == 'h5':
             self.save_items()
         else:
@@ -42,6 +48,8 @@ class PfsObject():
             np.save(self.file, item, allow_pickle=True)
         elif self.fileformat == 'pickle':
             pickle.dump(item, self.file, protocol=4)
+        elif self.fileformat == 'npz':
+            self.filedata[name] = item
         elif self.fileformat == 'h5':
             if item is None:
                 # Do not save if value is None
@@ -69,6 +77,10 @@ class PfsObject():
                 self.file = f
                 self.load_items()
                 self.file = None
+        if self.fileformat == 'npz':
+            self.filedata = np.load(self.filename, allow_pickle=True)
+            self.load_items()
+            self.filedata = None
         elif self.fileformat == 'h5':
             self.load_items()
         else:
@@ -84,12 +96,15 @@ class PfsObject():
 
         if self.fileformat == 'numpy':
             data = np.load(self.file, allow_pickle=True)
-            if isinstance(data, np.ndarray) and data.shape == ():
-                return None
-            else:
-                return data
+            return self.load_none_array(data)
         elif self.fileformat == 'pickle':
             return pickle.load(self.file)
+        elif self.fileformat == 'npz':
+            if name in self.filedata:
+                data = self.filedata[name]
+                return self.load_none_array(data)
+            else:
+                return None
         elif self.fileformat == 'h5':
             if type == pd.DataFrame:
                 return pd.read_hdf(self.filename, name)
@@ -103,6 +118,12 @@ class PfsObject():
                 raise NotImplementedError()
         else:
             raise NotImplementedError()
+
+    def load_none_array(self, data):
+        if isinstance(data, np.ndarray) and data.shape == ():
+            return None
+        else:
+            return data
 
     def plot_getax(self, ax=None, xlim=Constants.DEFAULT_PLOT_WAVE_RANGE, ylim=None):
         if ax is None:
