@@ -88,6 +88,7 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
 
         # Fit continuum, if requested
         # TODO: figure out how to vectorize fitting
+        # TODO: replace this with more generic code
         if self.normalize == 'poly':
             for i in range(flux.shape[0]):
                 poly = np.polyfit(self.dataset.wave, flux[i, :], 4, w=1/self.normalize_weights)

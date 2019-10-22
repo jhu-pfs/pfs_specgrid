@@ -58,7 +58,7 @@ class ModelGrid(PfsObject):
         self.save_item('flux', self.flux)
         self.save_item('cont', self.cont)
 
-    def load(self, filename, format='pickle'):
+    def load(self, filename, format=None):
         super(ModelGrid, self).load(filename, format)
         self.build_index()
 

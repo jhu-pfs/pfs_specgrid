@@ -1,3 +1,4 @@
+import os
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,6 +15,23 @@ class PfsObject():
         self.filename = None
         self.fileformat = None
         self.filedata = None
+
+    def get_format(self, filename):
+        fn, ext = os.path.splitext(filename)
+        if ext == '.h5':
+            return 'h5'
+        elif ext == '.npz':
+            return 'npz'
+        elif ext == '.gz':
+            fn, ext = os.path.splitext(fn)
+            if ext == '.npy':
+                return 'numpy'
+            elif ext == '.dat':
+                return 'pickle'
+            else:
+                raise NotImplementedError()
+        else:
+            raise NotImplementedError()
 
     def save(self, filename, format='pickle'):
         logging.info("Saving {} to file {}...".format(type(self).__name__, filename))
@@ -66,8 +84,11 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
-    def load(self, filename, format='pickle'):
+    def load(self, filename, format=None):
         logging.info("Loading {} from file {}...".format(type(self).__name__, filename))
+
+        if format is None:
+            format = self.get_format(filename)
 
         self.filename = filename
         self.fileformat = format
@@ -79,6 +100,7 @@ class PfsObject():
                 self.file = None
         if self.fileformat == 'npz':
             self.filedata = np.load(self.filename, allow_pickle=True)
+            logging.debug('Found items: {}'.format([k for k in self.filedata]))
             self.load_items()
             self.filedata = None
         elif self.fileformat == 'h5':

@@ -6,7 +6,6 @@ class ModelSpectrum(Spectrum):
     def __init__(self, orig=None):
         super(ModelSpectrum, self).__init__()
         if isinstance(orig, ModelSpectrum):
-            self.cont = np.copy(orig.cont)
             self.T_eff = orig.T_eff
             self.log_g = orig.log_g
             self.Fe_H = orig.Fe_H
@@ -17,7 +16,6 @@ class ModelSpectrum(Spectrum):
             self.C_M = orig.C_M
             self.O_M = orig.O_M
         else:
-            self.cont = None
             self.T_eff = np.nan
             self.log_g = np.nan
             self.Fe_H = np.nan
@@ -52,12 +50,3 @@ class ModelSpectrum(Spectrum):
         print('L/H=', self.L_H)
         print('[C/M]=', self.C_M)
         print('[O/M]=', self.O_M)
-
-    def rebin(self, nwave):
-        self.cont = Spectrum.rebin_vector(self.wave, nwave, self.cont)
-        super(ModelSpectrum, self).rebin(nwave)
-
-    def multiply(self, a):
-        super(ModelSpectrum, self).multiply(a)
-        if self.cont is not None:
-            self.cont = self.cont * a
