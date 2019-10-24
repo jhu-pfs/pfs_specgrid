@@ -16,6 +16,8 @@ class Script():
     def __init__(self):
         self.parser = argparse.ArgumentParser()
         self.args = None
+        self.debug = False
+        self.random_seed = None
         self.logging_console_handler = None
         self.logging_file_handler = None
         self.dir_history = []
@@ -26,16 +28,21 @@ class Script():
         else:
             self.threads = multiprocessing.cpu_count()
 
-    def parse_args(self):
-        if self.args is None:
-            self.args = self.parser.parse_args().__dict__
-
     def add_subparsers(self, parser):
         # Default behavior doesn't user subparsers
         self.add_args(parser)
 
     def add_args(self, parser):
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
+        parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
+
+    def parse_args(self):
+        if self.args is None:
+            self.args = self.parser.parse_args().__dict__
+            if 'debug' in self.args and self.args['debug']:
+                self.debug = True
+            if 'random_seed' in self.args and self.args['random_seed'] is not None:
+                self.random_seed = self.args['random_seed']
 
     def dump_json_default(obj):
         if type(obj).__module__ == np.__name__:
@@ -91,7 +98,7 @@ class Script():
         del self.dir_history[-1]
 
     def get_logging_level(self):
-        if 'debug' in self.args and self.args['debug']:
+        if self.debug:
             return logging.DEBUG
         else:
             return logging.INFO
@@ -151,6 +158,8 @@ class Script():
         self.dump_args_json(os.path.join(outdir, 'args.json'))
 
     def execute(self):
+        if self.random_seed is not None:
+            np.random.seed(self.random_seed)
         self.prepare()
         self.run()
         self.finish()
@@ -159,7 +168,7 @@ class Script():
         self.add_subparsers(self.parser)
         self.parse_args()
         self.setup_logging()
-        if 'debug' in self.args and self.args['debug']:
+        if self.debug:
             np.seterr(all='raise')
 
     def run(self):

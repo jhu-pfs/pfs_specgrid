@@ -71,7 +71,7 @@ class Convert(Script):
 
     def create_dsbuilder(self, dataset):
         ds = self.DATASET_TYPES[dataset]
-        dsbuilder = ds['builder']()
+        dsbuilder = ds['builder'](random_seed=self.random_seed)
         if 'survey' in ds:
             dsbuilder.survey = ds['survey']()
         elif 'grid' in ds:

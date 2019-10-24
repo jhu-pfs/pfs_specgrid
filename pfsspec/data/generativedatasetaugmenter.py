@@ -34,5 +34,5 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
 
         return input, output, weight
 
-    def get_average(self):
+    def get_output_mean(self):
         return np.mean(self.dataset.flux, axis=0)

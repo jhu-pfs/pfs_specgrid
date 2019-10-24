@@ -23,7 +23,7 @@ class ImportBosz(Import):
         grid = BoszGrid()
 
         r = BoszSpectrumReader(grid)
-        r.parallel = not self.args['debug']
+        r.parallel = not self.debug
         r.wave_lim = self.args['wave']
         r.max = self.args['max']
 

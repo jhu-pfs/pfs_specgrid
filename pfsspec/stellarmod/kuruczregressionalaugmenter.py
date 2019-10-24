@@ -69,9 +69,9 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
         else:
             return 1.0
 
-    def augment_batch(self, batch_id):
-        flux, labels, weight = super(KuruczRegressionalAugmenter, self).augment_batch(batch_id)
-        error = np.array(self.dataset.error[batch_id], copy=True, dtype=np.float)
+    def augment_batch(self, idx):
+        flux, labels, weight = super(KuruczRegressionalAugmenter, self).augment_batch(idx)
+        error = np.array(self.dataset.error[idx], copy=True, dtype=np.float)
 
         if self.noise_scheduler == 'linear':
             self.noise = self.noise_scheduler_linear_onestep()

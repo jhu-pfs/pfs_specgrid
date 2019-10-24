@@ -143,12 +143,9 @@ class ModelGrid(PfsObject):
         spec.wave = self.wave
         return spec
 
-    def interpolate_model_spline(self, free_param_name, **kwargs):
-        list_para = list(self.params.keys())
-        if free_param_name not in list_para:
-            free_param_name = choice(list_para)
-
-        free_idx = list_para.index(free_param_name)
+    def interpolate_model_spline(self, free_param, **kwargs):
+        params_list = list(self.params.keys())
+        free_param_idx = params_list.index(free_param)
 
         # Find nearest model to requested parameters
         idx = list(self.get_nearest_index(**kwargs))
@@ -158,16 +155,16 @@ class ModelGrid(PfsObject):
 
         # Set all params to nearest value except the one in which we interpolate
         for i, p in enumerate(self.params):
-            if p != free_param_name:
+            if p != free_param:
                 kwargs[p] = self.params[p].values[idx[i]]
 
         # Determine index of models
-        idx[free_idx] = slice(None)
+        idx[free_param_idx] = slice(None)
         idx = tuple(idx)
 
         # Find index of models that actually exists
         valid_flux = self.flux_idx[idx]
-        pars = self.params[free_param_name].values[valid_flux]
+        pars = self.params[free_param].values[valid_flux]
         flux = self.flux[idx][valid_flux]
 
         # If we are at the edge of the grid, it might happen that we try to
@@ -177,13 +174,13 @@ class ModelGrid(PfsObject):
             logging.debug('Parameters are at the edge of grid, no interpolation possible.')
             return None
 
-        logging.debug('Interpolating model to {} using cubic splines along {}.'.format(kwargs, free_param_name))
+        logging.debug('Interpolating model to {} using cubic splines along {}.'.format(kwargs, free_param))
 
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
         x, y = pars, flux
         fn = CubicSpline(x, y)
         spec = self.get_parameterized_spec(**kwargs)
-        spec.flux = fn(kwargs[free_param_name])
+        spec.flux = fn(kwargs[free_param])
 
         return spec
 

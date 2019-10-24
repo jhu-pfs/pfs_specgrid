@@ -55,5 +55,5 @@ class DatasetAugmenter(KerasDataGenerator):
 
         return input, output, weight
 
-    def get_average(self):
+    def get_output_mean(self):
         raise NotImplementedError()

@@ -6,8 +6,8 @@ from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 
 class ModelGridDatasetBuilder(DatasetBuilder):
-    def __init__(self, orig=None):
-        super(ModelGridDatasetBuilder, self).__init__(orig)
+    def __init__(self, orig=None, random_seed=None):
+        super(ModelGridDatasetBuilder, self).__init__(orig=orig, random_seed=random_seed)
         if orig is None:
             self.grid = None
             self.sample_mode = None
@@ -84,12 +84,13 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 spec = None
 
     def draw_random_params(self):
+        # Always draw random parameters from self.random_state
         params = {}
         for p in self.grid.params:
             if self.random_dist == 'uniform':
-                r = np.random.uniform(0, 1)
+                r = self.random_state.uniform(0, 1)
             elif self.random_dist == 'beta':
-                r = np.random.beta(0.7, 0.7)    # Add a bit more weight to the tails
+                r = self.random_state.beta(0.7, 0.7)    # Add a bit more weight to the tails
             else:
                 raise NotImplementedError()
             params[p] = self.grid.params[p].min + r * (self.grid.params[p].max - self.grid.params[p].min)
@@ -104,7 +105,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             elif self.interp_mode == 'linear':
                 spec = self.grid.interpolate_model_linear(**params)
             elif self.interp_mode == 'spline':
-                spec = self.grid.interpolate_model_spline(self.interp_param, **params)
+                if self.interp_param == 'random':
+                    free_param = self.random_state.choice(list(self.grid.params.keys()))
+                spec = self.grid.interpolate_model_spline(free_param, **params)
             else:
                 raise NotImplementedError()
 
