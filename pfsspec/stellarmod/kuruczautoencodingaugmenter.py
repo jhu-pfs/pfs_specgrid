@@ -1,26 +1,26 @@
 import numpy as np
 
-from pfsspec.data.generativedatasetaugmenter import GenerativeDatasetAugmenter
+from pfsspec.data.autoencodingdatasetaugmenter import AutoencodingDatasetAugmenter
 
-class KuruczGenerativeAugmenter(GenerativeDatasetAugmenter):
+class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter):
     def __init__(self):
-        super(KuruczGenerativeAugmenter, self).__init__()
+        super(KuruczAutoencodingAugmenter, self).__init__()
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
-        d = super(KuruczGenerativeAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
+    def from_datasets(cls, input_dataset, output_dataset, weight=None, batch_size=1, shuffle=True, seed=None):
+        d = super(KuruczAutoencodingAugmenter, cls).from_datasets(input_dataset, output_dataset, weight,
                                                                batch_size=batch_size,
                                                                shuffle=shuffle,
                                                                seed=seed)
         return d
 
     def copy(self):
-        new = KuruczGenerativeAugmenter(self.dataset, self.labels, self.coeffs,
+        new = KuruczAutoencodingAugmenter(self.dataset, self.labels, self.coeffs,
                                         self.batch_size, self.shuffle, self.seed)
         return new
 
-    def augment_batch(self, idx):
-        labels, flux, weight = super(KuruczGenerativeAugmenter, self).augment_batch(idx)
+    def augment_batch(self, batch_id):
+        labels, flux, weight = super(KuruczAutoencodingAugmenter, self).augment_batch(batch_id)
 
         # Add minimal Gaussian noise on output
         # output *= np.random.normal(1, 0.01, output.shape)

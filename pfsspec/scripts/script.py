@@ -158,8 +158,6 @@ class Script():
         self.dump_args_json(os.path.join(outdir, 'args.json'))
 
     def execute(self):
-        if self.random_seed is not None:
-            np.random.seed(self.random_seed)
         self.prepare()
         self.run()
         self.finish()
@@ -170,6 +168,8 @@ class Script():
         self.setup_logging()
         if self.debug:
             np.seterr(all='raise')
+        if self.random_seed is not None:
+            np.random.seed(self.random_seed)
 
     def run(self):
         raise NotImplementedError()
