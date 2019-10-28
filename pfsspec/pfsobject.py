@@ -84,8 +84,8 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
-    def load(self, filename, format=None):
-        logging.info("Loading {} from file {}...".format(type(self).__name__, filename))
+    def load(self, filename, slice=None, format=None):
+        logging.info("Loading {} from file {} with slices {}...".format(type(self).__name__, filename, slice))
 
         if format is None:
             format = self.get_format(filename)
@@ -96,44 +96,62 @@ class PfsObject():
         if self.fileformat in ['numpy', 'pickle']:
             with gzip.open(self.filename, 'rb') as f:
                 self.file = f
-                self.load_items()
+                self.load_items(slice=slice)
                 self.file = None
         if self.fileformat == 'npz':
             self.filedata = np.load(self.filename, allow_pickle=True)
             logging.debug('Found items: {}'.format([k for k in self.filedata]))
-            self.load_items()
+            self.load_items(slice=slice)
             self.filedata = None
         elif self.fileformat == 'h5':
-            self.load_items()
+            self.load_items(slice=slice)
         else:
             raise NotImplementedError()
 
         logging.info("Loaded {} from file {}.".format(type(self).__name__, filename))
 
-    def load_items(self):
+    def load_items(self, slice=None):
         raise NotImplementedError()
 
-    def load_item(self, name, type):
-        logging.debug('Loading item {} with type {}'.format(name, type.__name__))
+    def load_item(self, name, type, slice=None):
+        logging.debug('Loading item {} with type {} and slices {}'.format(name, type.__name__, slice))
 
         if self.fileformat == 'numpy':
             data = np.load(self.file, allow_pickle=True)
-            return self.load_none_array(data)
+            data = self.load_none_array(data, slice)
+            if data is not None and slice is not None:
+                return data[slice]
+            else:
+                return data
         elif self.fileformat == 'pickle':
-            return pickle.load(self.file)
+            data = pickle.load(self.file)
+            if data is not None and slice is not None:
+                return data[slice]
+            else:
+                return data
         elif self.fileformat == 'npz':
             if name in self.filedata:
                 data = self.filedata[name]
-                return self.load_none_array(data)
+                data = self.load_none_array(data)
+                if data is not None and slice is not None:
+                    return data[slice]
+                else:
+                    return data
             else:
                 return None
         elif self.fileformat == 'h5':
             if type == pd.DataFrame:
-                return pd.read_hdf(self.filename, name)
+                if slice is not None:
+                    return pd.read_hdf(self.filename, name, start=slice.start, stop=slice.stop)
+                else:
+                    return pd.read_hdf(self.filename, name)
             elif type == np.ndarray:
                 with h5py.File(self.filename, 'r') as f:
                     if name in f.keys():
-                        return f[name][:]
+                        if slice is not None:
+                            return f[name][slice]
+                        else:
+                            return f[name][:]
                     else:
                         return None
             else:

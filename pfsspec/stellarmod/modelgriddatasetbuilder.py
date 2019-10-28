@@ -36,11 +36,16 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
 
-        self.sample_mode = args['sample_mode']
-        self.sample_count = args['sample_count']
-        self.interp_mode = args['interp_mode']
-        self.interp_param = args['interp_param']
-        self.random_dist = args['random_dist']
+        if 'sample_mode' in args and args['sample_mode'] is not None:
+            self.sample_mode = args['sample_mode']
+        if 'sample_count' in args and args['sample_count'] is not None:
+            self.sample_count = args['sample_count']
+        if 'interp_mode' in args and args['interp_mode'] is not None:
+            self.interp_mode = args['interp_mode']
+        if 'interp_param' in args and args['interp_param'] is not None:
+            self.interp_param = args['interp_param']
+        if 'random_dist' in args and args['random_dist'] is not None:
+            self.random_dist = args['random_dist']
 
         # Override grid range if specified
         # TODO: extend this to sample physically meaningful models only
@@ -50,7 +55,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 self.grid.params[k].max = args[k][1]
 
     def get_spectrum_count(self):
-        if self.sample_mode == 'all':
+        if self.params is not None:
+            return self.params.shape[0]
+        elif self.sample_mode == 'all':
             # TODO: how to deal with parameters limits?
             # return self.index[0].shape[0]
             raise NotImplementedError()
@@ -62,26 +69,35 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def get_wave_count(self):
         return self.pipeline.rebin.shape[0]
 
-    def create_dataset(self):
-        super(ModelGridDatasetBuilder, self).create_dataset()
+    def create_dataset(self, init_storage=True):
+        return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
 
     def process_item(self, i):
         spec = None
-
         while spec is None:
-            if self.sample_mode == 'all':
-                spec = self.get_gridpoint_model(i)
-            elif self.sample_mode == 'random':
-                spec = self.get_interpolated_model(i)
+            if self.params is not None or self.sample_mode == 'random':
+                spec, params = self.get_interpolated_model(i)
+            elif self.sample_mode == 'all':
+                # TODO: implement, see below
+                spec, params = self.get_gridpoint_model(i)
             else:
                 raise NotImplementedError()
 
             try:
-                self.pipeline.run(spec)
+                spec.id = i
+                self.pipeline.run(spec, **params)
                 return spec
             except Exception as e:
                 logging.exception(e)
                 spec = None
+
+    def get_params(self, i):
+        params = self.params[self.params['id'] == i].to_dict('records')[0]
+        if self.interp_param == 'random':
+            free_param = params['interp_param']
+        else:
+            free_param = None
+        return params, free_param
 
     def draw_random_params(self):
         # Always draw random parameters from self.random_state
@@ -94,28 +110,38 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             else:
                 raise NotImplementedError()
             params[p] = self.grid.params[p].min + r * (self.grid.params[p].max - self.grid.params[p].min)
-        return params
+
+        if self.interp_param == 'random':
+            free_param = self.random_state.choice(list(self.grid.params.keys()))
+        else:
+            free_param = None
+
+        return params, free_param
 
     def get_interpolated_model(self, i):
         spec = None
         while spec is None:
-            params = self.draw_random_params()
+            # Use existing params or draw new ones
+            if self.params is not None:
+                params, free_param = self.get_params(i)
+            else:
+                params, free_param = self.draw_random_params()
+
             if self.interp_mode == 'grid':
                 spec = self.grid.get_nearest_model(**params)
             elif self.interp_mode == 'linear':
                 spec = self.grid.interpolate_model_linear(**params)
             elif self.interp_mode == 'spline':
-                if self.interp_param == 'random':
-                    free_param = self.random_state.choice(list(self.grid.params.keys()))
                 spec = self.grid.interpolate_model_spline(free_param, **params)
             else:
                 raise NotImplementedError()
 
-        return spec
+        return spec, params
 
     def get_gridpoint_model(self, i):
         # TODO: rewrite this to use index of grid
         #       and to observer parameter limits
+        # TODO: how to index models
         #fi = self.index[0][i]
         #fj = self.index[1][i]
         #fk = self.index[2][i]
@@ -129,7 +155,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.nonempty = self.grid.flux_idx
         self.index = np.where(self.nonempty)
 
-        super(ModelGridDatasetBuilder, self).build()
+        spectra = super(ModelGridDatasetBuilder, self).build()
+        self.copy_params_from_spectra(spectra)
 
         self.dataset.wave[:] = self.pipeline.rebin
         return self.dataset

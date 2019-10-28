@@ -54,9 +54,9 @@ class ModelGridSpectrumReader(SpectrumReader):
 
         g = ModelGridSpectrumReader.EnumParamsGenerator(self.grid, max=self.max)
         if self.parallel:
-            res = prll_map(self.process_item, g, verbose=True)
+            res = prll_map(None, self.process_item, g, verbose=True)
         else:
-            res = srl_map(self.process_item, g, verbose=True)
+            res = srl_map(None, self.process_item, g, verbose=True)
 
         for r in res:
             if r is not None:
@@ -76,9 +76,9 @@ class ModelGridSpectrumReader(SpectrumReader):
             logging.info("Loading will stop after {} spectra".format(self.max))
 
         if self.parallel:
-            res = prll_map(self.process_file, files, verbose=True)
+            res = prll_map(None, self.process_file, files, verbose=True)
         else:
-            res = srl_map(self.process_file, files, verbose=True)
+            res = srl_map(None, self.process_file, files, verbose=True)
 
         k = 0
         for r in res:

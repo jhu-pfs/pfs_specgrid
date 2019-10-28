@@ -8,6 +8,7 @@ from pfsspec.pfsobject import PfsObject
 
 class ModelGrid(PfsObject):
     def __init__(self, use_cont=False):
+        self.top = None
         self.use_cont = use_cont
         self.params = {
             'Fe_H': None,
@@ -19,10 +20,9 @@ class ModelGrid(PfsObject):
         self.flux = None
         self.flux_idx = None
 
-    def init_storage(self, wave):
+    def init_storage(self, wcount):
         shape = [self.params[p].values.shape[0] for p in self.params]
-        shape.append(wave.shape[0])
-        self.wave = wave
+        shape.append(wcount)
         self.flux = np.empty(shape)
         if self.use_cont:
             self.cont = np.empty(shape)
@@ -58,16 +58,19 @@ class ModelGrid(PfsObject):
         self.save_item('flux', self.flux)
         self.save_item('cont', self.cont)
 
-    def load(self, filename, format=None):
-        super(ModelGrid, self).load(filename, format)
+    def load(self, filename, slice=None, format=None):
+        super(ModelGrid, self).load(filename, slice=slice, format=format)
         self.build_index()
 
-    def load_items(self):
+    def load_items(self, slice=None):
         for p in self.params:
             self.params[p].values = self.load_item(p, np.ndarray)
         self.wave = self.load_item('wave', np.ndarray)
-        self.flux = self.load_item('flux', np.ndarray)
-        self.cont = self.load_item('cont', np.ndarray)
+
+        self.init_storage(self.wave.shape[0])
+
+        self.flux[slice] = self.load_item('flux', np.ndarray, slice=slice)
+        self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)
 
     def create_spectrum(self):
         raise NotImplementedError()
@@ -181,6 +184,7 @@ class ModelGrid(PfsObject):
         fn = CubicSpline(x, y)
         spec = self.get_parameterized_spec(**kwargs)
         spec.flux = fn(kwargs[free_param])
+        spec.interp_param = free_param
 
         return spec
 

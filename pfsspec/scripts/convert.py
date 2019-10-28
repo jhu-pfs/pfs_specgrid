@@ -46,6 +46,7 @@ class Convert(Script):
         self.outdir = None
         self.pipeline = None
         self.dsbuilder = None
+        self.params = None
 
     def add_subparsers(self, parser):
         spc = parser.add_subparsers(dest='dataset')
@@ -62,6 +63,12 @@ class Convert(Script):
         super(Convert, self).add_args(parser)
         parser.add_argument('--in', type=str, help="Data set directory\n")
         parser.add_argument('--out', type=str, help='Training set output directory\n')
+        parser.add_argument('--params', type=str, help="Take spectrum params from dataset.\n")
+
+    def parse_args(self):
+        super(Convert, self).parse_args()
+        if 'params' in self.args and self.args['params'] is not None:
+            self.params = self.args['params']
 
     def create_pipeline(self, dataset, pipeline):
         return self.DATASET_TYPES[dataset]['pipelines'][pipeline]()
@@ -86,11 +93,31 @@ class Convert(Script):
             dsbuilder.survey.load(os.path.join(self.args['in'], 'spectra.dat'))
             dsbuilder.params = dsbuilder.survey.params
         elif 'grid' in ds:
+            # If a limit is specified on any of the parameters, try to slice the
+            # grid while loading from HDF5
+            s = []
+            for k in dsbuilder.grid.params:
+                if self.args[k] is not None:
+                    idx = np.digitize([self.args[k][0], self.args[k][1]], dsbuilder.grid.params[k].values)
+                    s.append(slice(idx[0], idx[1] + 1, None))
+                else:
+                    s.append(slice(None))
+            s.append(slice(None))  # wave axis
+            s = tuple(s)
+
             fn = os.path.join(self.args['in'], 'spectra')
             if os.path.isfile(fn + '.h5'):
-                dsbuilder.grid.load(fn + '.h5', 'h5')
+                dsbuilder.grid.load(fn + '.h5', slice=s, format='h5')
             elif os.path.isfile(fn + '.npz'):
-                dsbuilder.grid.load(fn + '.npz', 'npz')
+                dsbuilder.grid.load(fn + '.npz', slice=s, format='npz')
+
+            # Load source parameters, if necessary
+            if self.params is not None:
+                fn = os.path.join(self.params, 'dataset.h5')
+                logging.info('Taking parameters from existing dataset: {}'.format(fn))
+                ds = dsbuilder.create_dataset(init_storage=False)
+                ds.load(fn, format='h5')
+                dsbuilder.params = ds.params
         else:
             raise NotImplementedError()
 
@@ -109,8 +136,8 @@ class Convert(Script):
         self.dump_json(self.pipeline, os.path.join(self.args['out'], 'pipeline.json'))
 
         self.dsbuilder = self.create_dsbuilder(self.args['dataset'])
-        self.load_data(self.dsbuilder)
         self.init_dsbuilder(self.dsbuilder)
+        self.load_data(self.dsbuilder)
 
     def run(self):
         self.init_logging(self.outdir)

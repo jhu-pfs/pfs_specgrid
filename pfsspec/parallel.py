@@ -28,15 +28,17 @@ import multiprocessing
 import numpy as np
 from tqdm import tqdm
 
-def apply_function(func_to_apply, queue_in, queue_out):
+def apply_function(x, init_func, worker_func, queue_in, queue_out):
     logger = multiprocessing.log_to_stderr()
     #logger.setLevel(logging.DEBUG)
     np.random.seed()
+    if init_func is not None:
+        init_func(x)
     while not queue_in.empty():
         num, obj = queue_in.get()
-        queue_out.put((num, func_to_apply(obj)))
+        queue_out.put((num, worker_func(obj)))
 
-def prll_map(func_to_apply, items, cpus=None, verbose=False):
+def prll_map(init_func, worker_func, items, cpus=None, verbose=False):
     # Number of processes to use #
     if cpus is None: cpus = min(multiprocessing.cpu_count(), 32)
     # Create queues #
@@ -44,7 +46,7 @@ def prll_map(func_to_apply, items, cpus=None, verbose=False):
     q_out = multiprocessing.Queue()
     # Process list #
     new_proc  = lambda t, a: multiprocessing.Process(target=t, args=a)
-    processes = [new_proc(apply_function, (func_to_apply, q_in, q_out)) for x in range(cpus)]
+    processes = [new_proc(apply_function, (x, init_func, worker_func, q_in, q_out)) for x in range(cpus)]
     # Put all the items (objects) in the queue #
     sent = [q_in.put((i, x)) for i, x in enumerate(items)]
     # Start them all #
@@ -63,12 +65,15 @@ def prll_map(func_to_apply, items, cpus=None, verbose=False):
     # Return results #
     return [x for i, x in sorted(results)]
 
-def srl_map(func_to_apply, items, verbose=False):
+def srl_map(init_func, worker_func, items, verbose=False):
+    if init_func is not None:
+        init_func(0)
+
     results = []
     if verbose:
         for i in tqdm(items):
-            results.append(func_to_apply(i))
+            results.append(worker_func(i))
     else:
         for i in items:
-            results.append(func_to_apply(i))
+            results.append(worker_func(i))
     return results

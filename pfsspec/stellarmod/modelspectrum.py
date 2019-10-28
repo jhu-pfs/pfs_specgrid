@@ -15,6 +15,7 @@ class ModelSpectrum(Spectrum):
             self.L_H = orig.L_H
             self.C_M = orig.C_M
             self.O_M = orig.O_M
+            self.interp_param = orig.interp_param
         else:
             self.T_eff = np.nan
             self.log_g = np.nan
@@ -25,6 +26,7 @@ class ModelSpectrum(Spectrum):
             self.L_H = np.nan
             self.C_M = np.nan
             self.O_M = np.nan
+            self.interp_param = ''
 
     def get_param_names(self):
         params = super(ModelSpectrum, self).get_param_names()
@@ -36,7 +38,8 @@ class ModelSpectrum(Spectrum):
                            'v_turb',
                            'L_H',
                            'C_M',
-                           'O_M']
+                           'O_M',
+                           'interp_param']
         return params
 
     def print_info(self):
