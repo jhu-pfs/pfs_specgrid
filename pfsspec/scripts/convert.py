@@ -136,8 +136,8 @@ class Convert(Script):
         self.dump_json(self.pipeline, os.path.join(self.args['out'], 'pipeline.json'))
 
         self.dsbuilder = self.create_dsbuilder(self.args['dataset'])
-        self.init_dsbuilder(self.dsbuilder)
         self.load_data(self.dsbuilder)
+        self.init_dsbuilder(self.dsbuilder)
 
     def run(self):
         self.init_logging(self.outdir)
