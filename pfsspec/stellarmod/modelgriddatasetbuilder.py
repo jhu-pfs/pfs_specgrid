@@ -11,12 +11,14 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         if orig is None:
             self.grid = None
             self.sample_mode = None
+            self.sample_dist = None
             self.sample_count = 0
             self.interp_mode = 'grid'
             self.interp_param = None
         else:
             self.grid = orig.grid
             self.sample_mode = orig.sample_mode
+            self.sample_dist = orig.sample_dist
             self.sample_count = orig.sample_count
             self.interp_mode = orig.interp_mode
             self.interp_param = orig.interp_param
@@ -25,10 +27,10 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         super(ModelGridDatasetBuilder, self).add_args(parser)
 
         parser.add_argument('--sample-mode', type=str, choices=['all', 'random'], default='all', help='Sampling mode\n')
-        parser.add_argument('--sample-count', type=int, default=None, help='Number of interpolations between models\n')
+        parser.add_argument('--sample-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
+        parser.add_argument('--sample-count', type=int, default=None, help='Number of samples to be interpolated between models\n')
         parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline'], default='grid', help='Type of interpolation\n')
         parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
-        parser.add_argument('--random-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
 
         for k in self.grid.params:
             parser.add_argument('--' + k, type=float, nargs=2, default=None, help='Limit ' + k)
@@ -38,14 +40,14 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
         if 'sample_mode' in args and args['sample_mode'] is not None:
             self.sample_mode = args['sample_mode']
+        if 'sample_dist' in args and args['sample_dist'] is not None:
+            self.sample_dist = args['sample_dist']
         if 'sample_count' in args and args['sample_count'] is not None:
             self.sample_count = args['sample_count']
         if 'interp_mode' in args and args['interp_mode'] is not None:
             self.interp_mode = args['interp_mode']
         if 'interp_param' in args and args['interp_param'] is not None:
             self.interp_param = args['interp_param']
-        if 'random_dist' in args and args['random_dist'] is not None:
-            self.random_dist = args['random_dist']
 
         # Override grid range if specified
         # TODO: extend this to sample physically meaningful models only
@@ -67,7 +69,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             raise NotImplementedError()
 
     def get_wave_count(self):
-        return self.pipeline.rebin.shape[0]
+        return self.pipeline.wave.shape[0]
 
     def create_dataset(self, init_storage=True):
         return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
@@ -103,9 +105,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         # Always draw random parameters from self.random_state
         params = {}
         for p in self.grid.params:
-            if self.random_dist == 'uniform':
+            if self.sample_dist == 'uniform':
                 r = self.random_state.uniform(0, 1)
-            elif self.random_dist == 'beta':
+            elif self.sample_dist == 'beta':
                 r = self.random_state.beta(0.7, 0.7)    # Add a bit more weight to the tails
             else:
                 raise NotImplementedError()
@@ -158,5 +160,5 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         spectra = super(ModelGridDatasetBuilder, self).build()
         self.copy_params_from_spectra(spectra)
 
-        self.dataset.wave[:] = self.pipeline.rebin
+        self.dataset.wave[:] = self.pipeline.wave
         return self.dataset

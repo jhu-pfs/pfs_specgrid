@@ -16,6 +16,17 @@ class PfsObject():
         self.fileformat = None
         self.filedata = None
 
+    def get_arg(self, name, old_value, args=None):
+        args = args or self.args
+        if name in args and args[name] is not None:
+            return args[name]
+        else:
+            return old_value
+
+    def is_arg(self, name, args=None):
+        args = args or self.args
+        return name in args and args[name] is not None
+
     def get_format(self, filename):
         fn, ext = os.path.splitext(filename)
         if ext == '.h5':
