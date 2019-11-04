@@ -13,6 +13,7 @@ if [[ $1 == "sbatch" ]] || [[ $1 == "srun" ]]; then
 
     SBATCH_PARTITION=default
     SBATCH_MEM=16G
+    SBATCH_TIME="12:00:00"
     SBATCH_GPUS=0
     SBATCH_CPUS_PER_TASK=8
 
@@ -25,6 +26,9 @@ if [[ $1 == "sbatch" ]] || [[ $1 == "srun" ]]; then
             --mem)
                 SBATCH_MEM=$2
                 shift 2
+                ;;
+            -t|--time)
+                SBATCH_TIME=$2
                 ;;
             -G|--gpus)
                 SBATCH_GPUS=$2
@@ -58,8 +62,10 @@ fi
 if [[ $RUNMODE == "run" ]]; then
     exec $COMMAND $@
 elif [[ $RUNMODE == "srun" ]]; then
-    exec srun --partition $SBATCH_PARTITION --gpus $SBATCH_GPUS \
+    exec srun --partition $SBATCH_PARTITION \
+              --gpus $SBATCH_GPUS \
               --cpus-per-task $SBATCH_CPUS_PER_TASK --mem $SBATCH_MEM \
+              --time $SBATCH_TIME \
               $COMMAND $PARAMS
 elif [[ $RUNMODE == "sbatch" ]]; then
     sbatch <<EOF
@@ -68,6 +74,7 @@ elif [[ $RUNMODE == "sbatch" ]]; then
 #SBATCH --gpus $SBATCH_GPUS
 #SBATCH --cpus-per-task $SBATCH_CPUS_PER_TASK
 #SBATCH --mem $SBATCH_MEM
+#SBATCH --time $SBATCH_TIME
 
 set -e
 
