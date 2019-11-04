@@ -97,8 +97,10 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         params = self.params[self.params['id'] == i].to_dict('records')[0]
         if self.interp_param == 'random':
             free_param = params['interp_param']
+        elif self.interp_param is not None:
+            free_param = self.interp_param
         else:
-            free_param = None
+            free_param = params['interp_param']
         return params, free_param
 
     def draw_random_params(self):
@@ -116,7 +118,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         if self.interp_param == 'random':
             free_param = self.random_state.choice(list(self.grid.params.keys()))
         else:
-            free_param = None
+            free_param = self.interp_param
 
         return params, free_param
 
