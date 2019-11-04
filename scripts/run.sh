@@ -63,7 +63,7 @@ if [[ $RUNMODE == "run" ]]; then
     exec $COMMAND $@
 elif [[ $RUNMODE == "srun" ]]; then
     exec srun --partition $SBATCH_PARTITION \
-              --gpus $SBATCH_GPUS \
+              --gres gpu:$SBATCH_GPUS \
               --cpus-per-task $SBATCH_CPUS_PER_TASK --mem $SBATCH_MEM \
               --time $SBATCH_TIME \
               $COMMAND $PARAMS
@@ -71,7 +71,7 @@ elif [[ $RUNMODE == "sbatch" ]]; then
     sbatch <<EOF
 #!/bin/bash
 #SBATCH --partition $SBATCH_PARTITION
-#SBATCH --gpus $SBATCH_GPUS
+#SBATCH --gres gpu:$SBATCH_GPUS
 #SBATCH --cpus-per-task $SBATCH_CPUS_PER_TASK
 #SBATCH --mem $SBATCH_MEM
 #SBATCH --time $SBATCH_TIME
