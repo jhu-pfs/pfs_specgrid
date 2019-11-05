@@ -109,7 +109,7 @@ class PfsObject():
                 self.file = f
                 self.load_items(slice=slice)
                 self.file = None
-        if self.fileformat == 'npz':
+        elif self.fileformat == 'npz':
             self.filedata = np.load(self.filename, allow_pickle=True)
             logging.debug('Found items: {}'.format([k for k in self.filedata]))
             self.load_items(slice=slice)
@@ -129,7 +129,7 @@ class PfsObject():
 
         if self.fileformat == 'numpy':
             data = np.load(self.file, allow_pickle=True)
-            data = self.load_none_array(data, slice)
+            data = self.load_none_array(data)
             if data is not None and slice is not None:
                 return data[slice]
             else:
