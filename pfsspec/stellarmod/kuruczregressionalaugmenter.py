@@ -22,27 +22,27 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter):
 
     def add_args(self, parser):
         super(KuruczRegressionalAugmenter, self).add_args(parser)
-        parser.add_argument('--noiz', type=str, help='Add noise.\n')
+        parser.add_argument('--noise', type=str, help='Add noise.\n')
         parser.add_argument('--norm', type=str, default=None, help='Normalize with continuum.')
 
     def init_from_args(self, args, mode):
         super(KuruczRegressionalAugmenter, self).init_from_args(args, mode)
 
         if mode == 'train':
-            if 'noiz' not in args or args['noiz'] is None or args['noiz'] == 'no':
+            if 'noise' not in args or args['noise'] is None or args['noise'] == 'no':
                 self.noise = 0
-            elif args['noiz'] == 'full':
+            elif args['noise'] == 'full':
                 self.noise = 1.0
-            elif args['noiz'] == 'prog':
+            elif args['noise'] == 'prog':
                 # progressively increasing noise
                 self.noise_scheduler = 'linear'
             else:
-                self.noise = float(args['noiz'])
+                self.noise = float(args['noise'])
         elif mode == 'test' or mode == 'predict':
-            if 'noiz' in args and args['noiz'] == 'no':
+            if 'noise' in args and args['noise'] == 'no':
                 self.noise = 0
-            elif is_float(args['noiz']):
-                self.noise = float(args['noiz'])
+            elif 'noise' in args and args['noise'] is not None and is_float(args['noise']):
+                self.noise = float(args['noise'])
             else:
                 self.noise = 1.0
         else:
