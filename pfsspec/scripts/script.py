@@ -10,6 +10,7 @@ import socket
 from keras.backend.tensorflow_backend import set_session
 from keras import backend as K
 
+import pfsspec.util as util
 from pfsspec.notebookrunner import NotebookRunner
 
 class Script():
@@ -31,6 +32,14 @@ class Script():
     def add_subparsers(self, parser):
         # Default behavior doesn't user subparsers
         self.add_args(parser)
+
+    def get_arg(self, name, old_value, args=None):
+        args = args or self.args
+        return util.get_arg(name, old_value, args)
+
+    def is_arg(self, name, args=None):
+        args = args or self.args
+        return util.is_arg(name, args)
 
     def add_args(self, parser):
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')

@@ -8,6 +8,7 @@ import gzip, pickle
 import h5py
 
 from pfsspec.constants import Constants
+import pfsspec.util as util
 
 class PfsObject():
     def __init__(self, orig=None):
@@ -18,14 +19,11 @@ class PfsObject():
 
     def get_arg(self, name, old_value, args=None):
         args = args or self.args
-        if name in args and args[name] is not None:
-            return args[name]
-        else:
-            return old_value
+        return util.get_arg(name, old_value, args)
 
     def is_arg(self, name, args=None):
         args = args or self.args
-        return name in args and args[name] is not None
+        return util.is_arg(name, args)
 
     def get_format(self, filename):
         fn, ext = os.path.splitext(filename)
