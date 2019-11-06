@@ -29,6 +29,7 @@ if [[ $1 == "sbatch" ]] || [[ $1 == "srun" ]]; then
                 ;;
             -t|--time)
                 SBATCH_TIME=$2
+		shift 2
                 ;;
             -G|--gpus)
                 SBATCH_GPUS=$2
