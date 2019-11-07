@@ -2,6 +2,7 @@ import os
 import numpy as np
 
 import pfsspec.util as util
+from pfsspec.obsmod.spectrum import Spectrum
 
 class KuruczAugmenter():
     def __init__(self):
@@ -75,14 +76,8 @@ class KuruczAugmenter():
             raise NotImplementedError()
 
         if noise is not None and noise > 0.0:
-            if error is not None:
-                # If error vector is present, use as sigma
-                err = noise * np.random.normal(size=flux.shape) * error
-                flux = flux + err
-            else:
-                # Simple multiplicative noise, one random number per bin
-                err = np.random.normal(1, noise, flux.shape)
-                flux = flux * err
+            # Noise don't have to be reproducible during training, do not reseed.
+            flux = Spectrum.generate_noise(flux, noise, error=error, random_seed=None)
 
         # Additive and multiplicative bias, two numbers per spectrum
         if self.aug_scale is not None:
