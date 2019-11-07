@@ -71,7 +71,7 @@ class KuruczAugmenter():
             pass
         elif self.noise_schedule == 'linear':
             noise *= self.noise_scheduler_linear_onestep()
-        else:
+        elif self.noise_schedule is not None:
             raise NotImplementedError()
 
         if noise is not None and noise > 0.0:
