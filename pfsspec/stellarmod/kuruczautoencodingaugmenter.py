@@ -1,10 +1,12 @@
 import numpy as np
 
 from pfsspec.data.autoencodingdatasetaugmenter import AutoencodingDatasetAugmenter
+from pfsspec.stellarmod.kuruczaugmenter import KuruczAugmenter
 
-class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter):
+class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter):
     def __init__(self):
         super(KuruczAutoencodingAugmenter, self).__init__()
+        KuruczAugmenter.__init__(self)
 
     @classmethod
     def from_datasets(cls, input_dataset, output_dataset, weight=None, batch_size=1, shuffle=True, seed=None):
@@ -19,13 +21,15 @@ class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter):
                                         self.batch_size, self.shuffle, self.seed)
         return new
 
-    def augment_batch(self, batch_id):
-        labels, flux, weight = super(KuruczAutoencodingAugmenter, self).augment_batch(batch_id)
+    def add_args(self, parser):
+        AutoencodingDatasetAugmenter.add_args(self, parser)
+        KuruczAugmenter.add_args(self, parser)
 
-        # Add minimal Gaussian noise on output
-        # output *= np.random.normal(1, 0.01, output.shape)
+    def init_from_args(self, args, mode):
+        AutoencodingDatasetAugmenter.init_from_args(self, args, mode)
+        KuruczAugmenter.init_from_args(self, args, mode)
 
-        # TODO: what type of augmentation can we do here?
-        # Cubic spline interpolation along grid lines?
-
-        return labels, flux, weight
+    def augment_batch(self, idx):
+        input, output, weight = AutoencodingDatasetAugmenter.augment_batch(self, idx)
+        input, _, weight = KuruczAugmenter.augment_batch(self, self.input_dataset, idx, input, None, weight)
+        return input, output, weight

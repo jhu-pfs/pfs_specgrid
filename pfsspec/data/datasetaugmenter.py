@@ -10,10 +10,6 @@ class DatasetAugmenter(KerasDataGenerator):
         self.coeffs = None
         self.weight = None
 
-        self.multiplicative_bias = False
-        self.additive_bias = False
-        self.include_wave = False
-
     @classmethod
     def from_dataset(cls, input_shape, output_shape, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
         d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, batch_size=batch_size, shuffle=shuffle, seed=seed)
@@ -25,17 +21,9 @@ class DatasetAugmenter(KerasDataGenerator):
         return d
 
     def add_args(self, parser):
-        parser.add_argument('--aug', type=str, default=None, help='Augment data.\n')
+        pass
 
     def init_from_args(self, args, mode):
-        # TODO: extend with more options
-        if 'aug' in args and args['aug'] == 'no':
-            self.multiplicative_bias = False
-            self.additive_bias = False
-        else:
-            self.multiplicative_bias = True
-            self.additive_bias = True
-
         # Copy weight column to new column called weight and normalize
         # We use the median since SNR is exponentially distributed
         # the clip normalized weights at 1

@@ -42,8 +42,10 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
-    def save(self, filename, format='pickle'):
+    def save(self, filename, format='pickle', save_items_func=None):
         logging.info("Saving {} to file {}...".format(type(self).__name__, filename))
+
+        save_items_func = save_items_func or self.save_items
 
         self.filename = filename
         self.fileformat = format
@@ -51,15 +53,15 @@ class PfsObject():
         if self.fileformat in ['numpy', 'pickle']:
             with gzip.open(self.filename, 'wb') as f:
                 self.file = f
-                self.save_items()
+                save_items_func()
                 self.file = None
         elif self.fileformat == 'npz':
             self.filedata = {}
-            self.save_items()
+            save_items_func()
             np.savez(filename, **self.filedata)
             self.filedata = None
         elif self.fileformat == 'h5':
-            self.save_items()
+            save_items_func()
         else:
             raise NotImplementedError()
 
@@ -93,11 +95,11 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
-    def load(self, filename, slice=None, format=None):
+    def load(self, filename, slice=None, format=None, load_items_func=None):
         logging.info("Loading {} from file {} with slices {}...".format(type(self).__name__, filename, slice))
 
-        if format is None:
-            format = self.get_format(filename)
+        load_items_func = load_items_func or self.load_items
+        format = format or self.get_format(filename)
 
         self.filename = filename
         self.fileformat = format
