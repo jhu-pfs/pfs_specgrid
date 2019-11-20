@@ -20,19 +20,29 @@ class ModelGrid(PfsObject):
         self.flux = None
         self.flux_idx = None
 
-    def init_storage(self, wcount):
+    def init_storage(self):
         shape = [self.params[p].values.shape[0] for p in self.params]
-        shape.append(wcount)
+        shape.append(self.wave.shape[0])
+
+        logging.info('Initializing memory for grid of size {}'.format(shape))
+
         self.flux = np.empty(shape)
         if self.use_cont:
             self.cont = np.empty(shape)
 
+        logging.info('Initialized memory for grid of size {}'.format(shape))
+
     def build_index(self):
+
+        logging.info('Building indexes on grid of size {}'.format(self.flux.shape))
+
         for p in self.params:
             self.params[p].build_index()
         axis = len(self.params)
         if self.flux is not None:
             self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
+
+        logging.info('Built indexes on grid of size {}'.format(self.flux.shape))
 
     def set_flux(self, flux, cont=None, **kwargs):
         """
@@ -67,7 +77,7 @@ class ModelGrid(PfsObject):
             self.params[p].values = self.load_item(p, np.ndarray)
         self.wave = self.load_item('wave', np.ndarray)
 
-        self.init_storage(self.wave.shape[0])
+        self.init_storage()
 
         self.flux[slice] = self.load_item('flux', np.ndarray, slice=slice)
         self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)

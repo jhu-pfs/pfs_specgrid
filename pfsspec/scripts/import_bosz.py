@@ -15,10 +15,16 @@ class ImportBosz(Import):
     def add_args(self, parser):
         super(ImportBosz, self).add_args(parser)
         parser.add_argument("--wave", type=float, nargs=2, default=None, help="Wavelength limits.\n")
+        parser.add_argument("--res", type=int, default=None, help="Resolution.\n")
         parser.add_argument("--max", type=int, default=None, help="Stop after this many items.\n")
 
     def run(self):
         super(ImportBosz, self).run()
+
+        if 'res' in self.args and self.args['res'] is not None:
+            res = self.args['res']
+        else:
+            res = 5000
 
         grid = BoszGrid()
 
@@ -31,10 +37,14 @@ class ImportBosz(Import):
             logging.info('Running in grid mode')
 
             # Load the first spectrum to get wavelength grid
-            fn = BoszSpectrumReader.get_filename(Fe_H=0.0, T_eff=5000.0, log_g=1.0, O_M=0.0, C_M=0.0)
+            fn = BoszSpectrumReader.get_filename(Fe_H=0.0, T_eff=5000.0, log_g=1.0, O_M=0.0, C_M=0.0, R=res)
             fn = os.path.join(self.args['path'], fn)
             spec = r.read(fn)
-            r.grid.init_storage(spec.wave)
+
+            logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
+            r.grid.wave = spec.wave
+            r.grid.init_storage()
+
             r.path = self.args['path']
             r.read_grid()
         else:
@@ -44,7 +54,8 @@ class ImportBosz(Import):
 
             # Load the first spectrum to get wavelength grid
             spec = r.read(files[0])
-            r.grid.init_storage(spec.wave)
+            r.grid.wave = spec.wave
+            r.grid.init_storage()
             r.read_files(files)
 
         r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
