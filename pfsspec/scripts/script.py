@@ -19,6 +19,7 @@ class Script():
         self.args = None
         self.debug = False
         self.random_seed = None
+        self.log_level = None
         self.logging_console_handler = None
         self.logging_file_handler = None
         self.dir_history = []
@@ -43,6 +44,7 @@ class Script():
 
     def add_args(self, parser):
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
+        parser.add_argument('--log-level', type=str, default=None, help='Logging level\n')
         parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
 
     def parse_args(self):
@@ -50,6 +52,8 @@ class Script():
             self.args = self.parser.parse_args().__dict__
             if 'debug' in self.args and self.args['debug']:
                 self.debug = True
+            if 'log_level' in self.args and self.args['log_level'] is not None:
+                self.log_level = self.args['log_level']
             if 'random_seed' in self.args and self.args['random_seed'] is not None:
                 self.random_seed = self.args['random_seed']
 
@@ -109,6 +113,8 @@ class Script():
     def get_logging_level(self):
         if self.debug:
             return logging.DEBUG
+        elif self.log_level is not None:
+            return getattr(logging, self.log_level)
         else:
             return logging.INFO
 

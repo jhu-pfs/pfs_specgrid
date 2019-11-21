@@ -15,6 +15,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.sample_count = 0
             self.interp_mode = 'grid'
             self.interp_param = None
+            self.use_cont = True    # Load model continuum
         else:
             self.grid = orig.grid
             self.sample_mode = orig.sample_mode
@@ -22,6 +23,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.sample_count = orig.sample_count
             self.interp_mode = orig.interp_mode
             self.interp_param = orig.interp_param
+            self.use_cont = orig.use_cont
 
     def add_args(self, parser):
         super(ModelGridDatasetBuilder, self).add_args(parser)

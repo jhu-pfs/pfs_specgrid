@@ -5,8 +5,8 @@ from pfsspec.stellarmod.modelparam import ModelParam
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 
 class BoszGrid(ModelGrid):
-    def __init__(self):
-        super(BoszGrid, self).__init__(use_cont=True)
+    def __init__(self, use_cont=True):
+        super(BoszGrid, self).__init__(use_cont=use_cont)
 
         self.params['Fe_H'] = ModelParam('Fe_H', np.arange(-2.5, 1.0, 0.25))
         self.params['T_eff'] = ModelParam('T_eff', np.hstack((np.arange(3500, 12500, 250),

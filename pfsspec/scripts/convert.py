@@ -1,4 +1,5 @@
 import os
+import psutil
 import logging
 import numpy as np
 
@@ -93,6 +94,7 @@ class Convert(Script):
             dsbuilder.survey.load(os.path.join(self.args['in'], 'spectra.dat'))
             dsbuilder.params = dsbuilder.survey.params
         elif 'grid' in ds:
+            dsbuilder.grid.use_cont = dsbuilder.use_cont
             # If a limit is specified on any of the parameters, try to slice the
             # grid while loading from HDF5
             s = []

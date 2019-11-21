@@ -24,25 +24,25 @@ class ModelGrid(PfsObject):
         shape = [self.params[p].values.shape[0] for p in self.params]
         shape.append(self.wave.shape[0])
 
-        logging.info('Initializing memory for grid of size {}'.format(shape))
+        logging.debug('Initializing memory for grid of size {}'.format(shape))
 
         self.flux = np.empty(shape)
         if self.use_cont:
             self.cont = np.empty(shape)
 
-        logging.info('Initialized memory for grid of size {}'.format(shape))
+        logging.debug('Initialized memory for grid of size {}'.format(shape))
 
     def build_index(self):
 
-        logging.info('Building indexes on grid of size {}'.format(self.flux.shape))
+        logging.debug('Building indexes on grid of size {}'.format(self.flux.shape))
 
         for p in self.params:
             self.params[p].build_index()
         axis = len(self.params)
         if self.flux is not None:
             self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
-
-        logging.info('Built indexes on grid of size {}'.format(self.flux.shape))
+            logging.debug('Built indexes on grid of size {}'.format(self.flux.shape))
+            logging.debug('{} valid models found'.format(np.sum(self.flux_idx)))
 
     def set_flux(self, flux, cont=None, **kwargs):
         """
@@ -80,7 +80,8 @@ class ModelGrid(PfsObject):
         self.init_storage()
 
         self.flux[slice] = self.load_item('flux', np.ndarray, slice=slice)
-        self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)
+        if self.use_cont:
+            self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)
 
     def create_spectrum(self):
         raise NotImplementedError()
