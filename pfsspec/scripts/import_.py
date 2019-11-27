@@ -19,6 +19,7 @@ class Import(Script):
         super(Import, self).prepare()
         self.outdir = self.args['out']
         self.create_output_dir(self.args['out'])
+        self.save_command_line(os.path.join(self.outdir, 'command.sh'))
 
     def run(self):
         self.init_logging(self.outdir)

@@ -46,8 +46,6 @@ class ModelGridSpectrumReader(SpectrumReader):
         self.max = max
 
     def read_grid(self, stop=None):
-        self.grid.build_index()
-
         logging.info("Loading grid with flux grid shape {}".format(self.grid.flux.shape))
         if self.max is not None:
             logging.info("Loading will stop after {} spectra".format(self.max))
@@ -63,14 +61,12 @@ class ModelGridSpectrumReader(SpectrumReader):
                 index, params, spec = r
                 self.grid.set_flux_idx(index, spec.flux, spec.cont)
 
-        logging.info("Grid loaded with flux grid shape {}".format(self.grid.flux.shape))
+        logging.info("Grid loaded with flux shape {}".format(self.grid.flux.shape))
 
     def process_item(self, i):
         raise NotImplementedError()
 
     def read_files(self, files, stop=None):
-        self.grid.build_index()
-
         logging.info("Loading grid with flux grid shape {}".format(self.grid.flux.shape))
         if self.max is not None:
             logging.info("Loading will stop after {} spectra".format(self.max))

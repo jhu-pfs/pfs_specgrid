@@ -28,6 +28,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def add_args(self, parser):
         super(ModelGridDatasetBuilder, self).add_args(parser)
 
+        parser.add_argument('--no-preload-arrays', action='store_true', help='Do not preload flux arrays to save memory\n')
         parser.add_argument('--sample-mode', type=str, choices=['all', 'random'], default='all', help='Sampling mode\n')
         parser.add_argument('--sample-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
         parser.add_argument('--sample-count', type=int, default=None, help='Number of samples to be interpolated between models\n')
@@ -39,6 +40,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
+
+        if 'no_preload_arrays' in args and args['no_preload_arrays'] is not None:
+            self.grid.preload_arrays = not args['no_preload_arrays']
 
         if 'sample_mode' in args and args['sample_mode'] is not None:
             self.sample_mode = args['sample_mode']

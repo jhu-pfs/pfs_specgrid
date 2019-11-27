@@ -7,9 +7,8 @@ from scipy.interpolate import RegularGridInterpolator, CubicSpline
 from pfsspec.pfsobject import PfsObject
 
 class ModelGrid(PfsObject):
-    def __init__(self, use_cont=False):
-        self.top = None
-        self.use_cont = use_cont
+    def __init__(self):
+        self.preload_arrays = True
         self.params = {
             'Fe_H': None,
             'T_eff': None,
@@ -24,24 +23,27 @@ class ModelGrid(PfsObject):
         shape = [self.params[p].values.shape[0] for p in self.params]
         shape.append(self.wave.shape[0])
 
-        logging.debug('Initializing memory for grid of size {}'.format(shape))
-
-        self.flux = np.empty(shape)
-        if self.use_cont:
+        if self.preload_arrays:
+            logging.info('Initializing memory for grid of size {}'.format(shape))
+            self.flux = np.empty(shape)
             self.cont = np.empty(shape)
+            logging.info('Initialized memory for grid of size {}'.format(shape))
+        else:
+            logging.info('Skipped memory initialization for grid. Will read random slices from storage.')
 
-        logging.debug('Initialized memory for grid of size {}'.format(shape))
-
-    def build_index(self):
-
-        logging.debug('Building indexes on grid of size {}'.format(self.flux.shape))
-
+    def build_params_index(self, rebuild=False):
         for p in self.params:
             self.params[p].build_index()
+
+    def build_flux_index(self, rebuild=False):
         axis = len(self.params)
         if self.flux is not None:
-            self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
-            logging.debug('Built indexes on grid of size {}'.format(self.flux.shape))
+            if rebuild or self.flux_idx is None:
+                logging.debug('Building indexes on grid of size {}'.format(self.flux.shape))
+                self.flux_idx = (self.flux.max(axis=axis) != 0) | (self.flux.min(axis=axis) != 0)
+                logging.debug('Built indexes on grid of size {}'.format(self.flux.shape))
+            else:
+                logging.debug('Skipped building indexes on grid of size {}'.format(self.flux.shape))
             logging.debug('{} valid models found'.format(np.sum(self.flux_idx)))
 
     def set_flux(self, flux, cont=None, **kwargs):
@@ -67,10 +69,11 @@ class ModelGrid(PfsObject):
         self.save_item('wave', self.wave)
         self.save_item('flux', self.flux)
         self.save_item('cont', self.cont)
+        self.save_item('flux_idx', self.flux_idx)
 
     def load(self, filename, slice=None, format=None):
         super(ModelGrid, self).load(filename, slice=slice, format=format)
-        self.build_index()
+        self.build_params_index()
 
     def load_items(self, slice=None):
         for p in self.params:
@@ -79,9 +82,22 @@ class ModelGrid(PfsObject):
 
         self.init_storage()
 
-        self.flux[slice] = self.load_item('flux', np.ndarray, slice=slice)
-        if self.use_cont:
-            self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)
+        # If not running in memory saver mode, load entire array
+        if self.preload_arrays:
+            if slice is not None:
+                logging.info('Loading flux arrays of size {}'.format(slice))
+                self.flux[slice] = self.load_item('flux', np.ndarray, slice=slice)
+                self.cont[slice] = self.load_item('cont', np.ndarray, slice=slice)
+                logging.info('Loaded flux arrays of size {}'.format(slice))
+            else:
+                logging.info('Loading flux arrays of size {}'.format(self.flux.shape))
+                self.flux = self.load_item('flux', np.ndarray)
+                self.cont = self.load_item('cont', np.ndarray)
+                logging.info('Loaded flux arrays of size {}'.format(self.flux.shape))
+        else:
+            logging.info('Skipped loading flux arrays. Will read directly from storage.')
+
+        self.flux_idx = self.load_item('flux_idx', np.ndarray, slice=None)
 
     def create_spectrum(self):
         raise NotImplementedError()
@@ -135,9 +151,17 @@ class ModelGrid(PfsObject):
             idx.append(slice(None, None, 1))
             idx = tuple(idx)
             spec.wave = np.array(self.wave, copy=True)
-            spec.flux = np.array(self.flux[idx], copy=True)
-            if self.cont is not None:
-                spec.cont = np.array(self.cont[idx], copy=True)
+
+            if self.preload_arrays:
+                spec.flux = np.array(self.flux[idx], copy=True)
+                if self.cont is not None:
+                    spec.cont = np.array(self.cont[idx], copy=True)
+            else:
+                # This works with HDF5 format only!
+                spec.flux = self.load_item('flux', np.ndarray, idx)
+                # TODO: test if dataset exists in hdf5
+                spec.cont = self.load_item('cont', np.ndarray, idx)
+
             return spec
         else:
             return None
@@ -179,7 +203,13 @@ class ModelGrid(PfsObject):
         # Find index of models that actually exists
         valid_flux = self.flux_idx[idx]
         pars = self.params[free_param].values[valid_flux]
-        flux = self.flux[idx][valid_flux]
+
+        if self.preload_arrays:
+            flux = self.flux[idx][valid_flux]
+        else:
+            # This works with HDF5 format only!
+            flux = self.load_item('flux', np.ndarray, idx)
+            flux = flux[valid_flux]
 
         # If we are at the edge of the grid, it might happen that we try to
         # interpolate over zero valid parameters, in this case return None and

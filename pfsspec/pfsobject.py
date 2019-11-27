@@ -89,7 +89,19 @@ class PfsObject():
                 with h5py.File(self.filename, 'a') as f:
                     if name in f:
                         del f[name]
-                    f.create_dataset(name, data=item)
+                    if item.size > 0x100000:
+                        chunks = list(item.shape)
+                        for i in range(len(chunks)):
+                            if chunks[i] <= 0x80:   # 128
+                                chunks[i] = 1
+                            elif chunks[i] > 0x400: # 1k
+                                pass
+                            else:
+                                chunks[i] = 64
+                        f.create_dataset(name, data=item, chunks=tuple(chunks), )
+                        logging.debug('Saving item {} with chunks {}'.format(name, chunks))
+                    else:
+                        f.create_dataset(name, data=item)
             else:
                 raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
         else:
@@ -159,6 +171,12 @@ class PfsObject():
             elif type == np.ndarray:
                 with h5py.File(self.filename, 'r') as f:
                     if name in f.keys():
+                        #a = np.empty(f[name].shape, dtype=f[name].dtype)
+                        #if slice is not None:
+                        #    f[name].read_direct(a, source_sel=slice, dest_sel=slice)
+                        #else:
+                        #    f[name].read_direct(a)
+                        #return a
                         if slice is not None:
                             return f[name][slice]
                         else:

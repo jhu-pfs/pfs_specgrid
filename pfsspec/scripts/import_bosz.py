@@ -32,6 +32,7 @@ class ImportBosz(Import):
         r.parallel = not self.debug
         r.wave_lim = self.args['wave']
         r.max = self.args['max']
+        r.res = res
 
         if os.path.isdir(self.args['path']):
             logging.info('Running in grid mode')
@@ -44,6 +45,7 @@ class ImportBosz(Import):
             logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
             r.grid.wave = spec.wave
             r.grid.init_storage()
+            r.grid.build_params_index()
 
             r.path = self.args['path']
             r.read_grid()
@@ -56,8 +58,10 @@ class ImportBosz(Import):
             spec = r.read(files[0])
             r.grid.wave = spec.wave
             r.grid.init_storage()
+            r.grid.build_params_index()
             r.read_files(files)
 
+        r.grid.build_flux_index(rebuild=True)
         r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
 
 def main():

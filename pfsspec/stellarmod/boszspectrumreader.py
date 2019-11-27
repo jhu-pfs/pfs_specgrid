@@ -48,11 +48,12 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         'p05': 0.5,
     }
 
-    def __init__(self, grid=None, path=None, wave_lim=None, max=None):
+    def __init__(self, grid=None, path=None, wave_lim=None, max=None, res=None):
         super(BoszSpectrumReader, self).__init__(grid=grid)
         self.path = path
         self.wave_lim = wave_lim
         self.max = max
+        self.res = res
 
     def read(self, file=None):
         compression = None
@@ -85,7 +86,7 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         logger = multiprocessing.get_logger()
 
         index, params = i
-        fn = BoszSpectrumReader.get_filename(**params)
+        fn = BoszSpectrumReader.get_filename(**params, R=self.res)
         fn = os.path.join(self.path, fn)
 
         if os.path.isfile(fn):
@@ -114,9 +115,10 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
 
         return index, params, spec
 
-    def get_filename(Fe_H, C_M, O_M, T_eff, log_g, v_turb=0.2, v_rot=0, R=5000):
-
+    def get_filename(Fe_H, C_M, O_M, T_eff, log_g, v_turb=0.2, v_rot=0, R=None):
         # amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2
+
+        R = R or 5000
 
         fn = 'a'
 
@@ -136,7 +138,7 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         fn += '%d' % (int(T_eff))
 
         fn += 'g'
-        fn += '%d' % (int(log_g * 10))
+        fn += '%02d' % (int(log_g * 10))
 
         fn += 'v'
         fn += '%02d' % (int(v_turb * 100))

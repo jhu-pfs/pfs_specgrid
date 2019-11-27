@@ -138,8 +138,11 @@ class Convert(Script):
         self.dump_json(self.pipeline, os.path.join(self.args['out'], 'pipeline.json'))
 
         self.dsbuilder = self.create_dsbuilder(self.args['dataset'])
-        self.load_data(self.dsbuilder)
         self.init_dsbuilder(self.dsbuilder)
+        self.load_data(self.dsbuilder)
+        # Do this again because grid sampling overrides might have changed when
+        # loading the grid
+        self.dsbuilder.init_from_args(self.args)
 
     def run(self):
         self.init_logging(self.outdir)
