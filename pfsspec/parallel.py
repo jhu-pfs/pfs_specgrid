@@ -23,6 +23,7 @@ https://github.com/uqfoundation/multiprocess
 """
 
 # Modules #
+from concurrent.futures import ProcessPoolExecutor
 import logging
 import multiprocessing
 import numpy as np
@@ -53,17 +54,23 @@ def prll_map(init_func, worker_func, items, cpus=None, verbose=False):
     for proc in processes:
         proc.daemon = True
         proc.start()
-    # Display progress bar or not #
+
+    # Display progress bar or not
     if verbose:
-        results = [q_out.get() for x in tqdm(range(len(sent)))]
+        return q_out, tqdm(range(len(sent)))
     else:
-        results = [q_out.get() for x in range(len(sent))]
+        return q_out, range(len(sent))
+
+    #if verbose:
+    #    results = [q_out.get() for x in tqdm(range(len(sent)))]
+    #else:
+    #    results = [q_out.get() for x in range(len(sent))]
 
     # Wait for them to finish #
     #for proc in processes: proc.join()
 
     # Return results #
-    return [x for i, x in sorted(results)]
+    #return [x for i, x in sorted(results)]
 
 def srl_map(init_func, worker_func, items, verbose=False):
     if init_func is not None:
@@ -77,3 +84,42 @@ def srl_map(init_func, worker_func, items, verbose=False):
         for i in items:
             results.append(worker_func(i))
     return results
+
+class SmartParallel():
+    def __init__(self, initializer=None, verbose=False, parallel=True):
+        self.pool = None
+        self.initializer = initializer
+        self.verbose = verbose
+        self.parallel = parallel
+
+    def __enter__(self):
+        if self.parallel:
+            logging.info("Starting parallel execution.")
+        else:
+            logging.info("Starting serial execution.")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.pool is not None:
+            self.pool.shutdown()
+        if self.parallel:
+            logging.info("Finished parallel execution.")
+        else:
+            logging.info("Finished serial execution.")
+        return False
+
+    def __del__(self):
+        pass
+
+    def map(self, worker, items):
+        if self.parallel:
+            self.pool = ProcessPoolExecutor(initializer=self.initializer)
+            m = self.pool.map(worker, items)
+        else:
+            self.pool = None
+            if self.initializer is not None:
+                self.initializer()
+            m = map(worker, items)
+        if self.verbose:
+            m = tqdm(m, total=len(items))
+        return m

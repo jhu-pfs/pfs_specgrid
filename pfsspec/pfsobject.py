@@ -70,8 +70,21 @@ class PfsObject():
     def save_items(self):
         raise NotImplementedError()
 
-    def save_item(self, name, item):
+    def allocate_item(self, name, shape, dtype=np.float):
+        if self.fileformat != 'h5':
+            raise NotImplementedError()
+
+        if self.fileformat == 'h5':
+            with h5py.File(self.filename, 'a') as f:
+                if name not in f.keys():
+                    chunks = self.get_chunks(shape)
+                    f.create_dataset(name, shape=shape, dtype=dtype, chunks=chunks)
+
+    def save_item(self, name, item, slice=None):
         logging.debug('Saving item {} with type {}'.format(name, type(item).__name__))
+
+        if self.fileformat != 'h5' and slice is not None:
+            raise NotImplementedError()
 
         if self.fileformat == 'numpy':
             np.save(self.file, item, allow_pickle=True)
@@ -87,25 +100,40 @@ class PfsObject():
                 item.to_hdf(self.filename, name, mode='a')
             elif isinstance(item, np.ndarray):
                 with h5py.File(self.filename, 'a') as f:
-                    if name in f:
-                        del f[name]
-                    if item.size > 0x100000:
-                        chunks = list(item.shape)
-                        for i in range(len(chunks)):
-                            if chunks[i] <= 0x80:   # 128
-                                chunks[i] = 1
-                            elif chunks[i] > 0x400: # 1k
-                                pass
-                            else:
-                                chunks[i] = 64
-                        f.create_dataset(name, data=item, chunks=tuple(chunks), )
-                        logging.debug('Saving item {} with chunks {}'.format(name, chunks))
+                    if slice is not None:
+                        # in-place update
+                        f[name][slice] = item
                     else:
-                        f.create_dataset(name, data=item)
+                        if name in f.keys():
+                            del f[name]
+                        chunks = self.get_chunks(item.shape)
+                        if chunks is not None:
+                            f.create_dataset(name, data=item, chunks=chunks)
+                            logging.debug('Saving item {} with chunks {}'.format(name, chunks))
+                        else:
+                            f.create_dataset(name, data=item)
             else:
                 raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
         else:
             raise NotImplementedError()
+
+    def get_chunks(self, shape):
+        size = 1
+        for s in shape:
+            size *= s
+
+        if size > 0x100000:
+            chunks = list(shape)
+            for i in range(len(chunks)):
+                if chunks[i] <= 0x80:  # 128
+                    chunks[i] = 1
+                elif chunks[i] > 0x400:  # 1k
+                    pass
+                else:
+                    chunks[i] = 64
+            return tuple(chunks)
+        else:
+            return None
 
     def load(self, filename, slice=None, format=None, load_items_func=None):
         logging.info("Loading {} from file {} with slices {}...".format(type(self).__name__, filename, slice))

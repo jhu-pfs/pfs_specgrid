@@ -19,9 +19,13 @@ class ModelGrid(PfsObject):
         self.flux = None
         self.flux_idx = None
 
-    def init_storage(self):
+    def get_flux_shape(self):
         shape = [self.params[p].values.shape[0] for p in self.params]
         shape.append(self.wave.shape[0])
+        return shape
+
+    def init_storage(self):
+        shape = self.get_flux_shape()
 
         if self.preload_arrays:
             logging.info('Initializing memory for grid of size {}'.format(shape))
@@ -30,6 +34,8 @@ class ModelGrid(PfsObject):
             logging.info('Initialized memory for grid of size {}'.format(shape))
         else:
             logging.info('Skipped memory initialization for grid. Will read random slices from storage.')
+
+        self.flux_idx = np.full(tuple(shape[:-1]), False, dtype=np.bool)
 
     def build_params_index(self, rebuild=False):
         for p in self.params:
@@ -56,19 +62,44 @@ class ModelGrid(PfsObject):
         self.set_flux_idx(idx, flux, cont=None)
 
     def set_flux_idx(self, idx, flux, cont=None):
+        idx = tuple(idx)
+
+        # Update index
+        self.flux_idx[idx] = True
+
         idx = list(idx)
         idx.append(slice(None, None, 1))
         idx = tuple(idx)
-        self.flux[idx] = flux
-        if self.cont is not None and cont is not None:
-            self.cont[idx] = cont
+
+        if self.preload_arrays:
+            self.flux[idx] = flux
+            if self.cont is not None and cont is not None:
+                self.cont[idx] = cont
+        else:
+            # Only works with HDF5, file must exists
+            if self.fileformat != 'h5':
+                raise NotImplementedError()
+            self.save_item('flux', flux, idx)
+            if cont is not None:
+                self.save_item('flux', flux, idx)
 
     def save_items(self):
         for p in self.params:
             self.save_item(p, self.params[p].values)
         self.save_item('wave', self.wave)
-        self.save_item('flux', self.flux)
-        self.save_item('cont', self.cont)
+
+        if self.preload_arrays:
+            logging.info('Saving flux arrays of size {}'.format(self.flux.shape))
+            self.save_item('flux', self.flux)
+            self.save_item('cont', self.cont)
+            logging.info('Saved flux arrays of size {}'.format(self.flux.shape))
+        else:
+            logging.info('Allocating flux arrays. Will write directly to storage.')
+            shape = self.get_flux_shape()
+            self.allocate_item('flux', shape, np.float)
+            self.allocate_item('cont', shape, np.float)
+            logging.info('Allocated flux arrays. Will write directly to storage.')
+
         self.save_item('flux_idx', self.flux_idx)
 
     def load(self, filename, slice=None, format=None):
@@ -103,7 +134,7 @@ class ModelGrid(PfsObject):
         raise NotImplementedError()
 
     def get_index(self, **kwargs):
-        idx = tuple(self.params[p].get_index(kwargs[p]) for p in self.params)
+        idx = tuple(self.params[p].get_index(kwargs[p])[0] for p in self.params)
         return idx
 
     def get_nearest_index(self, **kwargs):
@@ -158,6 +189,8 @@ class ModelGrid(PfsObject):
                     spec.cont = np.array(self.cont[idx], copy=True)
             else:
                 # This works with HDF5 format only!
+                if self.fileformat != 'h5':
+                    raise NotImplementedError()
                 spec.flux = self.load_item('flux', np.ndarray, idx)
                 # TODO: test if dataset exists in hdf5
                 spec.cont = self.load_item('cont', np.ndarray, idx)

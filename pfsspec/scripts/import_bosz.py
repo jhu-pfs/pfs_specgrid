@@ -17,6 +17,7 @@ class ImportBosz(Import):
         parser.add_argument("--wave", type=float, nargs=2, default=None, help="Wavelength limits.\n")
         parser.add_argument("--res", type=int, default=None, help="Resolution.\n")
         parser.add_argument("--max", type=int, default=None, help="Stop after this many items.\n")
+        parser.add_argument('--no-preload-arrays', action='store_true', help='Do not preload flux arrays to save memory\n')
 
     def run(self):
         super(ImportBosz, self).run()
@@ -34,6 +35,9 @@ class ImportBosz(Import):
         r.max = self.args['max']
         r.res = res
 
+        if 'no_preload_arrays' in self.args and self.args['no_preload_arrays'] is not None:
+            r.grid.preload_arrays = not self.args['no_preload_arrays']
+
         if os.path.isdir(self.args['path']):
             logging.info('Running in grid mode')
 
@@ -41,27 +45,28 @@ class ImportBosz(Import):
             fn = BoszSpectrumReader.get_filename(Fe_H=0.0, T_eff=5000.0, log_g=1.0, O_M=0.0, C_M=0.0, R=res)
             fn = os.path.join(self.args['path'], fn)
             spec = r.read(fn)
-
-            logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
-            r.grid.wave = spec.wave
-            r.grid.init_storage()
-            r.grid.build_params_index()
-
-            r.path = self.args['path']
-            r.read_grid()
         else:
             logging.info('Running in file list mode')
-            files = glob.glob(self.args['path'])
+            files = glob.glob(os.path.expandvars(self.args['path']))
             logging.info('Found {} files.'.format(len(files)))
 
             # Load the first spectrum to get wavelength grid
             spec = r.read(files[0])
-            r.grid.wave = spec.wave
-            r.grid.init_storage()
-            r.grid.build_params_index()
+
+        logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
+
+        r.grid.wave = spec.wave
+        r.grid.init_storage()
+        r.grid.build_params_index()
+        r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
+
+        if os.path.isdir(self.args['path']):
+            r.path = self.args['path']
+            r.read_grid()
+        else:
             r.read_files(files)
 
-        r.grid.build_flux_index(rebuild=True)
+        #r.grid.build_flux_index(rebuild=True)
         r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
 
 def main():
