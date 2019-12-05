@@ -81,6 +81,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
 
     def process_item(self, i):
+        self.init_random_state()
+
         spec = None
         while spec is None:
             if self.params is not None or self.sample_mode == 'random':

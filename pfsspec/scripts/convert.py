@@ -1,17 +1,16 @@
 import os
-import psutil
 import logging
 import numpy as np
 
-from pfsspec.data.dataset import Dataset
 from pfsspec.scripts.script import Script
 from pfsspec.surveys.survey import Survey
 from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
-from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
+from pfsspec.obsmod.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.stellarmod.boszgrid import BoszGrid
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
-from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
+from pfsspec.obsmod.kuruczbasicpipeline import KuruczBasicPipeline
+from pfsspec.obsmod.boszbasicpipeline import BoszBasicPipeline
 
 class Convert(Script):
     def __init__(self):
@@ -39,7 +38,7 @@ class Convert(Script):
                     'builder': ModelGridDatasetBuilder,
                     'grid': BoszGrid,
                     'pipelines': {
-                        'basic': KuruczBasicPipeline
+                        'basic': BoszBasicPipeline
                     }
                 }
         }
