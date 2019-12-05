@@ -17,7 +17,7 @@ class ImportBosz(Import):
         parser.add_argument("--wave", type=float, nargs=2, default=None, help="Wavelength limits.\n")
         parser.add_argument("--res", type=int, default=None, help="Resolution.\n")
         parser.add_argument("--max", type=int, default=None, help="Stop after this many items.\n")
-        parser.add_argument('--no-preload-arrays', action='store_true', help='Do not preload flux arrays to save memory\n')
+        parser.add_argument('--preload-arrays', action='store_true', help='Do not preload flux arrays to save memory\n')
 
     def run(self):
         super(ImportBosz, self).run()
@@ -35,8 +35,8 @@ class ImportBosz(Import):
         r.max = self.args['max']
         r.res = res
 
-        if 'no_preload_arrays' in self.args and self.args['no_preload_arrays'] is not None:
-            r.grid.preload_arrays = not self.args['no_preload_arrays']
+        if 'preload_arrays' in self.args and self.args['preload_arrays'] is not None:
+            r.grid.preload_arrays = self.args['preload_arrays']
 
         if os.path.isdir(self.args['path']):
             logging.info('Running in grid mode')

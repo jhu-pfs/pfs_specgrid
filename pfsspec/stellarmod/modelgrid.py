@@ -8,7 +8,7 @@ from pfsspec.pfsobject import PfsObject
 
 class ModelGrid(PfsObject):
     def __init__(self):
-        self.preload_arrays = True
+        self.preload_arrays = False
         self.params = {
             'Fe_H': None,
             'T_eff': None,
