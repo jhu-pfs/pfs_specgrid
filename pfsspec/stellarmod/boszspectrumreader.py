@@ -55,6 +55,32 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         self.max = max
         self.res = res
 
+    def correct_wave_grid(self, wlim):
+        RESOLU = self.res
+        WLBEG = wlim[0]  # nm
+        WLEND = wlim[1]  # nm
+        RATIO = 1. + 1. / RESOLU
+        RATIOLG = np.log10(RATIO)
+        IXWLBEG = int(np.log10(WLBEG) / RATIOLG)
+        WBEGIN = 10 ** (IXWLBEG * RATIOLG)
+
+        if WBEGIN < WLBEG:
+            IXWLBEG = IXWLBEG + 1
+            WBEGIN = 10 ** (IXWLBEG * RATIOLG)
+        IXWLEND = int(np.log10(WLEND) / RATIOLG)
+        WLLAST = 10 ** (IXWLEND * RATIOLG)
+        if WLLAST > WLEND:
+            IXWLEND = IXWLEND - 1
+            WLLAST = 10 ** (IXWLEND * RATIOLG)
+        LENGTH = IXWLEND - IXWLBEG + 1
+        DWLBEG = WBEGIN * RATIO - WBEGIN
+        DWLLAST = WLLAST - WLLAST / RATIO
+
+        a = np.linspace(np.log10(10 * WBEGIN), np.log10(10 * WLLAST), LENGTH)
+        cwave = 10 ** a
+
+        return cwave
+
     def read(self, file=None):
         compression = None
         if file is None:
@@ -76,7 +102,14 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
             filt = slice(None)
 
         spec = KuruczSpectrum()
-        spec.wave = np.array(df['wave'][filt])
+
+        # NOTE: wavelength values in the files have serious round-off errors
+        # Correct wavelength grid here
+        #spec.wave = np.array(df['wave'][filt])
+
+        cwave = self.correct_wave_grid((100, 32000))
+        spec.wave = cwave[filt]
+
         spec.cont = np.array(df['cont'][filt])
         spec.flux = np.array(df['flux'][filt])
 
