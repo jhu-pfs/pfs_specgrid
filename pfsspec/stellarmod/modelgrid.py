@@ -24,7 +24,7 @@ class ModelGrid(PfsObject):
         shape.append(self.wave.shape[0])
         return shape
 
-    def init_storage(self):
+    def init_data(self):
         shape = self.get_flux_shape()
 
         if self.preload_arrays:
@@ -111,7 +111,7 @@ class ModelGrid(PfsObject):
             self.params[p].values = self.load_item(p, np.ndarray)
         self.wave = self.load_item('wave', np.ndarray)
 
-        self.init_storage()
+        self.init_data()
 
         # If not running in memory saver mode, load entire array
         if self.preload_arrays:

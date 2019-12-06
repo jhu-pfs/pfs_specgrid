@@ -1,6 +1,6 @@
 import numpy as np
 
-class ModelParam():
+class GridParam():
     def __init__(self, name, values=None):
         self.name = name
         self.values = values
@@ -9,7 +9,8 @@ class ModelParam():
         self.max = None
 
     def build_index(self):
-        self.index = dict((v, i) for i, v in np.ndenumerate(self.values))
+        # NOTE: assume one dimension here
+        self.index = {v: i[0] for i, v in np.ndenumerate(self.values)}
         self.min = np.min(self.values)
         self.max = np.max(self.values)
 

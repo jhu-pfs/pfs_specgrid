@@ -56,7 +56,7 @@ class ImportBosz(Import):
         logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
 
         r.grid.wave = spec.wave
-        r.grid.init_storage()
+        r.grid.init_data()
         r.grid.build_params_index()
         r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
 
