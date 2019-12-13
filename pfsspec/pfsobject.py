@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import gzip, pickle
 import h5py
+from collections import Iterable
 
 from pfsspec.constants import Constants
 import pfsspec.util as util
@@ -80,10 +81,10 @@ class PfsObject():
                     chunks = self.get_chunks(shape)
                     f.create_dataset(name, shape=shape, dtype=dtype, chunks=chunks)
 
-    def save_item(self, name, item, slice=None):
+    def save_item(self, name, item, s=None):
         logging.debug('Saving item {} with type {}'.format(name, type(item).__name__))
 
-        if self.fileformat != 'h5' and slice is not None:
+        if self.fileformat != 'h5' and s is not None:
             raise NotImplementedError()
 
         if self.fileformat == 'numpy':
@@ -100,9 +101,9 @@ class PfsObject():
                 item.to_hdf(self.filename, name, mode='a')
             elif isinstance(item, np.ndarray):
                 with h5py.File(self.filename, 'a') as f:
-                    if slice is not None:
+                    if s is not None:
                         # in-place update
-                        f[name][slice] = item
+                        f[name][s] = item
                     else:
                         if name in f.keys():
                             del f[name]
@@ -135,7 +136,7 @@ class PfsObject():
         else:
             return None
 
-    def load(self, filename, slice=None, format=None, load_items_func=None):
+    def load(self, filename, s=None, format=None, load_items_func=None):
         logging.info("Loading {} from file {} with slices {}...".format(type(self).__name__, filename, slice))
 
         load_items_func = load_items_func or self.load_items
@@ -147,53 +148,53 @@ class PfsObject():
         if self.fileformat in ['numpy', 'pickle']:
             with gzip.open(self.filename, 'rb') as f:
                 self.file = f
-                self.load_items(slice=slice)
+                self.load_items(s=s)
                 self.file = None
         elif self.fileformat == 'npz':
             self.filedata = np.load(self.filename, allow_pickle=True)
             logging.debug('Found items: {}'.format([k for k in self.filedata]))
-            self.load_items(slice=slice)
+            self.load_items(s=s)
             self.filedata = None
         elif self.fileformat == 'h5':
-            self.load_items(slice=slice)
+            self.load_items(s=s)
         else:
             raise NotImplementedError()
 
         logging.info("Loaded {} from file {}.".format(type(self).__name__, filename))
 
-    def load_items(self, slice=None):
+    def load_items(self, s=None):
         raise NotImplementedError()
 
-    def load_item(self, name, type, slice=None):
-        logging.debug('Loading item {} with type {} and slices {}'.format(name, type.__name__, slice))
+    def load_item(self, name, type, s=None):
+        logging.debug('Loading item {} with type {} and slices {}'.format(name, type.__name__, s))
 
         if self.fileformat == 'numpy':
             data = np.load(self.file, allow_pickle=True)
             data = self.load_none_array(data)
-            if data is not None and slice is not None:
-                return data[slice]
+            if data is not None and s is not None:
+                return data[s]
             else:
                 return data
         elif self.fileformat == 'pickle':
             data = pickle.load(self.file)
-            if data is not None and slice is not None:
-                return data[slice]
+            if data is not None and s is not None:
+                return data[s]
             else:
                 return data
         elif self.fileformat == 'npz':
             if name in self.filedata:
                 data = self.filedata[name]
                 data = self.load_none_array(data)
-                if data is not None and slice is not None:
-                    return data[slice]
+                if data is not None and s is not None:
+                    return data[s]
                 else:
                     return data
             else:
                 return None
         elif self.fileformat == 'h5':
             if type == pd.DataFrame:
-                if slice is not None:
-                    return pd.read_hdf(self.filename, name, start=slice.start, stop=slice.stop)
+                if s is not None:
+                    return pd.read_hdf(self.filename, name, start=s.start, stop=s.stop)
                 else:
                     return pd.read_hdf(self.filename, name)
             elif type == np.ndarray:
@@ -205,8 +206,51 @@ class PfsObject():
                         #else:
                         #    f[name].read_direct(a)
                         #return a
-                        if slice is not None:
-                            return f[name][slice]
+
+                        # Do some smart indexing magic here because index arrays are not supported by h5py
+                        # This is not full fancy indexing!
+                        shape = None
+                        idxshape = None
+                        if isinstance(s, Iterable):
+                            for i in range(len(s)):
+                                if isinstance(s[i], (np.int32, np.int64)):
+                                    if shape is None:
+                                        shape = (1,)
+                                elif isinstance(s[i], np.ndarray):
+                                    if shape is None or shape == (1,):
+                                        shape = s[i].shape
+                                    if idxshape is not None and idxshape != s[i].shape:
+                                        raise Exception('Incompatible shapes')
+                                    idxshape = s[i].shape
+                                elif isinstance(s[i], slice):
+                                    k = len(range(*s[i].indices(f[name].shape[i])))
+                                    if shape is None:
+                                        shape = (k, )
+                                    else:
+                                        shape = shape + (k, )
+
+                            if shape is None:
+                                shape = f[name].shape
+                            else:
+                                shape = shape + f[name].shape[len(s):]
+
+                            if idxshape is None:
+                                data = f[name][s]
+                            else:
+                                data = np.empty(shape)
+                                for idx in np.ndindex(idxshape):
+                                    ii = []
+                                    for i in range(len(s)):
+                                        if isinstance(s[i], (np.int32, np.int64)):
+                                            ii.append(s[i])
+                                        elif isinstance(s[i], np.ndarray):
+                                            ii.append(s[i][idx])
+                                        elif isinstance(s[i], slice):
+                                            ii.append(s[i])
+                                    data[idx] = f[name][tuple(ii)]
+                            return data
+                        elif s is not None:
+                            return f[name][s]
                         else:
                             return f[name][:]
                     else:

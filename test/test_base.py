@@ -24,7 +24,7 @@ class TestBase(TestCase):
         if self.kurucz_grid is None:
             file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.h5')
             self.kurucz_grid = KuruczGrid(model='test')
-            self.kurucz_grid.load(file, slice=None, format='h5')
+            self.kurucz_grid.load(file, s=None, format='h5')
 
         return self.kurucz_grid
 
@@ -47,9 +47,13 @@ class TestBase(TestCase):
                 self.hsc_filters[i] = filter
         return self.hsc_filters[band]
 
+    def get_filename(self, ext):
+        filename = type(self).__name__[4:] + '_' + self._testMethodName[5:] + ext
+        return filename
+
     def save_fig(self, f=None, filename=None):
         if f is None:
             f = plt
         if filename is None:
-            filename = type(self).__name__[4:] + '_' + self._testMethodName[5:] + '.png'
+            filename = self.get_filename('.png')
         f.savefig(os.path.join(self.PFSSPEC_TEST_PATH, filename))

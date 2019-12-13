@@ -12,15 +12,16 @@ class TestKuruczGrid(TestBase):
         if os.path.exists(file):
             os.remove(file)
 
-        grid = KuruczSpectrumReader.read_grid(path, 'test')
-        self.assertEqual((2, 61, 11, 1221), grid.flux.shape)
+        grid = KuruczSpectrumReader.read_grid(path, 'test', preload_arrays=True)
+        self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
 
         grid.save(file, format=format)
 
         grid = KuruczGrid(model='test')
+        grid.preload_arrays = True
         grid.load(file, format=format)
         self.assertEqual((1221, ), grid.wave.shape)
-        self.assertEqual((2, 61, 11, 1221), grid.flux.shape)
+        self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
         #self.assertIsNone(grid.cont)
 
     def test_save_numpy(self):
@@ -32,19 +33,19 @@ class TestKuruczGrid(TestBase):
     def test_save_h5(self):
         self.save_load_helper('h5', '.h5')
 
-    #
     def import_kurucz_helper(self, file):
         path = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/kurucz')
         if not os.path.exists(file):
-            grid = KuruczSpectrumReader.read_grid(path, 'kurucz')
+            grid = KuruczSpectrumReader.read_grid(path, 'kurucz', preload_arrays=True)
             self.assertEqual((18, 61, 11, 1221), grid.flux.shape)
 
             grid.save(file, 'h5')
 
-    def load_kurucz_helper(self):
+    def load_kurucz_helper(self, preload_arrays=True):
         file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.h5')
         self.import_kurucz_helper(file)
         grid = KuruczGrid(model='kurucz')
+        grid.preload_arrays = preload_arrays
         grid.load(file, format='h5')
         return grid
 
@@ -73,40 +74,63 @@ class TestKuruczGrid(TestBase):
         # These are outside the grid completely
         idx = grid.get_nearby_indexes(Fe_H=-0.9, T_eff=14300, log_g=5.2)
         self.assertIsNone(idx)
+
         # These are outside the parameter space but inside grid
         idx = grid.get_nearby_indexes(Fe_H=-0.9, T_eff=14300, log_g=1.2)
-        self.assertIsNone(idx)
+        self.assertIsNotNone(idx)
 
-    def test_interpolate_linear_model(self):
-        grid = self.load_kurucz_helper()
+    def interpolate_model_linear_helper(self, preload_arrays, Fe_H=0.01, T_eff=4567, log_g=3.1):
+        grid = self.load_kurucz_helper(preload_arrays=preload_arrays)
 
-        idx1, idx2 = grid.get_nearby_indexes(Fe_H=0.01, T_eff=4567, log_g=3.1)
+        idx1, idx2 = grid.get_nearby_indexes(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
         a = grid.get_model(idx1)
         b = grid.get_model(idx2)
         a.plot()
         b.plot()
-        spec = grid.interpolate_model_linear(Fe_H=0.01, T_eff=4567, log_g=3.1)
+        spec = grid.interpolate_model_linear(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
         self.assertEqual((1221,), spec.wave.shape)
         self.assertEqual((1221,), spec.flux.shape)
         spec.plot()
         self.save_fig()
 
+    def test_interpolate_model_linear_preload(self):
+        self.interpolate_model_linear_helper(preload_arrays=True)
+
+    def test_interpolate_model_linear_lazy(self):
+        self.interpolate_model_linear_helper(preload_arrays=False)
+
     def test_interpolate_model_linear_outside(self):
-        grid = self.load_kurucz_helper()
+        self.interpolate_model_linear_helper(preload_arrays=False)
+
+    def test_interpolate_model_linear_outside(self):
+        grid = self.load_kurucz_helper(preload_arrays=True)
 
         # These are outside the parameter space but inside grid
         spec = grid.interpolate_model_linear(Fe_H=-0.9, T_eff=14300, log_g=1.2)
         self.assertIsNone(spec)
 
-    def test_interpolate_model_spline(self):
-        grid = self.load_kurucz_helper()
+    def interpolate_model_spline_helper(self, preload_arrays, Fe_H=0.01, T_eff=4567, log_g=3.1):
+        grid = self.load_kurucz_helper(preload_arrays=preload_arrays)
 
-        idx1, idx2 = grid.get_nearby_indexes(Fe_H=0.01, T_eff=4567, log_g=3.1)
+        idx1, idx2 = grid.get_nearby_indexes(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
         a = grid.get_model(idx1)
         b = grid.get_model(idx2)
         a.plot()
         b.plot()
 
-        spec = grid.interpolate_model_spline('T_eff', Fe_H=0.01, T_eff=4567, log_g=3.1)
+        spec = grid.interpolate_model_spline('T_eff', Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
         spec.plot()
         self.save_fig()
+
+    def test_interpolate_model_spline_preload(self):
+        self.interpolate_model_spline_helper(preload_arrays=True)
+
+    def test_interpolate_model_spline_lazy(self):
+        self.interpolate_model_spline_helper(preload_arrays=False)
+
+    def test_interpolate_model_spline_outside(self):
+        grid = self.load_kurucz_helper(preload_arrays=True)
+
+        # These are outside the parameter space but inside grid
+        spec = grid.interpolate_model_spline('T_eff', Fe_H=-0.9, T_eff=14300, log_g=1.2)
+        self.assertIsNone(spec)

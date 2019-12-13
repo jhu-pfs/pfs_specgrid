@@ -108,9 +108,9 @@ class Convert(Script):
 
             fn = os.path.join(self.args['in'], 'spectra')
             if os.path.isfile(fn + '.h5'):
-                dsbuilder.grid.load(fn + '.h5', slice=s, format='h5')
+                dsbuilder.grid.load(fn + '.h5', s=s, format='h5')
             elif os.path.isfile(fn + '.npz'):
-                dsbuilder.grid.load(fn + '.npz', slice=s, format='npz')
+                dsbuilder.grid.load(fn + '.npz', s=s, format='npz')
 
             # Load source parameters, if necessary
             if self.params is not None:

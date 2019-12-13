@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import itertools
+from collections import Iterable
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
 
 from pfsspec.pfsobject import PfsObject
@@ -18,6 +19,10 @@ class Grid(PfsObject):
         shape = tuple(self.params[p].values.shape[0] for p in self.params)
         return shape
 
+    def get_data_item_shape(self, name):
+        shape = self.get_shape() + self.data_shape[name]
+        return shape
+
     def ensure_lazy_load(self):
         # This works with HDF5 format only!
         if self.fileformat != 'h5':
@@ -27,7 +32,7 @@ class Grid(PfsObject):
         self.params[name] = GridParam(name, values)
 
     def init_data(self):
-        raise NotImplementedError()
+        pass
 
     def init_data_item(self, name, shape):
         if len(shape) != 1:
@@ -36,14 +41,16 @@ class Grid(PfsObject):
         gridshape = self.get_shape()
         datashape = gridshape + tuple(shape)
 
+        self.data_shape[name] = shape
+
         if self.preload_arrays:
             logging.info('Initializing memory for grid "{}" of size {}...'.format(name, datashape))
             self.data[name] = np.full(datashape, np.nan)
             logging.info('Initialized memory for grid "{}" of size {}.'.format(name, datashape))
         else:
+            self.data[name] = None
             logging.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
 
-        self.data_shape[name] = shape
         self.data_index[name] = np.full(gridshape, False, dtype=np.bool)
 
     def build_params_index(self):
@@ -67,6 +74,16 @@ class Grid(PfsObject):
             logging.debug('Skipped building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
         logging.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.data_index[name]), name))
 
+
+    def rectify_index(idx, s=None):
+        idx = tuple(idx)
+        if isinstance(s, Iterable):
+            idx = idx + tuple(s)
+        elif s is not None:
+            idx = idx + (s,)
+
+        return tuple(idx)
+
     def get_index(self, **kwargs):
         idx = tuple(self.params[p].index[kwargs[p]] for p in self.params)
         return idx
@@ -87,71 +104,74 @@ class Grid(PfsObject):
                 idx1[i], idx2[i] = idx1[i], idx1[i] + 1
 
             # Verify if indexes are inside bounds
-            if idx1[i] < 0 or idx2[i] < 0 or \
-               idx1[i] >= self.params[p].values.shape[0] or \
-               idx2[i] >= self.params[p].values.shape[0]:
+            if idx1[i] < 0 or self.params[p].values.shape[0] <= idx1[i] or \
+               idx2[i] < 0 or self.params[p].values.shape[0] <= idx2[i]:
                 return None
 
             i += 1
 
-        idx1 = tuple(idx1)
-        idx2 = tuple(idx2)
-
-        return idx1, idx2
+        return tuple(idx1), tuple(idx2)
 
     def is_data_index(self, name):
         return self.data_index is not None and name in self.data_index and self.data_index[name] is not None
 
+    def is_data_item(self, name):
+        return name in self.data and self.data[name] is not None and \
+               name in self.data_index and self.data_index[name] is not None
+
     def is_data_item_idx(self, name, idx):
         if self.is_data_index(name):
-            return self.data_index[name][idx]
+            return np.all(self.data_index[name][idx])
         else:
             return True
 
-    def set_data(self, data, **kwargs):
+    def set_data(self, data, s=None, **kwargs):
         idx = self.get_index(**kwargs)
-        self.set_data_idx(idx, data)
+        self.set_data_idx(idx, data, s)
 
-    def set_data_idx(self, idx, data):
+    def set_data_idx(self, idx, data, s=None):
         for name in data:
-            self.set_data_item_idx(name, idx, data[name])
+            self.set_data_item_idx(name, idx, data[name], s)
 
-    def set_data_item(self, name, data, **kwargs):
+    def set_data_item(self, name, data, s=None, **kwargs):
         idx = self.get_index(**kwargs)
-        self.set_data_item_idx(name, idx, data)
+        self.set_data_item_idx(name, idx, data, s)
 
-    def set_data_item_idx(self, name, idx, data):
+    def set_data_item_idx(self, name, idx, data, s=None):
+        idx = Grid.rectify_index(idx)
         if self.is_data_index(name):
             self.data_index[name][idx] = self.is_data_valid(name, data)
-        idx = tuple(idx) + (slice(None),)
+
+        idx = Grid.rectify_index(idx, s)
         if self.preload_arrays:
             self.data[name][idx] = data
         else:
             self.ensure_lazy_load()
             self.save_item(name, data, idx)
 
-    def get_data(self, **kwargs):
+    def get_data(self, s=None, **kwargs):
         idx = self.get_index(**kwargs)
-        return self.get_data_idx(idx)
+        return self.get_data_idx(idx, s)
 
-    def get_nearest_data(self, **kwargs):
+    def get_nearest_data(self, s=None, **kwargs):
         idx = self.get_nearest_index(**kwargs)
-        return self.get_data_idx(idx)
+        return self.get_data_idx(idx, s)
 
-    def get_data_idx(self, idx):
-        return {name: self.get_data_item_idx(name, idx) for name in self.data}
+    def get_data_idx(self, idx, s=None):
+        return {name: self.get_data_item_idx(name, idx, s) for name in self.data}
 
-    def get_data_item(self, name, **kwargs):
+    def get_data_item(self, name, s=None, **kwargs):
         idx = self.get_index(**kwargs)
-        return self.get_data_item_idx(name, idx)
+        return self.get_data_item_idx(name, idx, s)
 
-    def get_nearest_data_item(self, name, **kwargs):
+    def get_nearest_data_item(self, name, s=None, **kwargs):
         idx = self.get_nearest_index(**kwargs)
-        return self.get_data_item_idx(name, idx)
+        return self.get_data_item_idx(name, idx, s)
 
-    def get_data_item_idx(self, name, idx):
+    def get_data_item_idx(self, name, idx, s=None):
+        idx = Grid.rectify_index(idx)
         if self.is_data_item_idx(name, idx):
-            idx = tuple(idx) + (slice(None),)
+            idx = Grid.rectify_index(idx, s)
             if self.preload_arrays:
                 return self.data[name][idx]
             else:
@@ -160,9 +180,70 @@ class Grid(PfsObject):
         else:
             return None
 
-    def set_object_params(self, obj, **kwargs):
+    def save_params(self):
         for p in self.params:
-            setattr(obj, p, kwargs[p])
+            self.save_item(p, self.params[p].values)
+
+    def load_params(self):
+        for p in self.params:
+            self.params[p].values = self.load_item(p, np.ndarray)
+
+    def save_data(self):
+        for name in self.data:
+            if self.preload_arrays:
+                logging.info('Saving grid "{}" of size {}'.format(name, self.data[name].shape))
+                self.save_item(name, self.data[name])
+                logging.info('Saved grid "{}" of size {}'.format(name, self.data[name].shape))
+            else:
+                shape = self.get_data_item_shape(name)
+                logging.info('Allocating grid "{}" with size {}...'.format(name, shape))
+                self.allocate_item(name, shape, np.float)
+                logging.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
+
+    def load_data(self, s=None):
+        for name in self.data:
+            # If not running in memory saver mode, load entire array
+            if self.preload_arrays:
+                if s is not None:
+                    logging.info('Loading grid "{}" of size {}'.format(name, s))
+                    self.data[name][s] = self.load_item(name, np.ndarray, s=s)
+                    logging.info('Loaded grid "{}" of size {}'.format(name, s))
+                else:
+                    logging.info('Loading grid "{}" of size {}'.format(name, self.data_shape[name]))
+                    self.data[name] = self.load_item(name, np.ndarray)
+                    logging.info('Loaded grid "{}" of size {}'.format(name, self.data_shape[name]))
+            else:
+                logging.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
+
+    def save_data_index(self):
+        for name in self.data:
+            self.save_item(name + '_idx', self.data_index[name])
+
+    def load_data_index(self):
+        for name in self.data_index:
+            self.data_index[name] = self.load_item(name + '_idx', np.ndarray, s=None)
+
+    def save_items(self):
+        self.save_params()
+        self.save_data_index()
+        self.save_data()
+
+    def load(self, filename, s=None, format=None):
+        super(Grid, self).load(filename, s=s, format=format)
+        self.build_params_index()
+
+    def load_items(self, s=None):
+        self.load_params()
+        self.load_data_index()
+        self.load_data(s)
+
+    def set_object_params(self, obj, idx=None, **kwargs):
+        if idx is not None:
+            for i, p in enumerate(self.params):
+                setattr(obj, p, self.params[p].values[idx[i]])
+        if kwargs is not None:
+            for p in kwargs:
+                setattr(obj, p, kwargs[p])
 
     def interpolate_data_item_linear(self, name, **kwargs):
         idx = self.get_nearby_indexes(**kwargs)
@@ -178,17 +259,18 @@ class Grid(PfsObject):
 
         # Will hold data values
         s = [2, ] * len(x)
-        s.append(self.data[name][idx1].shape[0])
+        data = self.get_data_item_idx(name, idx1)
+        s.append(data.shape[0])
         V = np.empty(s)
 
         ii = tuple(np.array(tuple(itertools.product(*([[0, 1],] * len(x))))).transpose())
         kk = tuple(np.array(tuple(itertools.product(*[[idx1[i], idx2[i]] for i in range(len(idx1))]))).transpose())
 
-        V[ii] = self.data[name][kk]
+        V[ii] = self.get_data_item_idx(name, kk)
 
         fn = RegularGridInterpolator(x, V)
         data = fn(tuple([kwargs[p] for p in self.params]))
-        return data
+        return data, kwargs
 
     def interpolate_data_item_spline(self, name, free_param, **kwargs):
         params_list = list(self.params.keys())
@@ -213,19 +295,19 @@ class Grid(PfsObject):
         valid_data = self.data_index[name][idx]
         pars = self.params[free_param].values[valid_data]
 
+        # If we are at the edge of the grid, it might happen that we try to
+        # interpolate over zero valid parameters, in this case return None and
+        # the calling code will generate another set of random parameters
+        if pars.shape[0] < 2 or kwargs[free_param] < pars.min() or pars.max() < kwargs[free_param]:
+            logging.debug('Parameters are at the edge of grid, no interpolation possible.')
+            return None
+
         if self.preload_arrays:
             data = self.data[name][idx][valid_data]
         else:
             self.ensure_lazy_load()
             data = self.load_item(name, np.ndarray, idx)
             data = data[valid_data]
-
-        # If we are at the edge of the grid, it might happen that we try to
-        # interpolate over zero valid parameters, in this case return None and
-        # the calling code will generate another set of random parameters
-        if pars.shape[0] < 2:
-            logging.debug('Parameters are at the edge of grid, no interpolation possible.')
-            return None
 
         logging.debug('Interpolating data to {} using cubic splines along {}.'.format(kwargs, free_param))
 
