@@ -163,9 +163,10 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         raise NotImplementedError()
 
     def build(self):
+        # TODO: delete
         # non-existing models have 0 flux
-        self.nonempty = self.grid.flux_idx
-        self.index = np.where(self.nonempty)
+        #self.nonempty = self.grid.flux_idx
+        #self.index = np.where(self.nonempty)
 
         spectra = super(ModelGridDatasetBuilder, self).build()
         self.copy_params_from_spectra(spectra)
