@@ -74,7 +74,6 @@ class Grid(PfsObject):
             logging.debug('Skipped building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
         logging.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.data_index[name]), name))
 
-
     def rectify_index(idx, s=None):
         idx = tuple(idx)
         if isinstance(s, Iterable):
@@ -83,6 +82,22 @@ class Grid(PfsObject):
             idx = idx + (s,)
 
         return tuple(idx)
+
+    def get_limited_data_index(self, name):
+        idx = ()
+        for p in self.params:
+            start = np.where(self.params[p].values >= self.params[p].min)[0][0]
+            stop = np.where(self.params[p].values <= self.params[p].max)[0][-1]
+            idx = idx + (slice(start, stop + 1), )
+        data_index = np.full(self.data_index[name].shape, False)
+        data_index[idx] = self.data_index[name][idx]
+        return data_index
+
+    def get_valid_data_item_count(self, name, use_limits=False):
+        if use_limits:
+            return np.sum(self.get_limited_data_index(name))
+        else:
+            return np.sum(self.data_index[name])
 
     def get_index(self, **kwargs):
         idx = tuple(self.params[p].index[kwargs[p]] for p in self.params)

@@ -37,6 +37,51 @@ class TestGrid(TestBase):
 
         return grid
 
+    def create_jagged_grid(self, preload_arrays=True):
+        grid = self.create_full_grid()
+
+        grid.data['U'][2:,2:,:] = np.nan
+        grid.data['V'][2:,2:,:] = np.nan
+
+        grid.build_data_index(rebuild=True)
+
+        return grid
+
+    def test_get_valid_data_item_count(self):
+        #    1 2 3 4 5
+        # 10 * * * * *
+        # 20 * * * * *
+        # 30 * * * * *
+        grid = self.create_full_grid()
+        count = grid.get_valid_data_item_count('U', use_limits=False)
+        self.assertEqual(15, count)
+
+        #    1 2 3 4 5
+        # 10 o o o o o
+        # 20 * * * * *
+        # 30 * * * * *
+        grid.params['b'].min = 20
+        grid.params['b'].max = 30
+        count = grid.get_valid_data_item_count('U', use_limits=True)
+        self.assertEqual(10, count)
+
+        #    1 2 3 4 5
+        # 10 * * * * *
+        # 20 * * * * *
+        # 30 * * o o o
+        grid = self.create_jagged_grid()
+        count = grid.get_valid_data_item_count('U', use_limits=False)
+        self.assertEqual(12, count)
+
+        #    1 2 3 4 5
+        # 10 o o o o o
+        # 20 * * * * *
+        # 30 * * o o o
+        grid.params['b'].min = 20
+        grid.params['b'].max = 30
+        count = grid.get_valid_data_item_count('U', use_limits=True)
+        self.assertEqual(7, count)
+
     def test_get_index(self):
         grid = self.create_full_grid()
         idx = grid.get_index(a=1, b=30)

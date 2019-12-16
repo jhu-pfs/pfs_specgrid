@@ -139,6 +139,7 @@ class Convert(Script):
         self.dsbuilder = self.create_dsbuilder(self.args['dataset'])
         self.init_dsbuilder(self.dsbuilder)
         self.load_data(self.dsbuilder)
+
         # Do this again because grid sampling overrides might have changed when
         # loading the grid
         self.dsbuilder.init_from_args(self.args)
