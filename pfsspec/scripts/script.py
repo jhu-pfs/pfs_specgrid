@@ -167,7 +167,7 @@ class Script():
         K.clear_session()
 
     def init_logging(self, outdir):
-        self.setup_logging(os.path.join(outdir, type(self).__name__ + '.log'))
+        self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))
         self.save_command_line(os.path.join(outdir, 'command.sh'))
         self.dump_env(os.path.join(outdir, 'env.sh'))
         self.dump_args_json(os.path.join(outdir, 'args.json'))
