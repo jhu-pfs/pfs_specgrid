@@ -3,7 +3,7 @@ import numpy as np
 class Constants():
     DEFAULT_PLOT_WAVE_RANGE = (3750, 12650)
     DEFAULT_FILTER_VDISP = 5000
-    SPEED_OF_LIGHT = 299792.458
+    DEGREE = np.pi / 180.0
 
     SDSS_SP_MASK_OK = 0x000
     SDSS_SP_MASK_NOPLUG = 0x001  # Fiber not listed in plugmap file

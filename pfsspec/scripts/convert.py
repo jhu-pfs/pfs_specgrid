@@ -5,12 +5,12 @@ import numpy as np
 from pfsspec.scripts.script import Script
 from pfsspec.surveys.survey import Survey
 from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
-from pfsspec.obsmod.sdssbasicpipeline import SdssBasicPipeline
+from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.stellarmod.boszgrid import BoszGrid
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
-from pfsspec.obsmod.kuruczbasicpipeline import KuruczBasicPipeline
-from pfsspec.obsmod.boszbasicpipeline import BoszBasicPipeline
+from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
+from pfsspec.pipelines.boszbasicpipeline import BoszBasicPipeline
 
 class Convert(Script):
     def __init__(self):

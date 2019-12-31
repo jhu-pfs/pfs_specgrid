@@ -60,6 +60,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--ext-random', type=float, nargs=2, default=None, help='Extinction mean and sigma')
         parser.add_argument('--mag-grid', type=float, nargs=3, default=None, help='Magnitude grid')
         parser.add_argument('--mag-random', type=float, nargs=2, default=None, help='Apparent magnitude mean and sigma.\n')
+
+        # TODO: update this to new noise model
+        #       draw observation parameters randomly
         parser.add_argument('--sky-level-random', type=float, nargs=2, default=None, help='Random sky level mean and sigma.\n')
 
         for k in self.grid.params:

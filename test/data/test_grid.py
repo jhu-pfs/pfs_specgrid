@@ -47,6 +47,22 @@ class TestGrid(TestBase):
 
         return grid
 
+    def create_full_grid_1D(self, preload_arrays=True):
+        grid = Grid()
+        grid.preload_arrays = preload_arrays
+
+        grid.init_param('a', np.array([1., 2., 3., 4., 5.]))
+        grid.init_data_item('U', (10,))
+        grid.init_data_item('V', (100,))
+
+        grid.data['U'] = np.random.rand(*grid.data['U'].shape)
+        grid.data['V'] = np.random.rand(*grid.data['V'].shape)
+
+        grid.build_params_index()
+        grid.build_data_index(rebuild=True)
+
+        return grid
+
     def test_get_valid_data_item_count(self):
         #    1 2 3 4 5
         # 10 * * * * *
@@ -176,7 +192,14 @@ class TestGrid(TestBase):
         data = grid.get_data_item_idx('U', ([1,1], [2,2]))
         self.assertEquals((2, 10,), data.shape)
 
-    def test_interpolate_data_item_linear(self):
+    def test_interpolate_data_item_linear_1D(self):
+        grid = self.create_full_grid_1D()
+        data = grid.interpolate_data_item_linear('U', a=2.7)
+        self.assertIsNotNone(data)
+        data = grid.interpolate_data_item_linear('U', a=2.0)
+        self.assertIsNotNone(data)
+
+    def test_interpolate_data_item_linear_nD(self):
         grid = self.create_full_grid()
         data = grid.interpolate_data_item_linear('U', a=2.7, b=18)
         self.assertIsNotNone(data)

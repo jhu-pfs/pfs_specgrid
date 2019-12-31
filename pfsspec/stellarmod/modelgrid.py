@@ -9,11 +9,6 @@ from pfsspec.data.grid import Grid
 class ModelGrid(Grid):
     def __init__(self):
         super(ModelGrid, self).__init__()
-        self.params = {
-            'Fe_H': None,
-            'T_eff': None,
-            'log_g': None
-        }
         self.wave = None
 
     def get_model_count(self, use_limits=False):
@@ -22,9 +17,18 @@ class ModelGrid(Grid):
     def get_flux_shape(self):
         return self.get_shape + self.wave.shape
 
+    def init_params(self):
+        self.init_param('Fe_H')
+        self.init_param('T_eff')
+        self.init_param('log_g')
+
     def init_data(self):
-        self.init_data_item('flux', self.wave.shape)
-        self.init_data_item('cont', self.wave.shape)
+        self.init_data_item('flux')
+        self.init_data_item('cont')
+
+    def allocate_data(self):
+        self.allocate_data_item('flux', self.wave.shape)
+        self.allocate_data_item('cont', self.wave.shape)
 
     def is_data_valid(self, name, data):
         return np.logical_not(np.any(np.isnan(data), axis=-1)) & ((data.max(axis=-1) != 0) | (data.min(axis=-1) != 0))

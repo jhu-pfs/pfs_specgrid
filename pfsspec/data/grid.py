@@ -8,12 +8,17 @@ from pfsspec.pfsobject import PfsObject
 from pfsspec.data.gridparam import GridParam
 
 class Grid(PfsObject):
-    def __init__(self):
+    def __init__(self, orig=None):
+        super(Grid, self).__init__(orig=orig)
+
         self.preload_arrays = False
         self.params = {}
         self.data = {}
         self.data_shape = {}
         self.data_index = {}
+
+        self.init_params()
+        self.init_data()
 
     def get_shape(self):
         shape = tuple(self.params[p].values.shape[0] for p in self.params)
@@ -28,30 +33,44 @@ class Grid(PfsObject):
         if self.fileformat != 'h5':
             raise NotImplementedError()
 
-    def init_param(self, name, values):
+    def init_params(self):
+        pass
+
+    def init_param(self, name, values=None):
         self.params[name] = GridParam(name, values)
 
     def init_data(self):
         pass
 
-    def init_data_item(self, name, shape):
-        if len(shape) != 1:
-            raise NotImplementedError()
+    def allocate_data(self):
+        pass
 
-        gridshape = self.get_shape()
-        datashape = gridshape + tuple(shape)
-
-        self.data_shape[name] = shape
-
-        if self.preload_arrays:
-            logging.info('Initializing memory for grid "{}" of size {}...'.format(name, datashape))
-            self.data[name] = np.full(datashape, np.nan)
-            logging.info('Initialized memory for grid "{}" of size {}.'.format(name, datashape))
-        else:
+    def init_data_item(self, name, shape=None):
+        if shape is None:
             self.data[name] = None
-            logging.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
+            self.data_shape[name] = None
+            self.data_index[name] = None
+        else:
+            if len(shape) != 1:
+                raise NotImplementedError()
 
-        self.data_index[name] = np.full(gridshape, False, dtype=np.bool)
+            gridshape = self.get_shape()
+            datashape = gridshape + tuple(shape)
+
+            self.data_shape[name] = shape
+
+            if self.preload_arrays:
+                logging.info('Initializing memory for grid "{}" of size {}...'.format(name, datashape))
+                self.data[name] = np.full(datashape, np.nan)
+                logging.info('Initialized memory for grid "{}" of size {}.'.format(name, datashape))
+            else:
+                self.data[name] = None
+                logging.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
+
+            self.data_index[name] = np.full(gridshape, False, dtype=np.bool)
+
+    def allocate_data_item(self, name, shape):
+        self.init_data_item(name, shape)
 
     def build_params_index(self):
         for p in self.params:
@@ -261,6 +280,32 @@ class Grid(PfsObject):
                 setattr(obj, p, kwargs[p])
 
     def interpolate_data_item_linear(self, name, **kwargs):
+        if len(self.params) == 1:
+            return self.interpolate_data_item_linear_1D(name, **kwargs)
+        else:
+            return self.interpolate_data_item_linear_nD(name, **kwargs)
+
+    def interpolate_data_item_linear_1D(self, name, **kwargs):
+        idx = self.get_nearby_indexes(**kwargs)
+        if idx is None:
+            return None
+        else:
+            idx1, idx2 = idx
+            if not self.is_data_item_idx(name, idx1) or not self.is_data_item_idx(name, idx2):
+                return None
+
+        # Parameter values to interpolate between
+        p = list(kwargs.keys())[0]
+        x = kwargs[p]
+        xa = self.params[p].values[idx1[0]]
+        xb = self.params[p].values[idx2[0]]
+        a = self.get_data_item_idx(name, idx1)
+        b = self.get_data_item_idx(name, idx2)
+        m = (b - a) / (xb - xa)
+        data = a + (x - xa) * m
+        return data, kwargs
+
+    def interpolate_data_item_linear_nD(self, name, **kwargs):
         idx = self.get_nearby_indexes(**kwargs)
         if idx is None:
             return None
