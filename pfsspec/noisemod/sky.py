@@ -33,6 +33,12 @@ class Sky(Grid):
         self.init_data()
         super(Sky, self).load_items(s=s)
 
+    def get_conversion(self, exp_count, exp_time, za, fa):
+        # Do conversion between erg/cm2/s to counts per pixel
+        conv, _ = self.interpolate_data_item_linear('conv', za=za, fa=fa)
+        conv = conv * exp_count / self.ref_exp_count * exp_time / self.ref_exp_time
+        return conv
+
     def get_counts(self, exp_count, exp_time, za, fa):
         counts, _ = self.interpolate_data_item_linear('counts', fa=fa, za=za)
         counts = counts * exp_count / self.ref_exp_count

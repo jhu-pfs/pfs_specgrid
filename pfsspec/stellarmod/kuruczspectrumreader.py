@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 from pfsspec.data.spectrumreader import SpectrumReader
+from pfsspec.physics import Physics
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 
@@ -34,7 +35,8 @@ class KuruczSpectrumReader(SpectrumReader):
         spec.flux = self.read_fluxes(KuruczSpectrumReader.WAVELENGTHS)
         # skip continuum
         self.read_fluxes(KuruczSpectrumReader.WAVELENGTHS)
-        spec.fnu_to_flam()
+        # convert from model surface intensity in erg/s/cm^2/sterad to erg/s/cm^2/A
+        spec.flux = Physics.fnu_to_flam() * 4 * np.pi
 
         return spec
 
