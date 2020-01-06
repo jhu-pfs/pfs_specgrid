@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import gzip, pickle
 import h5py
+import json
 from collections import Iterable
 
 from pfsspec.constants import Constants
@@ -13,7 +14,16 @@ import pfsspec.util as util
 
 class PfsObject():
     def __init__(self, orig=None):
+        self.jsonomit = set([
+            'jsonomit',
+            'file',
+            'filename',
+            'fileformat',
+            'filedata'
+        ])
+
         self.file = None
+
         self.filename = None
         self.fileformat = None
         self.filedata = None
@@ -42,6 +52,24 @@ class PfsObject():
                 raise NotImplementedError()
         else:
             raise NotImplementedError()
+
+    def save_json(self, filename):
+        d = self.__dict__.copy()
+        for k in self.jsonomit:
+            if k in d:
+                del d[k]
+        with open(filename, 'w') as f:
+            f.write(json.dumps(d, default=self.save_json_default, indent=4))
+
+    def save_json_default(self, o):
+        return None
+
+    def load_json(self, filename):
+        with open(filename, 'r') as f:
+            d = json.loads(f.read())
+            for k in d:
+                if k not in self.jsonomit and k in self.__dict__:
+                    self.__dict__[k] = d[k]
 
     def save(self, filename, format='pickle', save_items_func=None):
         logging.info("Saving {} to file {}...".format(type(self).__name__, filename))

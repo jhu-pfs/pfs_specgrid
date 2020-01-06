@@ -19,10 +19,15 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.interp_param = orig.interp_param
             self.use_cont = orig.use_cont
 
-            self.z_random = orig.z_random
-            self.ext_random = orig.ext_random
-            self.mag_random = orig.mag_random
-            self.sky_level_random = orig.sky_level_random
+            self.z = orig.z
+            self.mag = orig.mag
+            self.ext = orig.ext
+
+            self.target_zenith_angle = orig.target_zenith_angle
+            self.target_field_angle = orig.target_field_angle
+            self.moon_zenith_angle = orig.moon_zenith_angle
+            self.moon_target_angle = orig.moon_target_angle
+            self.moon_phase = orig.moon_phase
         else:
             self.grid = None
             self.grid_index = None
@@ -33,14 +38,18 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.interp_param = None
             self.use_cont = True  # Load model continuum
 
-            self.z_random = None
-            self.ext_random = None
-            self.mag_random = None
-            self.sky_level_random = None
+            self.z = None
+            self.mag = None
+            self.ext = None
+
+            self.target_zenith_angle = None
+            self.target_field_angle = None
+            self.moon_zenith_angle = None
+            self.moon_target_angle = None
+            self.moon_phase = None
 
         self.params = {
             'redshift': None,
-            'extinction': None,
             'mag' : None
         }
 
@@ -55,15 +64,17 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
 
         parser.add_argument('--z-grid', type=float, nargs=3, default=None, help='Redshift grid')
-        parser.add_argument('--z-random', type=float, nargs=2, default=None, help='Radial velocity mean and dispersion')
-        parser.add_argument('--ext-grid', type=float, nargs=3, default=None, help='Extinction grid')
-        parser.add_argument('--ext-random', type=float, nargs=2, default=None, help='Extinction mean and sigma')
         parser.add_argument('--mag-grid', type=float, nargs=3, default=None, help='Magnitude grid')
-        parser.add_argument('--mag-random', type=float, nargs=2, default=None, help='Apparent magnitude mean and sigma.\n')
 
-        # TODO: update this to new noise model
-        #       draw observation parameters randomly
-        parser.add_argument('--sky-level-random', type=float, nargs=2, default=None, help='Random sky level mean and sigma.\n')
+        parser.add_argument('--z', type=float, nargs='*', default=None, help='Radial velocity or mean and dispersion')
+        parser.add_argument('--mag', type=float, nargs='*', default=None, help='Apparent magnitude or mean and sigma.\n')
+        parser.add_argument('--ext', type=float, nargs='*', default=None, help='Extinction or lognormal parameters.\n')
+
+        parser.add_argument('--target-zenith-angle', type=float, nargs='*', default=[0, 45], help='Zenith angle\n')
+        parser.add_argument('--target-field-angle', type=float, nargs='*', default=[0, 0.65], help='Field angle\n')
+        parser.add_argument('--moon-zenith-angle', type=float, nargs='*', default=[30, 90], help='Moon zenith angle\n')
+        parser.add_argument('--moon-target-angle', type=float, nargs='*', default=[60, 180], help='Moon target angle\n')
+        parser.add_argument('--moon-phase', type=float, nargs='*', default=[0, 0.25], help='Moon phase\n')
 
         for k in self.grid.params:
             parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit ' + k)
@@ -87,18 +98,18 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
         if self.is_arg('z_grid', args):
             self.params['redshift'] = GridParam('redshift', np.linspace(*args['z_grid']))
-        if self.is_arg('z_random', args):
-             self.z_random = lambda: self.random_state.normal(args['z_random'][0], args['z_random'][1])
-        if self.is_arg('ext_grid', args):
-            self.params['extinction'] = GridParam('extinction', np.linspace(*args['ext_grid']))
-        if self.is_arg('ext_random', args):
-            self.ext_random = lambda: self.random_state.lognormal(args['ext_random'][0], args['ext_random'][1])
         if self.is_arg('mag_grid', args):
             self.params['mag'] = GridParam('mag', np.linspace(*args['mag_grid']))
-        if self.is_arg('mag_random', args):
-            self.mag_random = lambda: self.random_state.normal(args['mag_random'][0], args['mag_random'][1])
-        if self.is_arg('sky_level_random', args):
-            self.sky_level_random = lambda: np.abs(self.random_state.normal(args['sky_level_random'][0], args['sky_level_random'][1]))
+
+        self.z = self.get_arg('z', self.z, args)
+        self.mag = self.get_arg('mag', self.mag, args)
+        self.ext = self.get_arg('ext', self.ext, args)
+
+        self.target_zenith_angle = self.get_arg('target_zenith_angle', self.target_zenith_angle, args)
+        self.target_field_angle = self.get_arg('target_field_angle', self.target_field_angle, args)
+        self.moon_zenith_angle = self.get_arg('moon_zenith_angle', self.moon_zenith_angle, args)
+        self.moon_target_angle = self.get_arg('moon_target_angle', self.moon_target_angle, args)
+        self.moon_phase = self.get_arg('moon_phase', self.moon_phase, args)
 
         # Override grid range if specified
         # TODO: extend this to sample physically meaningful models only
@@ -127,7 +138,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             raise NotImplementedError()
 
     def get_wave_count(self):
-        return self.pipeline.wave.shape[0]
+        return self.pipeline.get_wave_count()
 
     def create_dataset(self, init_storage=True):
         return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
@@ -162,6 +173,12 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             free_param = params['interp_param']
         return params, free_param
 
+    def draw_random_param(self, params, name, values, random_func):
+        if values is not None and len(values) == 1:
+            params[name] = values[0]
+        elif values is not None:
+            params[name] = random_func(*values)
+
     def draw_random_params(self):
         # Always draw random parameters from self.random_state
         params = {}
@@ -179,14 +196,15 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         else:
             free_param = self.interp_param
 
-        if self.z_random is not None:
-            params['redshift'] = self.z_random()
-        if self.ext_random is not None:
-            params['extinction'] = self.ext_random()
-        if self.mag_random is not None:
-            params['mag'] = self.mag_random()
-        if self.sky_level_random is not None:
-            params['sky_level'] = self.sky_level_random()
+        self.draw_random_param(params, 'redshift', self.z, self.random_state.normal)
+        self.draw_random_param(params, 'mag', self.mag, self.random_state.normal)
+        self.draw_random_param(params, 'extinction', self.ext, self.random_state.lognormal)
+
+        self.draw_random_param(params, 'target_zenith_angle', self.target_zenith_angle, self.random_state.uniform)
+        self.draw_random_param(params, 'target_field_angle', self.target_field_angle, self.random_state.uniform)
+        self.draw_random_param(params, 'moon_zenith_angle', self.moon_zenith_angle, self.random_state.uniform)
+        self.draw_random_param(params, 'moon_target_angle', self.moon_target_angle, self.random_state.uniform)
+        self.draw_random_param(params, 'moon_phase', self.moon_phase, self.random_state.uniform)
 
         return params, free_param
 
@@ -245,5 +263,5 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         spectra = super(ModelGridDatasetBuilder, self).build()
         self.copy_params_from_spectra(spectra)
 
-        self.dataset.wave[:] = self.pipeline.wave
+        self.dataset.wave[:] = self.pipeline.get_wave()
         return self.dataset

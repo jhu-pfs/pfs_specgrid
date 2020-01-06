@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from pfsspec.data.dataset import Dataset
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.obsmod.hscfilter import HscFilter
+from pfsspec.obsmod.filter import Filter
 
 class TestBase(TestCase):
 
@@ -41,7 +41,7 @@ class TestBase(TestCase):
             ids = ['g', 'r', 'i', 'z', 'y']
             self.hsc_filters = dict()
             for i in ids:
-                filter = HscFilter()
+                filter = Filter()
                 filename = os.path.join(self.PFSSPEC_DATA_PATH, 'subaru/hsc', r'hsc_%s.dat' % (i))
                 filter.read(filename)
                 self.hsc_filters[i] = filter
