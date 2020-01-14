@@ -4,9 +4,9 @@ import glob
 import numpy as np
 from scipy.optimize import curve_fit
 
-from pfsspec.scripts.script import Script
+from pfsspec.scripts.import_ import Import
 
-class ImportPsf(Script):
+class ImportPsf(Import):
     # TODO: take these values from the detector config
     NPIX = 4096
     NARM = 3
@@ -15,11 +15,11 @@ class ImportPsf(Script):
         super(ImportPsf, self).__init__()
 
     def add_args(self, parser):
-        super(ImportPsf, self).add_args(parser)
         parser.add_argument("--in", type=str, required=True, help="gspfs binary output file\n")
         parser.add_argument("--out", type=str, required=True, help="Output text file\n")
         parser.add_argument("--arm", type=int, required=True, help='Spectrograph arm.\n')
         parser.add_argument("--wave", type=float, nargs=2, required=True, help="Wavelength limits\n")
+        super(Import, self).add_args(parser)
 
     def run(self):
         psf, w = self.load_psf()
@@ -54,7 +54,8 @@ class ImportPsf(Script):
         return s
 
     def save_arm(self, wave, sigma):
-        np.savetxt(self.args['out'], np.transpose([wave.transpose(), sigma.transpose()]))
+        fn = os.path.join(self.outdir, 'psf.dat')
+        np.savetxt(fn, np.transpose([wave.transpose(), sigma.transpose()]))
 
     @staticmethod
     def g1(x, A, m, s):
@@ -63,6 +64,13 @@ class ImportPsf(Script):
     @staticmethod
     def g2(x, s):
         return 1 / np.sqrt(2 * np.pi) / s * np.exp(-0.5 * (x / s) ** 2)
+
+    def execute_notebooks(self):
+        super(ImportPsf, self).execute_notebooks()
+
+        self.execute_notebook('eval_psf', parameters={
+                                  'PSF_PATH': self.args['out']
+                              })
 
 
 def main():
