@@ -7,6 +7,7 @@ import pandas as pd
 import gzip, pickle
 import h5py
 import json
+import numbers
 from collections import Iterable
 
 from pfsspec.constants import Constants
@@ -141,6 +142,11 @@ class PfsObject():
                             logging.debug('Saving item {} with chunks {}'.format(name, chunks))
                         else:
                             f.create_dataset(name, data=item)
+            elif isinstance(item, numbers.Number):
+                with h5py.File(self.filename, 'a') as f:
+                    if name in f.keys():
+                        del f[name]
+                    f.create_dataset(name, data=item)
             else:
                 raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
         else:
@@ -281,6 +287,13 @@ class PfsObject():
                             return f[name][s]
                         else:
                             return f[name][:]
+                    else:
+                        return None
+            elif type == np.float or type == np.int:
+                with h5py.File(self.filename, 'r') as f:
+                    if name in f.keys():
+                        data = f[name][()]
+                        return data
                     else:
                         return None
             else:

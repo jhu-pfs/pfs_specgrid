@@ -5,6 +5,8 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from pfsspec.scripts.import_ import Import
+from pfsspec.obsmod.pcapsf import PcaPsf
+from pfsspec.obsmod.gausspsf import GaussPsf
 
 class ImportPsf(Import):
     # TODO: take these values from the detector config
@@ -22,10 +24,18 @@ class ImportPsf(Import):
         super(Import, self).add_args(parser)
 
     def run(self):
-        psf, w = self.load_psf()
-        sigma = self.fit_arm(psf)
-        wave = self.get_wave()
-        self.save_arm(wave, sigma)
+        kernels, w = self.load_psf()
+
+        pca = PcaPsf()
+        pca.wave = self.get_wave()
+        pca.mean, pca.eigs = self.run_pca(kernels)
+        pca.pc = self.get_pc(kernels, pca.mean, pca.eigs)
+        pca.save(os.path.join(self.outdir, 'pca.h5'), format='h5')
+
+        gauss = GaussPsf()
+        gauss.wave = self.get_wave()
+        gauss.sigma = self.fit_sigma(kernels)
+        gauss.save(os.path.join(self.outdir, 'gauss.h5'), format='h5')
 
     def load_psf(self):
         arm = self.args['arm']
@@ -45,17 +55,24 @@ class ImportPsf(Import):
         wave = 0.5 * (wave[:-1] + wave[1:])
         return wave
 
-    def fit_arm(self, psf):
+    def run_pca(self, psf, rank=5):
+        mean = np.mean(psf, axis=0)
+        X = psf - mean
+        C = np.matmul(X.transpose(), X)
+        U, S, V = np.linalg.svd(C)
+        return mean, V[:rank, :]
+
+    def get_pc(self, psf, mean, eigs):
+        pc = np.matmul(psf - mean, eigs.transpose())
+        return pc
+
+    def fit_sigma(self, psf):
         pix = self.get_pix(psf.shape[1])
         s = np.zeros(psf.shape[0])
         for i in range(0, s.shape[0]):
             p, cov = curve_fit(ImportPsf.g2, pix, psf[i, :], p0=[1.5])
             s[i] = p[0]
         return s
-
-    def save_arm(self, wave, sigma):
-        fn = os.path.join(self.outdir, 'psf.dat')
-        np.savetxt(fn, np.transpose([wave.transpose(), sigma.transpose()]))
 
     @staticmethod
     def g1(x, A, m, s):
