@@ -9,8 +9,7 @@ from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.stellarmod.boszgrid import BoszGrid
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
-from pfsspec.pipelines.kuruczbasicpipeline import KuruczBasicPipeline
-from pfsspec.pipelines.boszbasicpipeline import BoszBasicPipeline
+from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 
 class Convert(Script):
     def __init__(self):
@@ -30,7 +29,7 @@ class Convert(Script):
                     'builder': ModelGridDatasetBuilder,
                     'grid': KuruczGrid,
                     'pipelines': {
-                        'basic': KuruczBasicPipeline
+                        'basic': StellarModelPipeline
                     }
                 },
             'bosz':
@@ -38,7 +37,7 @@ class Convert(Script):
                     'builder': ModelGridDatasetBuilder,
                     'grid': BoszGrid,
                     'pipelines': {
-                        'basic': BoszBasicPipeline
+                        'basic': StellarModelPipeline
                     }
                 }
         }
