@@ -93,6 +93,7 @@ class Grid(PfsObject):
             logging.debug('Skipped building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
         logging.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.data_index[name]), name))
 
+    @staticmethod
     def rectify_index(idx, s=None):
         idx = tuple(idx)
         if isinstance(s, Iterable):
