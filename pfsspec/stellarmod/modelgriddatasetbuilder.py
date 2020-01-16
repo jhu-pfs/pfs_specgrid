@@ -144,7 +144,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
 
     def process_item(self, i):
-        self.init_random_state()
+        super(ModelGridDatasetBuilder, self).process_item(i)
 
         spec = None
         while spec is None:
@@ -261,7 +261,5 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.param_index = np.indices(shape).reshape(count, size)
 
         spectra = super(ModelGridDatasetBuilder, self).build()
-        self.copy_params_from_spectra(spectra)
 
-        self.dataset.wave[:] = self.pipeline.get_wave()
         return self.dataset
