@@ -42,6 +42,12 @@ class ModelSpectrum(Spectrum):
                            'interp_param']
         return params
 
+    def normalize_by_T_eff(self, T_eff=None):
+        T_eff = T_eff or self.T_eff
+        logging.debug('Normalizing spectrum with black-body of T_eff={}'.format(T_eff))
+        n = 1e-7 * Physics.planck(self.wave*1e-10, T_eff)
+        self.multiply(1 / n)
+
     def print_info(self):
         # TODO: call super
         print('T_eff=', self.T_eff)
