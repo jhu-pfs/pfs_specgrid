@@ -330,7 +330,8 @@ class Grid(PfsObject):
         V[ii] = self.get_data_item_idx(name, kk)
 
         fn = RegularGridInterpolator(x, V)
-        data = fn(tuple([kwargs[p] for p in self.params]))
+        pp = tuple([kwargs[p] for p in self.params])
+        data = fn(pp)
         return data, kwargs
 
     def interpolate_data_item_spline(self, name, free_param, **kwargs):
