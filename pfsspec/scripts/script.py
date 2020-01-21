@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import yaml
 import logging
 import argparse
 import numpy as np
@@ -15,7 +16,7 @@ from pfsspec.notebookrunner import NotebookRunner
 
 class Script():
     def __init__(self):
-        self.parser = argparse.ArgumentParser()
+        self.parser = None
         self.args = None
         self.debug = False
         self.random_seed = None
@@ -30,6 +31,10 @@ class Script():
         else:
             self.threads = multiprocessing.cpu_count()
 
+    def create_parser(self):
+        self.parser = argparse.ArgumentParser()
+        self.add_subparsers(self.parser)
+
     def add_subparsers(self, parser):
         # Default behavior doesn't user subparsers
         self.add_args(parser)
@@ -43,6 +48,7 @@ class Script():
         return util.is_arg(name, args)
 
     def add_args(self, parser):
+        parser.add_argument('--config', type=str, help='Load config from json file.')
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
         parser.add_argument('--log-level', type=str, default=None, help='Logging level\n')
         parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
@@ -50,6 +56,11 @@ class Script():
     def parse_args(self):
         if self.args is None:
             self.args = self.parser.parse_args().__dict__
+            if 'config' in self.args and self.args['config'] is not None:
+                # A config file is used, reparse args with defaults suppressed
+                self.disable_parser_defaults(self.parser)
+                self.args = self.parser.parse_args().__dict__
+                self.merge_args_json(self.args['config'])
             if 'debug' in self.args and self.args['debug']:
                 self.debug = True
             if 'log_level' in self.args and self.args['log_level'] is not None:
@@ -57,7 +68,22 @@ class Script():
             if 'random_seed' in self.args and self.args['random_seed'] is not None:
                 self.random_seed = self.args['random_seed']
 
+    def disable_parser_defaults(self, parser):
+        
+        # Call recursively for subparsers
+        for a in parser._actions:
+            if isinstance(a, (argparse._StoreAction, argparse._StoreConstAction,
+                              argparse._StoreTrueAction, argparse._StoreFalseAction)):
+                a.default = None
+            elif isinstance(a, argparse._SubParsersAction):
+                for k in a.choices:
+                    if isinstance(a.choices[k], argparse.ArgumentParser):
+                        self.disable_parser_defaults(a.choices[k])
+
+    @staticmethod
     def dump_json_default(obj):
+        if isinstance(obj, float):
+            return "%.5f" % obj
         if type(obj).__module__ == np.__name__:
             if isinstance(obj, np.ndarray):
                 if obj.size < 100:
@@ -78,6 +104,18 @@ class Script():
     def dump_args_json(self, filename):
         with open(filename, 'w') as f:
             json.dump(self.args, f, default=Script.dump_json_default, indent=4)
+
+    def dump_args_yaml(self, filename):
+        with open(filename, 'w') as f:
+            yaml.dump(self.args, f, indent=4)
+
+    def merge_args_json(self, filename):
+        with open(filename, 'r') as f:
+            config_args = json.load(f)
+        
+        for k in config_args:
+            if k not in self.args or self.args[k] is None:
+                self.args[k] = config_args[k]
 
     def dump_env(self, filename):
         with open(filename, 'w') as f:
@@ -178,7 +216,7 @@ class Script():
         self.finish()
 
     def prepare(self):
-        self.add_subparsers(self.parser)
+        self.create_parser()
         self.parse_args()
         self.setup_logging()
         if self.debug:
