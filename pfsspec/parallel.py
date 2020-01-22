@@ -24,8 +24,10 @@ https://github.com/uqfoundation/multiprocess
 
 # Modules #
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 import logging
 import multiprocessing
+from multiprocessing.queues import Queue
 import numpy as np
 from tqdm import tqdm
 
@@ -85,9 +87,31 @@ def srl_map(init_func, worker_func, items, verbose=False):
             results.append(worker_func(i))
     return results
 
+class IterableQueue():
+    def __init__(self, queue, length):
+        self.queue = queue
+        self.length = length
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.length > 0:
+            self.length -= 1
+            o = self.queue.get()
+            if isinstance(o, Exception):
+                raise o
+            else:
+                return o
+        else:
+            raise StopIteration()
+    
 class SmartParallel():
     def __init__(self, initializer=None, verbose=False, parallel=True):
-        self.pool = None
+        self.cpus = multiprocessing.cpu_count()
+        self.processes = []
+        self.queue_in = None
+        self.queue_out = None
         self.initializer = initializer
         self.verbose = verbose
         self.parallel = parallel
@@ -100,8 +124,8 @@ class SmartParallel():
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.pool is not None:
-            self.pool.shutdown()
+        for p in self.processes:
+            p.join()
         if self.parallel:
             logging.info("Finished parallel execution.")
         else:
@@ -111,15 +135,49 @@ class SmartParallel():
     def __del__(self):
         pass
 
+    @staticmethod
+    def pool_worker(initializer, worker, queue_in, queue_out):
+        if initializer is not None:
+            initializer()
+        while True:
+            i = queue_in.get()
+            if isinstance(i, StopIteration):
+                return
+            else:
+                try:
+                    o = worker(i)
+                    queue_out.put(o)
+                except Exception as e:
+                    queue_out.put(e)
+
     def map(self, worker, items):
         if self.parallel:
-            self.pool = ProcessPoolExecutor(initializer=self.initializer)
-            m = self.pool.map(worker, items)
+            self.queue_in = multiprocessing.Queue()
+            self.queue_out = multiprocessing.Queue()
+
+            pool_size = self.cpus
+
+            for i in range(pool_size):
+                target = SmartParallel.pool_worker
+                args = (self.initializer, worker, self.queue_in, self.queue_out)
+                p = multiprocessing.Process(target=target, args=args)
+                p.daemon = True
+                p.start()
+                self.processes.append(p)
+
+            for i in items:
+                self.queue_in.put(i)
+
+            for i in range(len(self.processes)):
+                self.queue_in.put(StopIteration())
+
+            m = IterableQueue(self.queue_out, len(items))
         else:
-            self.pool = None
             if self.initializer is not None:
                 self.initializer()
             m = map(worker, items)
+
         if self.verbose:
             m = tqdm(m, total=len(items))
+
         return m
