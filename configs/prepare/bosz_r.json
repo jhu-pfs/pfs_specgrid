@@ -61,10 +61,10 @@
     "wave": null,
     "wave_bins": null,
     "wave_log": false,
-    "norm": null,
+    "norm": "median",
     "norm_wave": [
-        4200.0,
-        6500.0
+        6500.0,
+        9500.0
     ],
     "detector": "/scratch/ceph/dobos/data/pfsspec/subaru/pfs/arms/r.json",
     "detector_map": "/scratch/ceph/dobos/data/pfsspec/subaru/pfs/map/r/beta.h5",
