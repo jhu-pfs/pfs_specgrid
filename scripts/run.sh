@@ -32,7 +32,6 @@ while (( "$#" )); do
     case "$1" in
         --debug)
             PYTHON_DEBUG=1
-            PARAMS="$PARAMS $1"
             shift
             ;;
         -p|--partition)
@@ -72,16 +71,17 @@ done
 
 if [[ $RUNMODE == "run" ]]; then
     if [[ $PYTHON_DEBUG == "1" ]]; then
-        exec python -m ptvsd --host localhost --port 5678 --wait $COMMAND $PARAMS
+        exec python -m ptvsd --host localhost --port 5678 --wait $COMMAND $PARAMS --debug
     else
         exec python $COMMAND $PARAMS
     fi
 elif [[ $RUNMODE == "srun" ]]; then
     exec srun --partition $SBATCH_PARTITION \
               --gres gpu:$SBATCH_GPUS \
-              --cpus-per-task $SBATCH_CPUS_PER_TASK --mem $SBATCH_MEM \
+              --cpus-per-task $SBATCH_CPUS_PER_TASK \
+              --mem $SBATCH_MEM \
               --time $SBATCH_TIME \
-              $COMMAND $PARAMS
+              python $COMMAND $PARAMS
 elif [[ $RUNMODE == "sbatch" ]]; then
     sbatch <<EOF
 #!/bin/bash
