@@ -57,10 +57,22 @@ class Script():
         if self.args is None:
             self.args = self.parser.parse_args().__dict__
             if 'config' in self.args and self.args['config'] is not None:
-                # A config file is used, reparse args with defaults suppressed
-                self.disable_parser_defaults(self.parser)
+                # A config file is used:
+                # - 1. parse command-line args with defaults enabled
+                # - 2. load config file, override all specified arguments
+                # - 3. reparse command-line with defaults suppressed, apply overrides
+                
+                # 1.
                 self.args = self.parser.parse_args().__dict__
-                self.merge_args_json(self.args['config'])
+
+                # 2.
+                config_args = self.load_args_json(self.args['config'])
+                self.merge_args(config_args, override=True)
+
+                # 3.
+                self.disable_parser_defaults(self.parser)
+                command_args = self.parser.parse_args().__dict__
+                self.merge_args(command_args, override=True)
             if 'debug' in self.args and self.args['debug']:
                 self.debug = True
             if 'log_level' in self.args and self.args['log_level'] is not None:
@@ -109,13 +121,15 @@ class Script():
         with open(filename, 'w') as f:
             yaml.dump(self.args, f, indent=4)
 
-    def merge_args_json(self, filename):
+    def load_args_json(self, filename):
         with open(filename, 'r') as f:
-            config_args = json.load(f)
-        
-        for k in config_args:
-            if k not in self.args or self.args[k] is None:
-                self.args[k] = config_args[k]
+            args = json.load(f)
+            return args
+
+    def merge_args(self, other_args, override=True):
+        for k in other_args:
+            if other_args[k] is not None and (k not in self.args or self.args[k] is None or override):
+                self.args[k] = other_args[k]
 
     def dump_env(self, filename):
         with open(filename, 'w') as f:
