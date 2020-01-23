@@ -1,0 +1,21 @@
+{
+    "method": "reg",
+    "generator": "bosz",
+    "type": "dense",
+    "labels": ["T_eff"],
+    "noise": 1.0,
+    "mask_snr": 0.1,
+    "normalize_input": false,
+    "normalize_output": true,
+    "batch": 16,
+    "levels": 4,
+    "units": 2048,
+    "act": "relu",
+    "loss": "mean_squared_error",
+    "patience": 1000,
+    "opt": "sgd",
+    "lr_sch": "drop",
+    "lr": [0.001, 20.0, 0.7],
+    "no_batchnorm": true,
+    "dropout": null
+}

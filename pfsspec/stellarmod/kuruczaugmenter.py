@@ -11,6 +11,7 @@ class KuruczAugmenter():
         self.aug_offset = None
         self.aug_scale = None
         self.mask_data = False
+        self.mask_snr = None
         self.mask_random = None
         self.mask_value = 0
 
@@ -22,6 +23,7 @@ class KuruczAugmenter():
         parser.add_argument('--aug-offset', type=float, default=None, help='Augment by adding a random offset.\n')
         parser.add_argument('--aug-scale', type=float, default=None, help='Augment by multiplying with a random number.\n')
         parser.add_argument('--mask-data', action='store_true', help='Use mask from dataset.\n')
+        parser.add_argument('--mask-snr', type=float, help='Mask noisy bins that are below.\n')
         parser.add_argument('--mask-random', type=float, nargs="*", help='Add random mask.\n')
         parser.add_argument('--mask-value', type=float, default=0, help='Use mask value.\n')
 
@@ -36,6 +38,7 @@ class KuruczAugmenter():
         self.aug_offset = util.get_arg('aug_offset', self.aug_offset, args)
         self.aug_scale = util.get_arg('aug_scale', self.aug_scale, args)
         self.mask_data = util.get_arg('mask_data', self.mask_data, args)
+        self.mask_snr = util.get_arg('mask_snr', self.mask_snr, args)
         self.mask_random = util.get_arg('mask_random', self.mask_random, args)
         self.mask_value = util.get_arg('mask_value', self.mask_value, args)
 
@@ -62,10 +65,15 @@ class KuruczAugmenter():
         else:
             error = None
 
-        if dataset.mask is not None:
-            mask = np.array(dataset.mask[idx], copy=True, dtype=np.float)
-        else:
-            mask = None
+        mask = np.full(flux.shape, False)
+
+        if self.mask_data and dataset.mask is not None:
+            # TODO: verify this with real survey data
+            mask = mask | (dataset.mask[idx] != 0)
+        
+        # Mask out points where noise is too high
+        if self.mask_snr is not None and self.mask_value is not None and error is not None:
+            mask = mask | (np.abs(flux / error) < self.mask_snr)
 
         noise = self.noise
         if self.noise_schedule == 'constant':
@@ -88,7 +96,7 @@ class KuruczAugmenter():
             flux += bias
 
         # Mask out point based on data
-        if self.mask_data and self.mask_value is not None and mask is not None:
+        if self.mask_value is not None and mask is not None:
             flux[mask] = self.mask_value
 
         # Generate random mask
