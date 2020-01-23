@@ -81,7 +81,6 @@ class Script():
                 self.random_seed = self.args['random_seed']
 
     def disable_parser_defaults(self, parser):
-        
         # Call recursively for subparsers
         for a in parser._actions:
             if isinstance(a, (argparse._StoreAction, argparse._StoreConstAction,
@@ -91,6 +90,48 @@ class Script():
                 for k in a.choices:
                     if isinstance(a.choices[k], argparse.ArgumentParser):
                         self.disable_parser_defaults(a.choices[k])
+
+    @staticmethod
+    def get_env_vars(prefix='PFSSPEC'):
+        vars = {}
+        for k in os.environ:
+            if k.startswith(prefix):
+                vars[k] = os.environ[k]
+        return vars
+
+    @staticmethod
+    def substitute_env_vars(data, vars=None):
+        vars = vars or Script.get_env_vars()
+
+        if isinstance(data, dict):
+            return {k: Script.substitute_env_vars(data[k], vars) for k in data}
+        elif isinstance(data, list):
+            return [Script.substitute_env_vars(d, vars) for d in data]
+        elif isinstance(data, tuple):
+            return tuple([Script.substitute_env_vars(d, vars) for d in data])
+        elif isinstance(data, str):
+            for k in vars:
+                data = data.replace(vars[k], '${' + k + '}')
+            return data
+        else:
+            return data
+
+    @staticmethod
+    def resolve_env_vars(data, vars=None):
+        vars = vars or Script.get_env_vars()
+
+        if isinstance(data, dict):
+            return {k: Script.resolve_env_vars(data[k], vars) for k in data}
+        elif isinstance(data, list):
+            return [Script.resolve_env_vars(d, vars) for d in data]
+        elif isinstance(data, tuple):
+            return tuple([Script.resolve_env_vars(d, vars) for d in data])
+        elif isinstance(data, str):
+            for k in vars:
+                data = data.replace('${' + k + '}', vars[k])
+            return data
+        else:
+            return data
 
     @staticmethod
     def dump_json_default(obj):
@@ -114,17 +155,20 @@ class Script():
                 json.dump(obj.__dict__, f, default=Script.dump_json_default, indent=4)
 
     def dump_args_json(self, filename):
+        args = Script.substitute_env_vars(self.args)
         with open(filename, 'w') as f:
-            json.dump(self.args, f, default=Script.dump_json_default, indent=4)
+            json.dump(args, f, default=Script.dump_json_default, indent=4)
 
     def dump_args_yaml(self, filename):
+        args = Script.substitute_env_vars(self.args)
         with open(filename, 'w') as f:
-            yaml.dump(self.args, f, indent=4)
+            yaml.dump(args, f, indent=4)
 
     def load_args_json(self, filename):
         with open(filename, 'r') as f:
             args = json.load(f)
-            return args
+        args = Script.resolve_env_vars(args)
+        return args
 
     def merge_args(self, other_args, override=True):
         for k in other_args:
