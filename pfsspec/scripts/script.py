@@ -15,11 +15,12 @@ import pfsspec.util as util
 from pfsspec.notebookrunner import NotebookRunner
 
 class Script():
-    def __init__(self):
+    def __init__(self, logging=True):
         self.parser = None
         self.args = None
         self.debug = False
         self.random_seed = None
+        self.logging = logging
         self.log_level = None
         self.logging_console_handler = None
         self.logging_file_handler = None
@@ -263,10 +264,11 @@ class Script():
         K.clear_session()
 
     def init_logging(self, outdir):
-        self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))
-        self.save_command_line(os.path.join(outdir, 'command.sh'))
-        self.dump_env(os.path.join(outdir, 'env.sh'))
-        self.dump_args_json(os.path.join(outdir, 'args.json'))
+        if self.logging:
+            self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))
+            self.save_command_line(os.path.join(outdir, 'command.sh'))
+            self.dump_env(os.path.join(outdir, 'env.sh'))
+            self.dump_args_json(os.path.join(outdir, 'args.json'))
 
     def execute(self):
         self.prepare()
@@ -276,7 +278,8 @@ class Script():
     def prepare(self):
         self.create_parser()
         self.parse_args()
-        self.setup_logging()
+        if self.logging:
+            self.setup_logging()
         if self.debug:
             np.seterr(all='raise')
         if self.random_seed is not None:
