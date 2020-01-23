@@ -1,7 +1,7 @@
 {
     "method": "reg",
-    "generator": "bosz",
     "type": "dense",
+    "generator": "bosz",
     "labels": ["T_eff"],
     "noise": 1.0,
     "mask_snr": 0.1,
