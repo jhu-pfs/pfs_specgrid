@@ -63,12 +63,13 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline'], default='grid', help='Type of interpolation\n')
         parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
 
-        parser.add_argument('--z-grid', type=float, nargs=3, default=None, help='Redshift grid')
-        parser.add_argument('--mag-grid', type=float, nargs=3, default=None, help='Magnitude grid')
+        parser.add_argument('--z', type=float, nargs='*', default=None, help='Radial velocity or distribution parameters')
+        parser.add_argument('--mag', type=float, nargs='*', default=None, help='Apparent magnitude or distribution parameters.\n')
+        parser.add_argument('--ext', type=float, nargs='*', default=None, help='Extinction or distribution parameters.\n')
 
-        parser.add_argument('--z', type=float, nargs='*', default=None, help='Radial velocity or mean and dispersion')
-        parser.add_argument('--mag', type=float, nargs='*', default=None, help='Apparent magnitude or mean and sigma.\n')
-        parser.add_argument('--ext', type=float, nargs='*', default=None, help='Extinction or lognormal parameters.\n')
+        parser.add_argument('--z-dist', type=str, default=None, help='Redshift distribution.')
+        parser.add_argument('--mag-dist', type=str, default=None, help='Magnitude distribution.')
+        parser.add_argument('--ext-dist', type=str, default=None, help='Extinction distribution.')
 
         parser.add_argument('--target-zenith-angle', type=float, nargs='*', default=[0, 45], help='Zenith angle\n')
         parser.add_argument('--target-field-angle', type=float, nargs='*', default=[0, 0.65], help='Field angle\n')
@@ -96,14 +97,17 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         if 'interp_param' in args and args['interp_param'] is not None:
             self.interp_param = args['interp_param']
 
-        if self.is_arg('z_grid', args):
-            self.params['redshift'] = GridParam('redshift', np.linspace(*args['z_grid']))
-        if self.is_arg('mag_grid', args):
-            self.params['mag'] = GridParam('mag', np.linspace(*args['mag_grid']))
-
         self.z = self.get_arg('z', self.z, args)
         self.mag = self.get_arg('mag', self.mag, args)
         self.ext = self.get_arg('ext', self.ext, args)
+
+        self.z_dist = self.get_arg('z_dist', self.z, args)
+        self.mag_dist = self.get_arg('mag_dist', self.z, args)
+        self.ext_dist = self.get_arg('ext_dist', self.z, args)
+
+        # Do not initialize random distributions here because they should
+        # use the random state of the worker sub-process to get independent
+        # numbers wher running in parallel!
 
         self.target_zenith_angle = self.get_arg('target_zenith_angle', self.target_zenith_angle, args)
         self.target_field_angle = self.get_arg('target_field_angle', self.target_field_angle, args)
@@ -111,7 +115,14 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.moon_target_angle = self.get_arg('moon_target_angle', self.moon_target_angle, args)
         self.moon_phase = self.get_arg('moon_phase', self.moon_phase, args)
 
-        # Override grid range if specified
+        # Observational parameter grid
+        # TODO: add more grid parameters here
+        if self.z_dist == 'grid':
+            self.params['redshift'] = GridParam('redshift', np.linspace(*self.z))
+        if self.mag_dist == 'grid':
+            self.params['mag'] = GridParam('mag', np.linspace(*self.mag))
+
+        # Override physical parameters grid ranges, if specified
         # TODO: extend this to sample physically meaningful models only
         for k in self.grid.params:
             if args[k] is not None and len(args[k]) >= 2:
@@ -129,7 +140,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         if self.match_params is not None:
             return self.match_params.shape[0]
         elif self.sample_mode == 'grid':
+            # Pysical parameter grid of the models
             count = self.grid.get_model_count(use_limits=True)
+            # Observational parameters grid
             count *= self.get_grid_param_count()
             return count
         elif self.sample_mode == 'random':
@@ -173,14 +186,30 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             free_param = params['interp_param']
         return params, free_param
 
+    def get_random_dist(self, dist):
+        if dist is None:
+            return None
+        elif dist == 'normal':
+            return self.random_state.normal
+        elif dist == 'uniform':
+            return self.random_state.uniform
+        elif dist == 'lognormal':
+            return self.random_state.lognormal
+        elif dist == 'beta':
+            return self.random_state.beta
+        else:
+            raise NotImplementedError()
+
     def draw_random_param(self, params, name, values, random_func):
         if values is not None and len(values) == 1:
             params[name] = values[0]
-        elif values is not None:
+        elif values is not None and random_func is not None:
             params[name] = random_func(*values)
 
     def draw_random_params(self):
         # Always draw random parameters from self.random_state
+
+        # Draw model physical parameters
         params = {}
         for p in self.grid.params:
             if self.sample_dist == 'uniform':
@@ -196,10 +225,12 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         else:
             free_param = self.interp_param
 
-        self.draw_random_param(params, 'redshift', self.z, self.random_state.normal)
-        self.draw_random_param(params, 'mag', self.mag, self.random_state.normal)
-        self.draw_random_param(params, 'extinction', self.ext, self.random_state.lognormal)
+        # Draw observational parameters
+        self.draw_random_param(params, 'redshift', self.z, self.get_random_dist(self.z_dist))
+        self.draw_random_param(params, 'mag', self.mag, self.get_random_dist(self.mag_dist))
+        self.draw_random_param(params, 'extinction', self.ext, self.get_random_dist(self.ext_dist))
 
+        # TODO: Do we want non-uniform here?
         self.draw_random_param(params, 'target_zenith_angle', self.target_zenith_angle, self.random_state.uniform)
         self.draw_random_param(params, 'target_field_angle', self.target_field_angle, self.random_state.uniform)
         self.draw_random_param(params, 'moon_zenith_angle', self.moon_zenith_angle, self.random_state.uniform)
