@@ -257,6 +257,9 @@ class Script():
         # config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
         if 'gpus' in self.args and self.args['gpus'] is not None:
             config.gpu_options.visible_device_list = self.args['gpus']
+        if 'debug' not in self.args or self.args['debug'] is None or not self.args['debug']:
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+            tf.logging.set_verbosity(tf.logging.ERROR)
         session = tf.Session(config=config)
         set_session(session)
 

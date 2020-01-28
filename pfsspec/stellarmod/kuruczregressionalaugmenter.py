@@ -20,9 +20,9 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
         RegressionalDatasetAugmenter.add_args(self, parser)
         KuruczAugmenter.add_args(self, parser)
 
-    def init_from_args(self, args, mode):
-        RegressionalDatasetAugmenter.init_from_args(self, args, mode)
-        KuruczAugmenter.init_from_args(self, args, mode)
+    def init_from_args(self, args):
+        RegressionalDatasetAugmenter.init_from_args(self, args)
+        KuruczAugmenter.init_from_args(self, args)
 
     def augment_batch(self, idx):
         flux, labels, weight = RegressionalDatasetAugmenter.augment_batch(self, idx)

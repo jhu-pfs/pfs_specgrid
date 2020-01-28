@@ -25,9 +25,9 @@ class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter)
         AutoencodingDatasetAugmenter.add_args(self, parser)
         KuruczAugmenter.add_args(self, parser)
 
-    def init_from_args(self, args, mode):
-        AutoencodingDatasetAugmenter.init_from_args(self, args, mode)
-        KuruczAugmenter.init_from_args(self, args, mode)
+    def init_from_args(self, args):
+        AutoencodingDatasetAugmenter.init_from_args(self, args)
+        KuruczAugmenter.init_from_args(self, args)
 
     def augment_batch(self, idx):
         input, output, weight = AutoencodingDatasetAugmenter.augment_batch(self, idx)

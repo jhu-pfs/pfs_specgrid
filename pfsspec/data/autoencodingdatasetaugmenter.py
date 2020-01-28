@@ -25,7 +25,7 @@ class AutoencodingDatasetAugmenter(KerasDataGenerator):
     def add_args(self, parser):
         parser.add_argument('--aug', type=str, default=None, help='Augment data.\n')
 
-    def init_from_args(selfself, args, mode):
+    def init_from_args(selfself, args):
         # TODO: extend with more options
         pass
 

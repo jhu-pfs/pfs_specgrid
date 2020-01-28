@@ -27,11 +27,11 @@ class KuruczAugmenter():
         parser.add_argument('--mask-random', type=float, nargs="*", help='Add random mask.\n')
         parser.add_argument('--mask-value', type=float, default=0, help='Use mask value.\n')
 
-    def init_from_args(self, args, mode):
+    def init_from_args(self, args):
         self.noise = util.get_arg('noise', self.noise, args)
-        if mode == 'train':
+        if self.mode == 'train':
             self.noise_schedule = util.get_arg('noise_sch', self.noise_schedule, args)
-        elif mode in ['test', 'predict']:
+        elif self.mode in ['test', 'predict']:
             self.noise_schedule = 'constant'
         else:
             raise NotImplementedError()

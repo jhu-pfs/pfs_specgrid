@@ -23,7 +23,7 @@ class DatasetAugmenter(KerasDataGenerator):
     def add_args(self, parser):
         pass
 
-    def init_from_args(self, args, mode):
+    def init_from_args(self, args):
         # Copy weight column to new column called weight and normalize
         # We use the median since SNR is exponentially distributed
         # the clip normalized weights at 1
