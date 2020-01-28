@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import multiprocessing
 import socket
+from collections.abc import Iterable
 from keras.backend.tensorflow_backend import set_session
 from keras import backend as K
 
@@ -54,21 +55,37 @@ class Script():
         parser.add_argument('--log-level', type=str, default=None, help='Logging level\n')
         parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
 
+    def get_configs(self):
+        configs = []
+        if 'config' in self.args and self.args['config'] is not None:
+            if isinstance(self.args['config'], Iterable):
+                filenames = list(self.args['config'])
+            else:
+                filenames = [self.args['config']]
+
+            for filename in filenames:
+                config = self.load_args_json(self.args['config'])
+                configs.append(config)
+
+        return configs
+
     def parse_args(self):
         if self.args is None:
             self.args = self.parser.parse_args().__dict__
-            if 'config' in self.args and self.args['config'] is not None:
+
+            configs = self.get_configs()
+            if len(configs) > 0:
                 # A config file is used:
-                # - 1. parse command-line args with defaults enabled
+                # - 1. parse command-line args with defaults enabled (already done above)
                 # - 2. load config file, override all specified arguments
                 # - 3. reparse command-line with defaults suppressed, apply overrides
                 
                 # 1.
-                self.args = self.parser.parse_args().__dict__
+                # self.args = self.parser.parse_args().__dict__
 
                 # 2.
-                config_args = self.load_args_json(self.args['config'])
-                self.merge_args(config_args, override=True)
+                for config in configs:
+                    self.merge_args(config, override=True)
 
                 # 3.
                 self.disable_parser_defaults(self.parser)
