@@ -8,7 +8,7 @@
     "normalize_input": false,
     "normalize_output": true,
     "batch": 16,
-    "levels": 4,
+    "levels": 16,
     "units": 2048,
     "act": "relu",
     "loss": "mean_squared_error",
@@ -17,5 +17,12 @@
     "lr_sch": "drop",
     "lr": [0.001, 20.0, 0.7],
     "no_batchnorm": true,
-    "dropout": null
+    "dropout": 0.05,
+    "reg_kernel": [0, 5e-6],
+    "reg_bias": null,
+    "in": [
+        "${PFSSPEC_DATA}/dataset/stellar/bosz/train",
+        "${PFSSPEC_DATA}/dataset/stellar/bosz/valid"
+    ],
+    "out": "${PFSSPEC_DATA}/train/stellar/bosz"
 }

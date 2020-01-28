@@ -15,10 +15,10 @@
         20.0,
         1.25
     ],
-    "ext_dist": "normal",
+    "ext_dist": "lognormal",
     "ext": [
-        0.03,
-        0.01
+        -3.2,
+        0.2
     ],
     "target_zenith_angle": [
         0.0,
