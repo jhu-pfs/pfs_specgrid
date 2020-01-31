@@ -16,8 +16,9 @@
     "opt": "sgd",
     "lr_sch": "slowdrop",
     "lr": [0.01, 2.0, 0.8],
-    "no_batchnorm": false,
+    "no_batchnorm": true,
     "dropout": 0.1,
+    "dropout-input": false,
     "reg_kernel": [0, 1e-6],
     "reg_bias": [0, 1e-6],
     "in": [

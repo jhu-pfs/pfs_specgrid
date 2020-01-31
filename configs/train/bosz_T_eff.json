@@ -21,6 +21,8 @@
     "dropout": 0.1,
     "reg_kernel": [0, 1e-6],
     "reg_bias": [0, 1e-6],
+    "aug_scale": 0.1,
+    "aug_offset": 0.1,
     "in": [
         "${PFSSPEC_DATA}/train/dataset/stellar/bosz/train",
         "${PFSSPEC_DATA}/train/dataset/stellar/bosz/valid"
