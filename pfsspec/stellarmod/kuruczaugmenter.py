@@ -15,15 +15,13 @@ class KuruczAugmenter():
         self.mask_random = None
         self.mask_value = 0
 
-        self.include_wave = False
-
     def add_args(self, parser):
         parser.add_argument('--noise', type=float, default=None, help='Add noise.\n')
         parser.add_argument('--noise-sch', type=str, choices=['constant', 'linear'], default='constant', help='Noise schedule.\n')
         parser.add_argument('--aug-offset', type=float, default=None, help='Augment by adding a random offset.\n')
         parser.add_argument('--aug-scale', type=float, default=None, help='Augment by multiplying with a random number.\n')
         parser.add_argument('--mask-data', action='store_true', help='Use mask from dataset.\n')
-        parser.add_argument('--mask-snr', type=float, help='Mask noisy bins that are below.\n')
+        parser.add_argument('--mask-snr', type=float, help='Mask noisy bins that are below snr.\n')
         parser.add_argument('--mask-random', type=float, nargs="*", help='Add random mask.\n')
         parser.add_argument('--mask-value', type=float, default=0, help='Use mask value.\n')
 
