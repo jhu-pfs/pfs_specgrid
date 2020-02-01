@@ -6,6 +6,8 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
     def __init__(self):
         super(RegressionalDatasetAugmenter, self).__init__()
 
+        self.include_wave = False
+
     @classmethod
     def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
         input_shape = dataset.flux.shape
@@ -17,6 +19,13 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
                                                                   shuffle=shuffle,
                                                                   seed=seed)
         return d
+
+    def add_args(self, parser):
+        parser.add_argument('--include-wave', action='store_true', help='Include wave vector in training.\n')
+
+    def init_from_args(self, args):
+        super(RegressionalDatasetAugmenter, self).init_from_args(args)
+        self.include_wave = self.get_arg('include_wave', self.include_wave, args)
 
     def scale_output(self, output):
         values = output / self.coeffs
