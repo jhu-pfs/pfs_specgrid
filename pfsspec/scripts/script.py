@@ -9,8 +9,7 @@ import tensorflow as tf
 import multiprocessing
 import socket
 from collections.abc import Iterable
-from keras.backend.tensorflow_backend import set_session
-from keras import backend as K
+#from tensorflow.keras.backend import set_session, clear_session
 
 import pfsspec.util as util
 from pfsspec.notebookrunner import NotebookRunner
@@ -269,19 +268,27 @@ class Script():
             f.write(' '.join(sys.argv))
 
     def init_tensorflow(self):
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        # config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
+        if not self.debug:
+            tf.autograph.set_verbosity(3, False)
+
+        devices = tf.config.experimental.list_physical_devices('GPU')
+        if not devices:
+            raise Exception("No GPU available.")
+
         if 'gpus' in self.args and self.args['gpus'] is not None:
-            config.gpu_options.visible_device_list = self.args['gpus']
-        if 'debug' not in self.args or self.args['debug'] is None or not self.args['debug']:
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
-            tf.logging.set_verbosity(tf.logging.ERROR)
-        session = tf.Session(config=config)
-        set_session(session)
+            gpus = self.args['gpus'].split(',')
+            devices = [devices[int(i)] for i in gpus]
+            tf.config.experimental.set_visible_devices(devices, 'GPU')
+
+        for d in devices:
+            tf.config.experimental.set_memory_growth(d, True)
+            
+        tf.compat.v1.disable_eager_execution()
+
+        ## config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
 
     def release_tensorflow(self):
-        K.clear_session()
+        tf.keras.backend.clear_session()
 
     def init_logging(self, outdir):
         if self.logging:
