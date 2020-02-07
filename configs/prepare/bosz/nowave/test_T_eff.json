@@ -2,14 +2,17 @@
     "dataset": "bosz",
     "pipeline": "basic",
     "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_300000",
-    "out": "${PFSSPEC_DATA}/dataset/stellar/bosz/nowave/test",
+    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave/test_T_eff",
     "sample_mode": "random",
-    "sample_dist": "beta",
+    "sample_dist": "uniform",
     "sample_count": 20000,
     "interp_mode": "spline",
-    "interp_param": "random",
-    "z_dist": null,
-    "z": null,
+    "interp_param": "T_eff",
+    "z_dist": "normal",
+    "z": [
+        0,
+        0.001
+    ],
     "mag_dist": "normal",
     "mag": [
         20.0,
@@ -42,7 +45,7 @@
     ],
     "Fe_H": [
         -2.5,
-        1.5
+        0.75
     ],
     "T_eff": [
         3500.0,
@@ -74,7 +77,10 @@
     "psf_sigma": null,
     "psf_gauss": null,
     "psf_pca": "${PFSSPEC_DATA}/subaru/pfs/psf/r/pca.h5",
-    "calib_bias": null,
+    "calib_bias": [
+        0.01,
+        400
+    ],
     "noise": null,
     "noise_freeze": false,
     "cont": null,

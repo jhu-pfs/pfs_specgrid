@@ -2,26 +2,26 @@
     "dataset": "bosz",
     "pipeline": "basic",
     "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_300000",
-    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave/valid",
+    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave/test_log_g",
     "sample_mode": "random",
-    "sample_dist": "beta",
-    "sample_count": 100000,
+    "sample_dist": "uniform",
+    "sample_count": 20000,
     "interp_mode": "spline",
-    "interp_param": "random",
+    "interp_param": "log_g",
     "z_dist": "normal",
     "z": [
         0,
         0.001
     ],
-    "mag_dist": "uniform",
+    "mag_dist": "normal",
     "mag": [
-        19.0,
-        22.5
+        20.0,
+        1.25
     ],
-    "ext_dist": "uniform",
+    "ext_dist": "lognormal",
     "ext": [
-        0,
-        0.1
+        -3.2,
+        0.2
     ],
     "target_zenith_angle": [
         0.0,
