@@ -24,19 +24,13 @@ class DatasetAugmenter(KerasDataGenerator):
         pass
 
     def init_from_args(self, args):
-        # Copy weight column to new column called weight and normalize
-        # We use the median since SNR is exponentially distributed
-        # the clip normalized weights at 1
-        if self.weight is not None and 'weight' not in self.dataset.params.columns:
-            m = self.dataset.params[self.weight].median()
-            self.dataset.params['weight'] = 0.5 * self.dataset.params[self.weight] / m
-            self.dataset.params['weight'][self.dataset.params['weight'] > 1] = 1
+        pass
 
     def augment_batch(self, idx):
         input = None
         output = None
 
-        if self.weight is not None:
+        if self.weight is not None and 'weight' in self.dataset.params.columns:
             weight = np.array(self.dataset.params['weight'].iloc[idx], copy=True, dtype=np.float)
         else:
             weight = None
