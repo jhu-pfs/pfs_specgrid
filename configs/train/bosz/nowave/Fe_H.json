@@ -16,16 +16,16 @@
     "patience": 10000,
     "opt": "sgd",
     "lr_sch": "slowdrop",
-    "lr": [0.01, 2.0, 0.85],
-    "no_batchnorm": false,
-    "dropout": 0.05,
+    "lr": [0.01, 1.2, 0.85],
+    "no_batchnorm": true,
+    "dropout": 0.3,
     "dropout-input": false,
     "reg_kernel": [0, 1e-6],
-    "reg_bias": [0, 1e-6],
+    "reg_bias": [0, 1e-4],
     "in": [
-        "${PFSSPEC_DATA}/dataset/stellar/bosz/nowave/train",
-        "${PFSSPEC_DATA}/dataset/stellar/bosz/nowave/valid"
+        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/train",
+        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/valid"
     ],
     "out": "${PFSSPEC_DATA}/train/run/stellar/bosz",
-    "checkpoint_period": 200
+    "checkpoint_period": 500
 }
