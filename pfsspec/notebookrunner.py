@@ -73,14 +73,3 @@ class NotebookRunner():
         self.execute_notebook()
         self.save_notebook()
         self.convert_html()
-
-if __name__ == "__main__":
-    nr = NotebookRunner()
-    nr.input_notebook = r'H:\project\pfs_spec_dnn\nb\eval_ts.ipynb'
-    nr.output_notebook = r'H:\project\pfs_spec_dnn\test.ipynb'
-    nr.output_html = r'H:\project\pfs_spec_dnn\test.html'
-    nr.parameters = {
-        'DATASET_PATH': 'test'
-    }
-    nr.kernel = 'python3'
-    nr.execute()
