@@ -5,7 +5,6 @@ import yaml
 import logging
 import argparse
 import numpy as np
-import tensorflow as tf
 import multiprocessing
 import socket
 from collections.abc import Iterable
@@ -266,30 +265,7 @@ class Script():
                 f.write('\n')
                 f.write('\n')
             f.write(' '.join(sys.argv))
-
-    def init_tensorflow(self):
-        if not self.debug:
-            tf.autograph.set_verbosity(3, False)
-
-        devices = tf.config.experimental.list_physical_devices('GPU')
-        if not devices:
-            raise Exception("No GPU available.")
-
-        if 'gpus' in self.args and self.args['gpus'] is not None:
-            gpus = self.args['gpus'].split(',')
-            devices = [devices[int(i)] for i in gpus]
-            tf.config.experimental.set_visible_devices(devices, 'GPU')
-
-        for d in devices:
-            tf.config.experimental.set_memory_growth(d, True)
-            
-        tf.compat.v1.disable_eager_execution()
-
-        ## config.gpu_options.per_process_gpu_memory_fraction = args.reserve_vram
-
-    def release_tensorflow(self):
-        tf.keras.backend.clear_session()
-
+    
     def init_logging(self, outdir):
         if self.logging:
             self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))

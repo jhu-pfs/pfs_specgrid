@@ -47,7 +47,11 @@ while (( "$#" )); do
             shift 2
             ;;
         -G|--gpus)
-            SBATCH_GPUS=$2
+            if [[ $RUNMODE != "run" ]]; then
+                SBATCH_GPUS=$2
+            else
+                PARAMS="$PARAMS $1 $2"
+            fi
             shift 2
             ;;
         -c|--cpus-per-task|--cpus)
