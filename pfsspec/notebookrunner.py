@@ -56,7 +56,7 @@ class NotebookRunner():
         epp = ExecutePreprocessor(timeout=None)
         try:
             self.nb, resources = epp.preprocess(self.nb, resources)
-        except CellExecutionError as ex:
+        except Exception as ex:
             logging.error('An error has occured while execution notebook {}'.format(self.input_notebook))
             # Error is not propagated to allow saving notebook
 
@@ -70,6 +70,7 @@ class NotebookRunner():
         self.set_kernel()
         self.set_params()
         self.clear_all_output()
+        self.save_notebook()
         self.execute_notebook()
         self.save_notebook()
         self.convert_html()
