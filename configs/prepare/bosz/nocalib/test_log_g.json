@@ -1,0 +1,85 @@
+{
+    "dataset": "bosz",
+    "pipeline": "basic",
+    "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_300000",
+    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nocalib/test_log_g",
+    "sample_mode": "random",
+    "sample_dist": "uniform",
+    "sample_count": 20000,
+    "interp_mode": "spline",
+    "interp_param": "log_g",
+    "z_dist": "normal",
+    "z": [
+        0,
+        0.001
+    ],
+    "mag_dist": "normal",
+    "mag": [
+        20.0,
+        1.25
+    ],
+    "ext_dist": "lognormal",
+    "ext": [
+        -3.2,
+        0.2
+    ],
+    "target_zenith_angle": [
+        0.0,
+        45.0
+    ],
+    "target_field_angle": [
+        0.0,
+        0.65
+    ],
+    "moon_zenith_angle": [
+        30.0,
+        90.0
+    ],
+    "moon_target_angle": [
+        60.0,
+        180.0
+    ],
+    "moon_phase": [
+        0.0,
+        0.25
+    ],
+    "Fe_H": [
+        -2.5,
+        0.75
+    ],
+    "T_eff": [
+        3500.0,
+        7500.0
+    ],
+    "log_g": [
+        0.0,
+        5.0
+    ],
+    "redden": true,
+    "mag_filter": "${PFSSPEC_DATA}/subaru/hsc/hsc_r.dat",
+    "wave": null,
+    "wave_bins": null,
+    "wave_log": false,
+    "norm": "median",
+    "norm_wave": [
+        6500.0,
+        9500.0
+    ],
+    "detector": "${PFSSPEC_DATA}/subaru/pfs/arms/r.json",
+    "detector_map": null,
+    "exp_count": 16,
+    "exp_time": 450.0,
+    "sky": "${PFSSPEC_DATA}/noise/sky/r/sky.h5",
+    "sky_level": null,
+    "moon": "${PFSSPEC_DATA}/noise/moon/r/moon.h5",
+    "moon_level": null,
+    "model_res": null,
+    "psf_sigma": null,
+    "psf_gauss": null,
+    "psf_pca": "${PFSSPEC_DATA}/subaru/pfs/psf/r/pca.h5",
+    "calib_bias": null,
+    "noise": null,
+    "noise_freeze": false,
+    "cont": null,
+    "cont_wave": null
+}

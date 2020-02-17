@@ -16,12 +16,12 @@
     "patience": 10000,
     "opt": "sgd",
     "lr_sch": "slowdrop",
-    "lr": [0.01, 1.2, 0.85],
+    "lr": [0.01, 3.0, 0.85],
     "no_batchnorm": true,
-    "dropout": 0.3,
+    "dropout": 0.1,
     "dropout-input": false,
     "reg_kernel": [0, 1e-6],
-    "reg_bias": [0, 1e-4],
+    "reg_bias": [0, 1e-6],
     "in": [
         "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/train",
         "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/valid"
