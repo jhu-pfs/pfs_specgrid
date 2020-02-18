@@ -45,7 +45,7 @@ class ImportSdss(Import):
 
     def find_stars(self):
         return self.reader.find_stars(top=self.args['top'], plate=self.args['plate'], Fe_H=self.args['feh'],
-                                      T_eff=self.args['teff'], log_g=self.args['logg'], a_fe=self.args['afe'])
+                                      T_eff=self.args['teff'], log_g=self.args['logg'], a_Fe=self.args['afe'])
 
     def prepare(self):
         super(ImportSdss, self).prepare()
