@@ -4,7 +4,7 @@
     "generator": "bosz",
     "labels": ["log_g"],
     "noise": 1.0,
-    "mask_snr": 0.1,
+    "mask_lowsnr": 0.1,
     "weight": "snr",
     "normalize_input": false,
     "normalize_output": true,

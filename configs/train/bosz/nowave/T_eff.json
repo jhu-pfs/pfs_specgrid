@@ -5,7 +5,7 @@
     "labels": ["T_eff"],
     "weight": "snr",
     "noise": 1.0,
-    "mask_snr": 0.1,
+    "mask_lowsnr": 0.1,
     "normalize_input": false,
     "normalize_output": true,
     "batch": 16,
