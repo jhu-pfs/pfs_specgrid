@@ -307,6 +307,16 @@ class PfsObject():
         else:
             return data
 
+    def get_item_shape(self, name):
+        if self.fileformat == 'h5':
+            with h5py.File(self.filename, 'r') as f:
+                if name in f.keys():
+                    return f[name].shape
+                else:
+                    return None
+        else:
+            raise NotImplementedError()
+
     def plot_getax(self, ax=None, xlim=Constants.DEFAULT_PLOT_WAVE_RANGE, ylim=None):
         if ax is None:
             ax = plt.gca()
