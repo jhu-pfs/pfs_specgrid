@@ -7,9 +7,8 @@ from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 class KuruczGrid(ModelGrid):
     def __init__(self, model='kurucz'):
         self.model = model
-
         super(KuruczGrid, self).__init__()
-
+        
     def init_params(self):
         if self.model == 'test':
             self.init_param('Fe_H', np.array([0.0, 0.1]))

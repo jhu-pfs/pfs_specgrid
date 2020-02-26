@@ -3,6 +3,8 @@
 import os
 
 from pfsspec.scripts.import_ import Import
+from pfsspec.stellarmod.kuruczgrid import KuruczGrid
+from pfsspec.stellarmod.kuruczgridreader import KuruczGridReader
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 class ImportKurucz(Import):
@@ -18,7 +20,9 @@ class ImportKurucz(Import):
     def run(self):
         super(ImportKurucz, self).run()
 
-        grid = KuruczSpectrumReader.read_grid(self.args['path'], self.args['grid'])
+        grid = KuruczGrid(self.args['grid'])
+        reader = KuruczGridReader(grid, self.args['path'])
+        reader.read_grid()
         grid.save(os.path.join(self.args['out'], 'spectra.npz'))
 
 def main():

@@ -1,9 +1,8 @@
 import logging
 
 from pfsspec.parallel import SmartParallel
-from pfsspec.data.spectrumreader import SpectrumReader
 
-class ModelGridSpectrumReader(SpectrumReader):
+class GridReader():
     class EnumParamsGenerator():
         def __init__(self, grid=None, max=None):
             self.grid = grid
@@ -49,30 +48,27 @@ class ModelGridSpectrumReader(SpectrumReader):
                 return ci, cr
 
     def __init__(self, grid, parallel=True, max=None):
-        super(ModelGridSpectrumReader, self).__init__()
         self.grid = grid
         self.parallel = parallel
         self.max = max
 
-    def read_grid(self, stop=None):
-        shape = self.grid.get_flux_shape()
-        logging.info("Loading grid with flux grid shape {}".format(shape))
+    def read_grid(self):
+        # Iterate over the grid points and call a function for each
+        param = list(self.grid.params.keys())[0]
+        shape = self.grid.get_data_item_shape(param)
+        logging.info("Loading {} with shapes {}".format(type(grid).__name__, shape))
         if self.max is not None:
-            logging.info("Loading will stop after {} spectra".format(self.max))
+            logging.info("Loading will stop after {} items.".format(self.max))
 
-        g = ModelGridSpectrumReader.EnumParamsGenerator(self.grid, max=self.max)
+        g = GridReader.EnumParamsGenerator(self.grid, max=self.max)
         with SmartParallel(verbose=True, parallel=self.parallel) as p:
-            for r in p.map(self.process_item, g):
-                if r is not None:
-                    index, params, spec = r
-                    self.grid.set_flux_idx(index, spec.flux, spec.cont)
+            for res in p.map(self.process_item, g):
+                self.store_item(res)
 
-        logging.info("Grid loaded with flux shape {}".format(shape))
+        logging.info("Grid loaded with shape {}".format(shape))
 
-    def process_item(self, i):
-        raise NotImplementedError()
-
-    def read_files(self, files, stop=None):
+    def read_files(self, files):
+        # Iterate over a list of files and call a function for each
         shape = self.grid.get_flux_shape()
         logging.info("Loading grid with flux grid shape {}".format(shape))
         if self.max is not None:
@@ -80,13 +76,17 @@ class ModelGridSpectrumReader(SpectrumReader):
 
         k = 0
         with SmartParallel(verbose=True, parallel=self.parallel) as p:
-            for r in p.map(self.process_file, files):
-                if r is not None:
-                    index, params, spec = r
-                    self.grid.set_flux_idx(index, spec.flux, spec.cont)
+            for res in p.map(self.process_file, files):
+                self.store_item(res)
                 k += 1
 
         logging.info('{} files loaded.'.format(k))
 
+    def process_item(self, i):
+        raise NotImplementedError()
+
     def process_file(self, file):
+        raise NotImplementedError()
+
+    def store_item(self, res):
         raise NotImplementedError()

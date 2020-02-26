@@ -36,7 +36,7 @@ class KuruczSpectrumReader(SpectrumReader):
         # skip continuum
         self.read_fluxes(KuruczSpectrumReader.WAVELENGTHS)
         # convert from model surface intensity in erg/s/cm^2/sterad to erg/s/cm^2/A
-        spec.flux = Physics.fnu_to_flam() * 4 * np.pi
+        spec.flux = Physics.fnu_to_flam(spec.wave, spec.flux) * 4 * np.pi
 
         return spec
 
@@ -116,45 +116,3 @@ class KuruczSpectrumReader(SpectrumReader):
                     flux[i] = float(p)
                     i += 1
         return flux
-
-    def read_grid(path, model, preload_arrays=False):
-        grid = KuruczGrid(model)
-        grid.preload_arrays = preload_arrays
-        grid.build_params_index()
-
-        for m_h in grid.params['Fe_H'].values:
-            fn = KuruczSpectrumReader.get_filename(m_h, 2.0, False, False, False)
-            fn = os.path.join(path, fn)
-            with open(fn) as f:
-                r = KuruczSpectrumReader(f)
-                specs = r.read_all()
-                for spec in specs:
-                    if grid.wave is None:
-                        grid.wave = spec.wave
-                        grid.init_data()
-                    grid.set_flux(spec.flux, Fe_H=spec.Fe_H, T_eff=spec.T_eff, log_g=spec.log_g)
-
-        logging.info("Grid loaded with flux shape {}".format(grid.get_data_item_shape('flux')))
-
-        return grid
-
-    def get_filename(Fe_H, v_turb, alpha=False, nover=False, odfnew=False):
-        mh = "%02d" % (abs(Fe_H) * 10)
-
-        dir = 'grid'
-        dir += 'm' if Fe_H < 0 else 'p'
-        dir += mh
-        if alpha: dir += 'a'
-        if nover: dir += 'nover'
-        if odfnew: dir += 'odfnew'
-
-        fn = 'f'
-        fn += 'm' if Fe_H < 0 else 'p'
-        fn += mh
-        if alpha: dir += 'a'
-        fn += 'k%01d' % (v_turb)
-        if nover: fn += 'nover'
-        if odfnew: fn += 'odfnew'
-        fn += '.pck'
-
-        return os.path.join(dir, fn)

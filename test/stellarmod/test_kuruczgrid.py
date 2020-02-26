@@ -3,16 +3,20 @@ import os
 import numpy as np
 
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
+from pfsspec.stellarmod.kuruczgridreader import KuruczGridReader
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 
 class TestKuruczGrid(TestBase):
     def save_load_helper(self, format, ext):
-        path = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/kurucz')
-        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/test' + ext)
+        path = os.path.join(self.PFSSPEC_DATA_PATH, 'models/stellar/grid/atlas9/')
+        file = os.path.join(self.PFSSPEC_TEST_PATH, 'test_kurucz_grid_compressed' + ext)
         if os.path.exists(file):
             os.remove(file)
 
-        grid = KuruczSpectrumReader.read_grid(path, 'test', preload_arrays=True)
+        grid = KuruczGrid('test')
+        grid.preload_arrays = True
+        reader = KuruczGridReader(grid, path)
+        reader.read_grid()
         self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
 
         grid.save(file, format=format)
@@ -34,15 +38,18 @@ class TestKuruczGrid(TestBase):
         self.save_load_helper('h5', '.h5')
 
     def import_kurucz_helper(self, file):
-        path = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/kurucz')
+        path = os.path.join(self.PFSSPEC_DATA_PATH, 'models/stellar/grid/atlas9/')
         if not os.path.exists(file):
-            grid = KuruczSpectrumReader.read_grid(path, 'kurucz', preload_arrays=True)
-            self.assertEqual((18, 61, 11, 1221), grid.flux.shape)
+            grid = KuruczGrid('kurucz')
+            grid.preload_arrays = True
+            reader = KuruczGridReader(grid, path)
+            reader.read_grid()
+            self.assertEqual((18, 61, 11, 1221), grid.data['flux'].shape)
 
             grid.save(file, 'h5')
 
     def load_kurucz_helper(self, preload_arrays=True):
-        file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.h5')
+        file = os.path.join(self.PFSSPEC_TEST_PATH, 'test_kurucz_grid_compressed.h5')
         self.import_kurucz_helper(file)
         grid = KuruczGrid(model='kurucz')
         grid.preload_arrays = preload_arrays
