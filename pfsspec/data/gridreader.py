@@ -53,10 +53,11 @@ class GridReader():
         self.max = max
 
     def read_grid(self):
+        self.grid.init_data()
+        self.grid.allocate_data()
+
         # Iterate over the grid points and call a function for each
-        param = list(self.grid.params.keys())[0]
-        shape = self.grid.get_data_item_shape(param)
-        logging.info("Loading {} with shapes {}".format(type(grid).__name__, shape))
+        logging.info("Loading {}.".format(type(self.grid).__name__))
         if self.max is not None:
             logging.info("Loading will stop after {} items.".format(self.max))
 
@@ -65,12 +66,11 @@ class GridReader():
             for res in p.map(self.process_item, g):
                 self.store_item(res)
 
-        logging.info("Grid loaded with shape {}".format(shape))
+        logging.info("Grid loaded.")
 
     def read_files(self, files):
         # Iterate over a list of files and call a function for each
-        shape = self.grid.get_flux_shape()
-        logging.info("Loading grid with flux grid shape {}".format(shape))
+        logging.info("Loading {}".format(type(self.grid).__name__))
         if self.max is not None:
             logging.info("Loading will stop after {} spectra".format(self.max))
 

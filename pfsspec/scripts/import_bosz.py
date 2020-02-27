@@ -6,6 +6,7 @@ import logging
 
 from pfsspec.scripts.import_ import Import
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
+from pfsspec.stellarmod.boszgridreader import BoszGridReader
 from pfsspec.stellarmod.boszgrid import BoszGrid
 
 class ImportBosz(Import):
@@ -28,15 +29,12 @@ class ImportBosz(Import):
             res = 5000
 
         grid = BoszGrid()
-
-        r = BoszSpectrumReader(grid)
-        r.parallel = not self.debug
-        r.wave_lim = self.args['wave']
-        r.max = self.args['max']
-        r.res = res
+        r = BoszSpectrumReader(self.args['path'], self.args['wave'], res)
+        gr = BoszGridReader(grid, r, self.args.max)
+        gr.parallel = not self.debug
 
         if 'preload_arrays' in self.args and self.args['preload_arrays'] is not None:
-            r.grid.preload_arrays = self.args['preload_arrays']
+            grid.preload_arrays = self.args['preload_arrays']
 
         if os.path.isdir(self.args['path']):
             logging.info('Running in grid mode')
@@ -55,10 +53,10 @@ class ImportBosz(Import):
 
         logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
 
-        r.grid.wave = spec.wave
-        r.grid.init_data()
-        r.grid.build_params_index()
-        r.grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
+        grid.wave = spec.wave
+        grid.init_data()
+        grid.build_params_index()
+        grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
 
         if os.path.isdir(self.args['path']):
             r.path = self.args['path']

@@ -7,13 +7,13 @@ import re
 import multiprocessing
 import time
 
-from pfsspec.stellarmod.modelgridspectrumreader import ModelGridSpectrumReader
+from pfsspec.data.spectrumreader import SpectrumReader
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.boszgrid import BoszGrid
 
-class BoszSpectrumReader(ModelGridSpectrumReader):
+class BoszSpectrumReader(SpectrumReader):
 
-    # TODO: Unify file open/close logig with other readers and
+    # TODO: Unify file open/close logging with other readers and
     # figure out how to use instance/class functions
 
     MAP_FE_H = {
@@ -48,11 +48,10 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         'p05': 0.5,
     }
 
-    def __init__(self, grid=None, path=None, wave_lim=None, max=None, res=None):
-        super(BoszSpectrumReader, self).__init__(grid=grid)
+    def __init__(self, path=None, wave_lim=None, res=None):
+        super(BoszSpectrumReader, self).__init__()
         self.path = path
         self.wave_lim = wave_lim
-        self.max = max
         self.res = res
 
     def correct_wave_grid(self, wlim):
@@ -96,58 +95,26 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
         df = pd.read_csv(file, delimiter=r'\s+', header=None, compression=compression)
         df.columns = ['wave', 'flux', 'cont']
 
-        if self.wave_lim is not None:
-            filt = (self.wave_lim[0] <= df['wave']) & (df['wave'] <= self.wave_lim[1])
-        else:
-            filt = slice(None)
-
         spec = KuruczSpectrum()
 
         # NOTE: wavelength values in the files have serious round-off errors
         # Correct wavelength grid here
         #spec.wave = np.array(df['wave'][filt])
+        # cwave = self.correct_wave_grid((100, 32000))
 
-        cwave = self.correct_wave_grid((100, 32000))
-        spec.wave = cwave[filt]
+        if self.wave_lim is not None:
+            filt = (self.wave_lim[0] <= df['wave']) & (df['wave'] <= self.wave_lim[1])
+        else:
+            filt = slice(None)
+
+        spec.wave = df['wave'][filt]
 
         spec.cont = np.array(df['cont'][filt])
         spec.flux = np.array(df['flux'][filt])
 
         return spec
 
-    def process_item(self, i):
-        logger = multiprocessing.get_logger()
-
-        index, params = i
-        fn = BoszSpectrumReader.get_filename(**params, R=self.res)
-        fn = os.path.join(self.path, fn)
-
-        if os.path.isfile(fn):
-            tries = 3
-            while True:
-                try:
-                    spec = self.read(fn)
-                    return index, params, spec
-                except Exception as e:
-                    logger.error('Error parsing {}'.format(fn))
-                    time.sleep(0.01)    # ugly hack
-                    tries -= 1
-                    if tries == 0:
-                        raise e
-
-        else:
-            logger.debug('Cannot find file {}'.format(fn))
-            return None
-
-    def process_file(self, file):
-        logger = multiprocessing.get_logger()
-
-        params = BoszSpectrumReader.parse_filename(file)
-        index = self.grid.get_index(**params)
-        spec = self.read(file)
-
-        return index, params, spec
-
+    @staticmethod
     def get_filename(Fe_H, C_M, O_M, T_eff, log_g, v_turb=0.2, v_rot=0, R=None):
         # amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2
 
@@ -188,6 +155,7 @@ class BoszSpectrumReader(ModelGridSpectrumReader):
 
         return fn
 
+    @staticmethod
     def parse_filename(filename):
 
         # amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2

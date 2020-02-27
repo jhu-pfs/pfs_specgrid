@@ -54,6 +54,11 @@ class ModelGrid(Grid):
         if cont is not None:
             self.set_data_item('cont', cont, **kwargs)
 
+    def set_flux_idx(self, index, flux, cont=None):
+        self.set_data_item_idx('flux', index, flux)
+        if cont is not None:
+            self.set_data_item_idx('cont', index, cont)
+
     def create_spectrum(self):
         raise NotImplementedError()
 
