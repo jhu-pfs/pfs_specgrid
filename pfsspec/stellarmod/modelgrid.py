@@ -15,7 +15,7 @@ class ModelGrid(Grid):
         return self.get_valid_data_item_count('flux', use_limits=use_limits)
 
     def get_flux_shape(self):
-        return self.get_shape + self.wave.shape
+        return self.get_shape() + self.wave.shape
 
     def init_params(self):
         self.init_param('Fe_H')

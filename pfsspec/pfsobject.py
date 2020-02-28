@@ -153,11 +153,13 @@ class PfsObject():
             raise NotImplementedError()
 
     def get_chunks(self, shape):
+        needchunk = False
         size = 1
         for s in shape:
+            needchunk |= (s > 0x80)
             size *= s
 
-        if size > 0x100000:
+        if needchunk and size > 0x100000:
             chunks = list(shape)
             for i in range(len(chunks)):
                 if chunks[i] <= 0x80:  # 128

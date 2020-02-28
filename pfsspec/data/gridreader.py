@@ -73,6 +73,7 @@ class GridReader():
         logging.info("Loading {}".format(type(self.grid).__name__))
         if self.max is not None:
             logging.info("Loading will stop after {} spectra".format(self.max))
+            files = files[:min(self.max, len(files))]
 
         k = 0
         with SmartParallel(verbose=True, parallel=self.parallel) as p:

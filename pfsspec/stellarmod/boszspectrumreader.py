@@ -12,10 +12,6 @@ from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.boszgrid import BoszGrid
 
 class BoszSpectrumReader(SpectrumReader):
-
-    # TODO: Unify file open/close logging with other readers and
-    # figure out how to use instance/class functions
-
     MAP_FE_H = {
         'm03': -0.25,
         'm05': -0.5,
@@ -27,10 +23,18 @@ class BoszSpectrumReader(SpectrumReader):
         'm20': -2.0,
         'm23': -2.25,
         'm25': -2.5,
+        'm28': -2.75,
+        'm30': -3.0,
+        'm35': -3.5,
+        'm40': -4.0,
+        'm45': -4.5,
+        'm50': -5.0,
         'p00': 0.0,
         'p03': 0.25,
         'p05': 0.5,
-        'p08': 0.75
+        'p08': 0.75,
+        'p10': 1.00,
+        'p15': 1.50
     }
 
     MAP_C_M = {
