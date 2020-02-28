@@ -60,6 +60,17 @@ class ImportSdss(Import):
         survey.save(os.path.join(self.args['out'], 'spectra.dat'))
         logging.info('Saved %d spectra.' % len(survey.spectra))
 
+    def execute_notebooks(self):
+        super(ImportSdss, self).execute_notebooks()
+        self.execute_notebook('eval_SDSS_viska', parameters={
+                                'PFSSPEC_ROOT': os.environ['PFSSPEC_ROOT'],
+                                'PFSSPEC_DATA': os.environ['PFSSPEC_DATA'],
+                                'DATASET_PATH': self.outdir,
+                            },
+                            output_notebook_name='eval_SDSS',
+                            outdir=self.outdir)
+
+
 def main():
     script = ImportSdss()
     script.execute()
