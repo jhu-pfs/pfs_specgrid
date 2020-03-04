@@ -29,6 +29,10 @@ class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter)
         AutoencodingDatasetAugmenter.init_from_args(self, args)
         KuruczAugmenter.init_from_args(self, args)
 
+    def on_epoch_end(self):
+        super(KuruczAutoencodingAugmenter, self).on_epoch_end()
+        KuruczAugmenter.on_epoch_end(self)
+
     def augment_batch(self, idx):
         input, output, weight = AutoencodingDatasetAugmenter.augment_batch(self, idx)
         input, _, weight = KuruczAugmenter.augment_batch(self, self.input_dataset, idx, input, None, weight)

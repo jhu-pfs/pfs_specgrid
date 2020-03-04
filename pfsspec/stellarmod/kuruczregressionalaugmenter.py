@@ -24,6 +24,10 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
         RegressionalDatasetAugmenter.init_from_args(self, args)
         KuruczAugmenter.init_from_args(self, args)
 
+    def on_epoch_end(self):
+        super(KuruczRegressionalAugmenter, self).on_epoch_end()
+        KuruczAugmenter.on_epoch_end(self)
+
     def augment_batch(self, idx):
         flux, labels, weight = RegressionalDatasetAugmenter.augment_batch(self, idx)
         flux, labels, weight = KuruczAugmenter.augment_batch(self, self.dataset, idx, flux, labels, weight)
