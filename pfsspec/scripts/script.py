@@ -48,53 +48,59 @@ class Script():
         return util.is_arg(name, args)
 
     def add_args(self, parser):
-        parser.add_argument('--config', type=str, help='Load config from json file.')
+        parser.add_argument('--config', type=str, nargs='+', help='Load config from json file.')
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
         parser.add_argument('--log-level', type=str, default=None, help='Logging level\n')
         parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
 
-    def get_configs(self):
+    def get_configs(self, args):
         configs = []
-        if 'config' in self.args and self.args['config'] is not None:
-            if isinstance(self.args['config'], Iterable):
-                filenames = list(self.args['config'])
+        if 'config' in args and args['config'] is not None:
+            if isinstance(args['config'], Iterable):
+                filenames = list(args['config'])
             else:
-                filenames = [self.args['config']]
+                filenames = [args['config']]
 
             for filename in filenames:
-                config = self.load_args_json(self.args['config'])
+                config = self.load_args_json(filename)
                 configs.append(config)
 
         return configs
 
     def parse_args(self):
         if self.args is None:
+            # - 1. parse command-line args with defaults enabled (already done above)
             self.args = self.parser.parse_args().__dict__
-
-            configs = self.get_configs()
+            configs = self.get_configs(self.args)
             if len(configs) > 0:
-                # A config file is used:
-                # - 1. parse command-line args with defaults enabled (already done above)
+                # If a config file is used:
                 # - 2. load config file, override all specified arguments
-                # - 3. reparse command-line with defaults suppressed, apply overrides
-                
-                # 1.
-                # self.args = self.parser.parse_args().__dict__
-
-                # 2.
                 for config in configs:
-                    self.merge_args(config, override=True)
+                    self.merge_args(config, override=True, recursive=True)
 
-                # 3.
+                # - 3. reparse command-line with defaults suppressed, apply overrides
                 self.disable_parser_defaults(self.parser)
                 command_args = self.parser.parse_args().__dict__
-                self.merge_args(command_args, override=True)
+                self.merge_args(command_args, override=True, recursive=False)
+
+            # Parse some special but generic arguments
             if 'debug' in self.args and self.args['debug']:
                 self.debug = True
             if 'log_level' in self.args and self.args['log_level'] is not None:
                 self.log_level = self.args['log_level']
             if 'random_seed' in self.args and self.args['random_seed'] is not None:
                 self.random_seed = self.args['random_seed']
+
+    def merge_args(self, other_args, override=True, recursive=False):
+        if 'config' in other_args and recursive:
+            # This is a config within a config file, load configs recursively, if requested
+            configs = self.get_configs(other_args)
+            for config in configs:
+                self.merge_args(config, override=override, recursive=True)
+
+        for k in other_args:
+            if other_args[k] is not None and (k not in self.args or self.args[k] is None or override):
+                self.args[k] = other_args[k]
 
     def disable_parser_defaults(self, parser):
         # Call recursively for subparsers
@@ -185,11 +191,6 @@ class Script():
             args = json.load(f)
         args = Script.resolve_env_vars(args)
         return args
-
-    def merge_args(self, other_args, override=True):
-        for k in other_args:
-            if other_args[k] is not None and (k not in self.args or self.args[k] is None or override):
-                self.args[k] = other_args[k]
 
     def dump_env(self, filename):
         with open(filename, 'w') as f:
