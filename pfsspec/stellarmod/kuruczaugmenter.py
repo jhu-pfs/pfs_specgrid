@@ -2,6 +2,8 @@ import os
 import logging
 import numpy as np
 
+import pysynphot, pysynphot.binning, pysynphot.spectrum, pysynphot.reddening
+
 import pfsspec.util as util
 from pfsspec.obsmod.spectrum import Spectrum
 
@@ -16,10 +18,15 @@ class KuruczAugmenter():
         self.mask_value = [0]
         self.lowsnr = None
         self.lowsnr_value = [0.0, 1.0]
+
         self.calib_bias = None
         self.calib_bias_count = None
         self.calib_bias_bandwidth = 200
         self.calib_bias_amplitude = 0.01
+
+        self.ext = None
+        self.ext_count = None
+        self.ext_dist = None
 
     def add_args(self, parser):
         parser.add_argument('--noise', type=float, default=None, help='Add noise.\n')
@@ -31,7 +38,10 @@ class KuruczAugmenter():
         parser.add_argument('--mask-value', type=float, nargs="*", default=[0], help='Use mask value.\n')
         parser.add_argument('--lowsnr', type=float, help='Pixels that are considered low SND.\n')
         parser.add_argument('--lowsnr-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize noisy bins that are below snr.\n')
+        
         parser.add_argument('--calib-bias', type=float, nargs=3, default=None, help='Add simulated calibration bias.')
+        
+        parser.add_argument('--ext', type=float, nargs='*', default=None, help='Extinction or distribution parameters.\n')
 
     def init_from_args(self, args):
         self.noise = util.get_arg('noise', self.noise, args)
@@ -51,14 +61,20 @@ class KuruczAugmenter():
         self.lowsnr = util.get_arg('lowsnr', self.lowsnr, args)
         self.lowsnr_value = util.get_arg('lowsnr_value', self.lowsnr_value, args)
 
-        if 'calib_bias' in args and 'calib_bias' is not None:
+        if 'calib_bias' in args and args['calib_bias'] is not None:
             calib_bias = args['calib_bias']
             self.calib_bias_count = int(calib_bias[0])
             self.calib_bias_bandwidth = calib_bias[1]
             self.calib_bias_amplitude = calib_bias[2]
 
+        if 'ext' in args and args['ext'] is not None:
+            ext = args['ext']
+            self.ext_count = int(ext[0])
+            self.ext_dist = [ext[1], ext[2]]
+
     def on_epoch_end(self):
         self.calib_bias = None
+        self.ext = None
 
     def noise_scheduler_linear_onestep(self):
         break_point = int(0.5 * self.total_epochs)
@@ -82,6 +98,7 @@ class KuruczAugmenter():
         mask = self.get_data_mask(dataset, idx, flux, labels, weight, mask)
         mask = self.generate_random_mask(dataset, idx, flux, labels, weight, mask)
         
+        flux = self.apply_ext(dataset, idx, flux, labels, weight)
         flux = self.apply_calib_bias(dataset, idx, flux, labels, weight)
         flux, error = self.generate_noise(dataset, idx, flux, labels, weight)
         flux = self.augment_flux(dataset, idx, flux, labels, weight)
@@ -186,3 +203,27 @@ class KuruczAugmenter():
                                                                  amplitude=self.calib_bias_amplitude)
 
         logging.info('Generated {} realization of calibration bias'.format(self.calib_bias_count))
+
+    def apply_ext(self, dataset, idx, flux, labels, weight):
+        if self.ext_count is not None:
+            if self.ext is None:
+                self.generate_ext(dataset.wave)
+
+            # Pick extinction curve
+            i = np.random.randint(self.ext.shape[0], size=(flux.shape[0],))
+            flux *= self.ext[i, :]
+
+        return flux
+
+    def generate_ext(self, wave):
+        logging.info('Generating {} realization of extinction curve'.format(self.ext_count))
+
+        wave = wave if len(wave.shape) == 1 else wave[0]
+        self.ext = np.empty((self.ext_count, wave.shape[0]))
+        for i in range(self.ext_count):
+            extval = np.random.uniform(*self.ext_dist)
+            spec = pysynphot.spectrum.ArraySourceSpectrum(wave=wave, flux=np.full(wave.shape, 1.0), keepneg=True)
+            obs = spec * pysynphot.reddening.Extinction(extval, 'mwavg')
+            self.ext[i, :] = obs.flux
+
+        logging.info('Generated {} realization of extinction curve'.format(self.ext_count))
