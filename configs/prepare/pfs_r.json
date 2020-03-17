@@ -1,0 +1,22 @@
+{
+    "mag_filter": "${PFSSPEC_DATA}/subaru/hsc/hsc_r.dat",
+    "wave": null,
+    "wave_bins": null,
+    "wave_log": false,
+    "norm": "median",
+    "norm_wave": [
+        6500.0,
+        9500.0
+    ],
+    "detector": "${PFSSPEC_DATA}/subaru/pfs/arms/r.json",
+    "detector_map": null,
+
+    "sky": "${PFSSPEC_DATA}/subaru/pfs/noise/sky/r/sky.h5",
+    "sky_level": null,
+    "moon": "${PFSSPEC_DATA}/subaru/pfs/noise/moon/r/moon.h5",
+    "moon_level": null,
+    "model_res": null,
+    "psf_sigma": null,
+    "psf_gauss": null,
+    "psf_pca": "${PFSSPEC_DATA}/subaru/pfs/psf/r/pca.h5"
+}

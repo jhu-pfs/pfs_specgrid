@@ -4,7 +4,9 @@
     "generator": "bosz",
     "labels": ["Fe_H"],
     "noise": 1.0,
-    "mask_lowsnr": 0.1,
+    "mask_value": [ 0, 1 ],
+    "lowsnr": 0.1,
+    "lowsnr_value": [ 0, 1 ],
     "weight": "snr",
     "normalize_input": false,
     "normalize_output": true,
@@ -19,14 +21,13 @@
     "lr": [0.001, 3.0, 0.85],
     "momentum": 0.9,
     "nesterov": true,
-    "no_batchnorm": true,
     "dropout": 0.1,
     "dropout-input": false,
     "reg_kernel": [0, 1e-6],
     "reg_bias": [0, 1e-6],
     "in": [
-        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/train",
-        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/valid"
+        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nocalib/train",
+        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nocalib/valid"
     ],
     "out": "${PFSSPEC_DATA}/train/run/stellar/bosz",
     "checkpoint_period": 500
