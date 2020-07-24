@@ -39,7 +39,7 @@ class ImportSdss(Import):
         logging.info('SciServer token: {}'.format(self.token))
 
     def create_reader(self):
-        self.reader = SdssSpectrumReader()
+        self.reader = SdssSpectrumReader(verbose=True, parallel=not self.debug)
         self.reader.path = self.args['path']
         self.reader.sciserver_token = self.token
 
@@ -62,12 +62,12 @@ class ImportSdss(Import):
 
     def execute_notebooks(self):
         super(ImportSdss, self).execute_notebooks()
-        self.execute_notebook('eval_SDSS_viska', parameters={
+        self.execute_notebook('eval_import_sdss', parameters={
                                 'PFSSPEC_ROOT': os.environ['PFSSPEC_ROOT'],
                                 'PFSSPEC_DATA': os.environ['PFSSPEC_DATA'],
                                 'DATASET_PATH': self.outdir,
                             },
-                            output_notebook_name='eval_SDSS',
+                            output_notebook_name='eval_import_sdss',
                             outdir=self.outdir)
 
 

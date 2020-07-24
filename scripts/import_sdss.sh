@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec python -m pfsspec.scripts.import_sdss $@
+./scripts/run.sh "-m pfsspec.scripts.import_sdss" $@

@@ -8,7 +8,6 @@ import numpy as np
 import multiprocessing
 import socket
 from collections.abc import Iterable
-#from tensorflow.keras.backend import set_session, clear_session
 
 import pfsspec.util as util
 from pfsspec.notebookrunner import NotebookRunner
