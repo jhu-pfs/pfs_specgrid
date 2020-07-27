@@ -10,6 +10,31 @@ class ModelGrid(Grid):
     def __init__(self):
         super(ModelGrid, self).__init__()
         self.wave = None
+        self.slice = None
+
+    def add_args(self, parser):
+        for k in self.params:
+            parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit on ' + k)
+
+    def init_from_args(self, args):
+        # If a limit is specified on any of the parameters on the command-line,
+        # try to slice the grid while loading from HDF5
+        s = []
+        for k in self.params:
+            if args[k] is not None:
+                idx = np.digitize([args[k][0], args[k][1]], self.grid.params[k].values)
+                s.append(slice(idx[0], idx[1] + 1, None))
+            else:
+                s.append(slice(None))
+        s.append(slice(None))  # wave axis
+        self.slice = tuple(s)
+
+        # Override physical parameters grid ranges, if specified
+        # TODO: extend this to sample physically meaningful models only
+        for k in self.grid.params:
+            if args[k] is not None and len(args[k]) >= 2:
+                self.grid.params[k].min = args[k][0]
+                self.grid.params[k].max = args[k][1]
 
     def get_model_count(self, use_limits=False):
         return self.get_valid_data_item_count('flux', use_limits=use_limits)
@@ -36,6 +61,10 @@ class ModelGrid(Grid):
     def save_items(self):
         self.save_item('wave', self.wave)
         super(ModelGrid, self).save_items()
+
+    def load(self, filename, s=None, format=None):
+        s = s or self.slice
+        super(ModelGrid, self).load(filename, s=s, format=format)
 
     def load_items(self, s=None):
         self.wave = self.load_item('wave', np.ndarray)

@@ -77,9 +77,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--moon-target-angle', type=float, nargs='*', default=[60, 180], help='Moon target angle\n')
         parser.add_argument('--moon-phase', type=float, nargs='*', default=[0, 0.25], help='Moon phase\n')
 
-        for k in self.grid.params:
-            parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit ' + k)
-
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
 
@@ -122,12 +119,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         if self.mag_dist == 'grid':
             self.params['mag'] = GridParam('mag', np.linspace(*self.mag))
 
-        # Override physical parameters grid ranges, if specified
-        # TODO: extend this to sample physically meaningful models only
-        for k in self.grid.params:
-            if args[k] is not None and len(args[k]) >= 2:
-                self.grid.params[k].min = args[k][0]
-                self.grid.params[k].max = args[k][1]
+    def load_grid(self, filename, args):
+        self.grid.use_cont = self.use_cont
+        self.grid.load(filename, format='h5')
 
     def get_grid_param_count(self):
         count = 1
