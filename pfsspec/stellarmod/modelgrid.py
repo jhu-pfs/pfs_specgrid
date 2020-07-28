@@ -22,7 +22,7 @@ class ModelGrid(Grid):
         s = []
         for k in self.params:
             if args[k] is not None:
-                idx = np.digitize([args[k][0], args[k][1]], self.grid.params[k].values)
+                idx = np.digitize([args[k][0], args[k][1]], self.params[k].values)
                 s.append(slice(idx[0], idx[1] + 1, None))
             else:
                 s.append(slice(None))
@@ -31,10 +31,10 @@ class ModelGrid(Grid):
 
         # Override physical parameters grid ranges, if specified
         # TODO: extend this to sample physically meaningful models only
-        for k in self.grid.params:
+        for k in self.params:
             if args[k] is not None and len(args[k]) >= 2:
-                self.grid.params[k].min = args[k][0]
-                self.grid.params[k].max = args[k][1]
+                self.params[k].min = args[k][0]
+                self.params[k].max = args[k][1]
 
     def get_model_count(self, use_limits=False):
         return self.get_valid_data_item_count('flux', use_limits=use_limits)

@@ -275,10 +275,10 @@ class Grid(PfsObject):
     def set_object_params(self, obj, idx=None, **kwargs):
         if idx is not None:
             for i, p in enumerate(self.params):
-                setattr(obj, p, self.params[p].values[idx[i]])
+                setattr(obj, p, float(self.params[p].values[idx[i]]))
         if kwargs is not None:
             for p in kwargs:
-                setattr(obj, p, kwargs[p])
+                setattr(obj, p, float(kwargs[p]))
 
     def interpolate_data_item_linear(self, name, **kwargs):
         if len(self.params) == 1:

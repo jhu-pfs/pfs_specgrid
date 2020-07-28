@@ -10,9 +10,9 @@ class BoszGrid(ModelGrid):
 
     def init_params(self):
         self.init_param('Fe_H', np.arange(-2.5, 1.0, 0.25))
-        self.init_param('T_eff', np.hstack((np.arange(3500, 12500, 250),
-                                             np.arange(12500, 20000, 500),
-                                             np.arange(20000, 36000, 1000))))
+        self.init_param('T_eff', np.hstack((np.arange(3500.0, 12500.0, 250.0),
+                                             np.arange(12500.0, 20000.0, 500.0),
+                                             np.arange(20000.0, 36000.0, 1000.0))))
         self.init_param('log_g', np.arange(0, 5.5, 0.5))
         self.init_param('C_M', np.arange(-0.75, 0.75, 0.25))
         self.init_param('O_M', np.arange(-0.25, 0.75, 0.25))
