@@ -6,7 +6,7 @@ from pfsspec.stellarmod.boszgrid import BoszGrid
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 from pfsspec.obsmod.pfsobservation import PfsObservation
-from pfsspec.obsmod.sdssobservation import SdssObservation
+from pfsspec.obsmod.simpleobservation import SimpleObservation
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {
@@ -15,7 +15,7 @@ MODEL_PIPELINE_TYPES = {
     },
     'sdss': {
         'pipeline': StellarModelPipeline,
-        'obsmod': SdssObservation
+        'obsmod': SimpleObservation
     },
 }
 
