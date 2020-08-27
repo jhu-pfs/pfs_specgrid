@@ -1,0 +1,26 @@
+{
+    "config": [
+        "./configs/pfs/prepare/bosz/nowave/common.json"
+    ],
+
+    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/train",
+    "sample_count": 100000,
+
+    "interp_mode": "spline",
+    "interp_param": "random",
+    "z_dist": "normal",
+    "z": [
+        0,
+        0.001
+    ],
+    "mag_dist": "uniform",
+    "mag": [
+        19.0,
+        22.5
+    ],
+    "ext_dist": "uniform",
+    "ext": [
+        0,
+        0.1
+    ]
+}

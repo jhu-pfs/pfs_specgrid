@@ -1,0 +1,29 @@
+{
+    "config": [
+        "./configs/prepare/bosz/nowave/common.json"
+    ],
+
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/test_T_eff",
+    "sample_mode": "random",
+    "sample_dist": "uniform",
+    "sample_count": 20000,
+
+    "interp_mode": "spline",
+    "interp_param": "T_eff",
+    
+    "z_dist": "normal",
+    "z": [
+        0,
+        0.001
+    ],
+    "mag_dist": "uniform",
+    "mag": [
+        15.5,
+        19.5
+    ],
+    "ext_dist": "lognormal",
+    "ext": [
+        -2.5,
+        0.6
+    ]
+}

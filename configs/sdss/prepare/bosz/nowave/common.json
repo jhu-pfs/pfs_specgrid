@@ -1,0 +1,31 @@
+{   
+    "dataset": "bosz",
+    "pipeline": "sdss",
+    "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_5000",
+    "model_res": 5000.0,
+    "sample_mode": "random",
+    "sample_dist": "beta",
+    
+    "interp_mode": "spline",
+    "interp_param": "random",
+
+    "noise": "${PFSSPEC_DATA}/sdss/spec/noise/relative_in_range",
+    "noise_freeze": false,
+    "cont": null,
+    "cont_wave": null,
+    "redden": true,
+    
+    "calib_bias": null,
+    "Fe_H": [
+        -2.5,
+        0.25
+    ],
+    "T_eff": [
+        4500.0,
+        6400.0
+    ],
+    "log_g": [
+        1.0,
+        5.0
+    ]
+}
