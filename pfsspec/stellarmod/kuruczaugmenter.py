@@ -18,6 +18,8 @@ class KuruczAugmenter():
         self.mask_value = [0]
         self.lowsnr = None
         self.lowsnr_value = [0.0, 1.0]
+        self.extreme = None
+        self.extreme_value = [0.0, 1.0]
 
         self.calib_bias = None
         self.calib_bias_count = None
@@ -36,8 +38,10 @@ class KuruczAugmenter():
         parser.add_argument('--mask-data', action='store_true', help='Use mask from dataset.\n')
         parser.add_argument('--mask-random', type=float, nargs="*", help='Add random mask.\n')
         parser.add_argument('--mask-value', type=float, nargs="*", default=[0], help='Use mask value.\n')
-        parser.add_argument('--lowsnr', type=float, help='Pixels that are considered low SND.\n')
+        parser.add_argument('--lowsnr', type=float, help='Pixels that are considered low SNR.\n')
         parser.add_argument('--lowsnr-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize noisy bins that are below snr.\n')
+        parser.add_argument('--extreme', type=float, help='Pixels that are considered extreme values.\n')
+        parser.add_argument('--extreme-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize extreme value bins.\n')
         
         parser.add_argument('--calib-bias', type=float, nargs=3, default=None, help='Add simulated calibration bias.')
         
@@ -60,6 +64,8 @@ class KuruczAugmenter():
 
         self.lowsnr = util.get_arg('lowsnr', self.lowsnr, args)
         self.lowsnr_value = util.get_arg('lowsnr_value', self.lowsnr_value, args)
+        self.extreme = util.get_arg('extreme', self.extreme, args)
+        self.extreme_value = util.get_arg('extreme_value', self.extreme_value, args)
 
         if 'calib_bias' in args and args['calib_bias'] is not None:
             calib_bias = args['calib_bias']
@@ -104,6 +110,7 @@ class KuruczAugmenter():
         flux = self.augment_flux(dataset, idx, flux, labels, weight)
 
         flux = self.apply_lowsnr(dataset, idx, flux, error, labels, weight)
+        flux = self.apply_extreme(dataset, idx, flux, error, labels, weight)
         flux = self.apply_mask(dataset, idx, flux, error, labels, weight, mask)
 
         return flux, labels, weight
@@ -178,6 +185,25 @@ class KuruczAugmenter():
                 flux[mask] = self.lowsnr_value[0]
             else:
                 flux[mask] = np.random.uniform(*self.lowsnr_value, size=np.sum(mask))
+
+        return flux
+
+    def apply_extreme(self, dataset, idx, flux, error, labels, weight):
+        # Mask out extreme values of flux
+        mask = None
+        if self.extreme is not None:
+            if len(self.extreme) == 2:
+                mask = (flux < self.extreme[0]) | (self.extreme[1] < flux)
+            elif len(self.extreme) == 1:
+                mask = (np.abs(flux) > self.extreme[0])
+            else:
+                raise NotImplementedError()
+
+        if self.extreme_value is not None and mask is not None:
+            if len(self.extreme_value) == 1:
+                flux[mask] = self.extreme_value[0]
+            else:
+                flux[mask] = np.random.uniform(*self.extreme_value, size=np.sum(mask))
 
         return flux
 
