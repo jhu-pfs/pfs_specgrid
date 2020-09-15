@@ -1,0 +1,42 @@
+{
+    "method": "reg",
+    "type": "dense",
+    "generator": "bosz",
+    "labels": ["log_g"],
+    "weight": "snr",
+    "normalize_input": false,
+    "normalize_output": true,
+    "epochs": 100,
+    "batch": 16,
+    "levels": 16,
+    "split": 0.3,
+    "units": 2048,
+    "act": "relu",
+    "loss": "mean_squared_error",
+    "patience": 1000,
+    "opt": "sgd",
+    "lr_sch": "slowdrop",
+    "lr": [0.03, 2.0, 0.8],
+    "no_batchnorm": true,
+    "dropout": 0.05,
+    "dropout_input": true,
+    "dropout_levels": 8,
+
+    "reg_kernel": [0, 1e-6],
+    "reg_bias": [0, 1e-6],
+    "aug_scale": 0.0,
+    "aug_offset": 0.0,
+
+    "noise": 1.0,
+    "lowsnr": 5,
+    "lowsnr_value": [0.0, 1.0],
+    "extreme": [-100, 100],
+    "extreme_value": [0.0, 1.0],
+    "mask_value": [0.0, 1.0],
+
+    "in": [
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/train",
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid"
+    ],
+    "out": "${PFSSPEC_DATA}/train/sdss/run/"
+}
