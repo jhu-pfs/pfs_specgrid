@@ -1,0 +1,16 @@
+{
+    "config": [
+        "./configs/sdss/prepare/sdss.json"
+    ],
+
+    "source": "survey",
+    "dataset": "sdss",
+    "pipeline": "basic",
+
+    "in": "${PFSSPEC_DATA}/import/stellar/survey/sdss_nice_4",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/sdss/nowave/test",
+    "sample_mode": "survey",
+
+    "redden": false,
+    "calib_bias": null
+}
