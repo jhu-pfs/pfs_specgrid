@@ -159,11 +159,17 @@ class PfsObject():
             needchunk |= (s > 0x80)
             size *= s
 
+        # TODO: Review this logic here. For some reason, tiny dimensions are chunked
+        #       While longer arrays aren't. This function is definitely called during
+        #       model grid import when chunking is important.
+
         if needchunk and size > 0x100000:
             chunks = list(shape)
             for i in range(len(chunks)):
                 if chunks[i] <= 0x80:  # 128
                     chunks[i] = 1
+                elif chunks[i] > 0x10000:  # 64k
+                    chunks[i] = 0x1000     # 4k 
                 elif chunks[i] > 0x400:  # 1k
                     pass
                 else:
