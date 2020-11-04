@@ -23,11 +23,18 @@ class PfsObject():
             'filedata'
         ])
 
-        self.file = None
+        if isinstance(orig, PfsObject):
+            self.file = None
 
-        self.filename = None
-        self.fileformat = None
-        self.filedata = None
+            self.filename = orig.filename
+            self.fileformat = orig.fileformat
+            self.filedata = orig.filedata
+        else:
+            self.file = None
+
+            self.filename = None
+            self.fileformat = None
+            self.filedata = None
 
     def get_arg(self, name, old_value, args=None):
         args = args or self.args
@@ -108,7 +115,7 @@ class PfsObject():
             with h5py.File(self.filename, 'a') as f:
                 if name not in f.keys():
                     chunks = self.get_chunks(shape)
-                    f.create_dataset(name, shape=shape, dtype=dtype, chunks=chunks)
+                    return f.create_dataset(name, shape=shape, dtype=dtype, chunks=chunks)
 
     def save_item(self, name, item, s=None):
         logging.debug('Saving item {} with type {}'.format(name, type(item).__name__))
@@ -208,7 +215,7 @@ class PfsObject():
         raise NotImplementedError()
 
     def load_item(self, name, type, s=None):
-        logging.debug('Loading item {} with type {} and slices {}'.format(name, type.__name__, s))
+        # logging.debug('Loading item {} with type {} and slices {}'.format(name, type.__name__, s))
 
         if self.fileformat == 'numpy':
             data = np.load(self.file, allow_pickle=True)
@@ -314,6 +321,13 @@ class PfsObject():
             return None
         else:
             return data
+
+    def has_item(self, name):
+        if self.fileformat == 'h5':
+            with h5py.File(self.filename, 'r') as f:
+                return name in f
+        else:
+            raise NotImplementedError()
 
     def get_item_shape(self, name):
         if self.fileformat == 'h5':

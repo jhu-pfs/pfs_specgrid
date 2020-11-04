@@ -8,27 +8,50 @@ import pfsspec.util as util
 from pfsspec.obsmod.spectrum import Spectrum
 
 class KuruczAugmenter():
-    def __init__(self):
-        self.noise = None
-        self.noise_schedule = None
-        self.aug_offset = None
-        self.aug_scale = None
-        self.mask_data = False
-        self.mask_random = None
-        self.mask_value = [0]
-        self.lowsnr = None
-        self.lowsnr_value = [0.0, 1.0]
-        self.extreme = None
-        self.extreme_value = [0.0, 1.0]
+    def __init__(self, orig=None):
 
-        self.calib_bias = None
-        self.calib_bias_count = None
-        self.calib_bias_bandwidth = 200
-        self.calib_bias_amplitude = 0.01
+        if isinstance(orig, KuruczAugmenter):
+            self.noise = orig.noise
+            self.noise_schedule = orig.noise_schedule
+            self.aug_offset = orig.aug_offset
+            self.aug_scale = orig.aug_scale
+            self.mask_data = orig.mask_data
+            self.mask_random = orig.mask_random
+            self.mask_value = orig.mask_value
+            self.lowsnr = orig.lowsnr
+            self.lowsnr_value = orig.lowsnr_value
+            self.extreme = orig.extreme
+            self.extreme_value = orig.extreme_value
 
-        self.ext = None
-        self.ext_count = None
-        self.ext_dist = None
+            self.calib_bias = orig.calib_bias
+            self.calib_bias_count = orig.calib_bias_count
+            self.calib_bias_bandwidth = orig.calib_bias_bandwidth
+            self.calib_bias_amplitude = orig.calib_bias_amplitude
+
+            self.ext = orig.ext
+            self.ext_count = orig.ext_count
+            self.ext_dist = orig.ext_dist      
+        else:
+            self.noise = None
+            self.noise_schedule = None
+            self.aug_offset = None
+            self.aug_scale = None
+            self.mask_data = False
+            self.mask_random = None
+            self.mask_value = [0]
+            self.lowsnr = None
+            self.lowsnr_value = [0.0, 1.0]
+            self.extreme = None
+            self.extreme_value = [0.0, 1.0]
+
+            self.calib_bias = None
+            self.calib_bias_count = None
+            self.calib_bias_bandwidth = 200
+            self.calib_bias_amplitude = 0.01
+
+            self.ext = None
+            self.ext_count = None
+            self.ext_dist = None
 
     def add_args(self, parser):
         parser.add_argument('--noise', type=float, default=None, help='Add noise.\n')
@@ -99,46 +122,50 @@ class KuruczAugmenter():
         else:
             return 1.0
 
-    def augment_batch(self, dataset, idx, flux, labels, weight):
+    def augment_batch(self, dataset, chunk_id, idx, flux, labels, weight):
         mask = np.full(flux.shape, False)
-        mask = self.get_data_mask(dataset, idx, flux, labels, weight, mask)
-        mask = self.generate_random_mask(dataset, idx, flux, labels, weight, mask)
+        mask = self.get_data_mask(dataset, chunk_id, idx, flux, labels, weight, mask)
+        mask = self.generate_random_mask(dataset, chunk_id, idx, flux, labels, weight, mask)
         
-        flux = self.apply_ext(dataset, idx, flux, labels, weight)
-        flux = self.apply_calib_bias(dataset, idx, flux, labels, weight)
-        flux, error = self.generate_noise(dataset, idx, flux, labels, weight)
-        flux = self.augment_flux(dataset, idx, flux, labels, weight)
+        flux = self.apply_ext(dataset, chunk_id, idx, flux, labels, weight)
+        flux = self.apply_calib_bias(dataset, chunk_id, idx, flux, labels, weight)
+        flux, error = self.generate_noise(dataset, chunk_id, idx, flux, labels, weight)
+        flux = self.augment_flux(dataset, chunk_id, idx, flux, labels, weight)
 
-        flux = self.apply_lowsnr(dataset, idx, flux, error, labels, weight)
-        flux = self.apply_extreme(dataset, idx, flux, error, labels, weight)
-        flux = self.apply_mask(dataset, idx, flux, error, labels, weight, mask)
+        flux = self.cut_lowsnr(flux, error, labels, weight)
+        flux = self.cut_extreme(flux, error, labels, weight)
+        flux = self.apply_mask(flux, error, labels, weight, mask)
 
         return flux, labels, weight
 
-    def get_data_mask(self, dataset, idx, flux, labels, weight, mask):       
+    def get_data_mask(self, dataset, chunk_id, idx, flux, labels, weight, mask):
         # Take mask from dataset
-        if self.mask_data and dataset.mask is not None:
+        if self.mask_data and dataset.has_mask():
             # TODO: verify this with real survey data
-            mask = mask | (dataset.mask[idx] != 0)
+            mask = mask | (dataset.get_mask(idx, self.chunk_size, chunk_id) != 0)
 
         return mask
 
-    def generate_random_mask(self, dataset, idx, flux, labels, weight, mask):
+    def generate_random_mask(self, dataset, chunk_id, idx, flux, labels, weight, mask):
         # Generate random mask
         if self.mask_random is not None and self.mask_value is not None:
+            # TODO: test this functionality with lazy-loaded datasets
+            raise NotImplementedError()
+
             for k in range(flux.shape[0]):
                 n = np.random.randint(0, self.mask_random[0] + 1)
                 for i in range(n):
-                    wl = dataset.wave[0] + np.random.rand() * (dataset.wave[-1] - dataset.wave[0])
+                    wl = dataset.get_wave(idx, self.chunk_size, chunk_id)
+                    wl = wl + np.random.rand() * (wl[-1] - wl[0])
                     ww = max(0.0, np.random.normal(self.mask_random[1], self.mask_random[2]))
                     mx = np.digitize([wl - ww / 2, wl + ww / 2], dataset.wave)
                     mask[k, mx[0]:mx[1]] = True
 
         return mask
 
-    def generate_noise(self, dataset, idx, flux, labels, weight):
-        if dataset.error is not None:
-            error = dataset.error[idx]
+    def generate_noise(self, dataset, chunk_id, idx, flux, labels, weight):
+        if dataset.has_error():
+            error = dataset.get_error(idx, self.chunk_size, chunk_id)
         else:
             error = None
 
@@ -156,7 +183,7 @@ class KuruczAugmenter():
 
         return flux, error
 
-    def augment_flux(self, dataset, idx, flux, labels, weight):
+    def augment_flux(self, dataset, chunk_id, idx, flux, labels, weight):
         # Additive and multiplicative bias, two numbers per spectrum
         if self.aug_scale is not None:
             bias = np.random.normal(1, self.aug_scale, (flux.shape[0], 1))
@@ -167,7 +194,7 @@ class KuruczAugmenter():
 
         return flux
 
-    def apply_mask(self, dataset, idx, flux, error, labels, weight, mask):
+    def apply_mask(self,flux, error, labels, weight, mask):
         # Set masked pixels to mask_value
         if self.mask_value is not None and mask is not None:
             if len(self.mask_value) == 0:
@@ -177,10 +204,10 @@ class KuruczAugmenter():
 
         return flux
 
-    def apply_lowsnr(self, dataset, idx, flux, error, labels, weight):
+    def cut_lowsnr(self, flux, error, labels, weight):
         # Mask out points where noise is too high
         if self.lowsnr is not None and self.lowsnr_value is not None and error is not None:
-            mask = (np.abs(flux / error) < self.lowsnr)
+            mask = (error == 0.0) & (np.abs(flux / error) < self.lowsnr)
             if len(self.lowsnr_value) == 1:
                 flux[mask] = self.lowsnr_value[0]
             else:
@@ -188,7 +215,7 @@ class KuruczAugmenter():
 
         return flux
 
-    def apply_extreme(self, dataset, idx, flux, error, labels, weight):
+    def cut_extreme(self, flux, error, labels, weight):
         # Mask out extreme values of flux
         mask = None
         if self.extreme is not None:
@@ -207,9 +234,11 @@ class KuruczAugmenter():
 
         return flux
 
-    def apply_calib_bias(self, dataset, idx, flux, labels, weight):
+    def apply_calib_bias(self, dataset, chunk_id, idx, flux, labels, weight):
         if self.calib_bias_count is not None:
             if self.calib_bias is None:
+                if not dataset.constant_wave:
+                    raise Exception('Random flux calibration bias can only be applied during data augmentation if a constant wave grid is used.')
                 self.generate_calib_bias(dataset.wave)
         
             # Pick calibration bias curve
@@ -230,9 +259,11 @@ class KuruczAugmenter():
 
         logging.info('Generated {} realization of calibration bias'.format(self.calib_bias_count))
 
-    def apply_ext(self, dataset, idx, flux, labels, weight):
+    def apply_ext(self, dataset, chunk_id, idx, flux, labels, weight):
         if self.ext_count is not None:
             if self.ext is None:
+                if not dataset.constant_wave:
+                    raise Exception('Random extinction can only be applied during data augmentation if a constant wave grid is used.')
                 self.generate_ext(dataset.wave)
 
             # Pick extinction curve
@@ -242,6 +273,9 @@ class KuruczAugmenter():
         return flux
 
     def generate_ext(self, wave):
+        # This function generates a range of random extinction curves. Note that
+        # it work only with fixed wavelength grids
+
         logging.info('Generating {} realization of extinction curve'.format(self.ext_count))
 
         wave = wave if len(wave.shape) == 1 else wave[0]

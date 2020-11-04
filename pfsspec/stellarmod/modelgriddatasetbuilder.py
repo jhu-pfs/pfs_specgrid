@@ -288,6 +288,4 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 shape = shape + (self.params[p].values.size,)
         self.param_index = np.indices(shape).reshape(count, size)
 
-        spectra = super(ModelGridDatasetBuilder, self).build()
-
-        return self.dataset
+        super(ModelGridDatasetBuilder, self).build()

@@ -3,24 +3,29 @@ import numpy as np
 from pfsspec.data.datasetaugmenter import DatasetAugmenter
 
 class RegressionalDatasetAugmenter(DatasetAugmenter):
-    def __init__(self):
-        super(RegressionalDatasetAugmenter, self).__init__()
+    def __init__(self, orig=None):
+        super(RegressionalDatasetAugmenter, self).__init__(orig=orig)
 
-        self.include_wave = False
+        if isinstance(orig, RegressionalDatasetAugmenter):
+            self.include_wave = orig.include_wave
+        else:
+            self.include_wave = False
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
-        input_shape = dataset.flux.shape
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
+        input_shape = dataset.shape
         output_shape = (len(labels),)
         d = super(RegressionalDatasetAugmenter, cls).from_dataset(input_shape, output_shape,
                                                                   dataset, labels, coeffs,
                                                                   weight=weight,
                                                                   batch_size=batch_size,
                                                                   shuffle=shuffle,
+                                                                  chunk_size=chunk_size,
                                                                   seed=seed)
         return d
 
     def add_args(self, parser):
+        super(RegressionalDatasetAugmenter, self).add_args(parser)
         parser.add_argument('--include-wave', action='store_true', help='Include wave vector in training.\n')
 
     def init_from_args(self, args):
@@ -35,13 +40,36 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         values = output * self.coeffs
         return super(RegressionalDatasetAugmenter, self).rescale_output(values)
 
-    def augment_batch(self, idx):
-        input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(idx)
+    def set_batch(self, batch_id, input, output):
+        chunk_id, idx = self.get_batch_index(batch_id)
+        
+        for i, label in enumerate(self.labels):
+            if label not in self.dataset.params.columns:
+                self.dataset.params.loc[:, label] = np.zeros((), dtype=input.dtype)
+            if chunk_id is None:
+                self.dataset.params[label].iloc[idx] = input[..., i]
+            else:
+                self.dataset.params[label].iloc[chunk_id * self.chunk_size + idx] = input[..., i]
 
-        input = np.array(self.dataset.flux[idx], copy=True, dtype=np.float)
+    def augment_batch(self, chunk_id, idx):
+        input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(chunk_id, idx)
+
+        input = np.array(self.dataset.get_flux(idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)
         output = np.array(self.dataset.params[self.labels].iloc[idx], copy=True, dtype=np.float)
 
         return input, output, weight
 
     def get_output_mean(self):
         return np.mean(np.array(self.dataset.params[self.labels]), axis=0) / self.coeffs
+
+    def get_output_labels(self, model):
+        if model.mc_count is None:
+            return self.labels, ['_pred']
+        else:
+            return self.labels, ['_pred', '_std', '_skew', '_median']
+
+    def init_output_labels(self, labels, postfixes):
+        self.labels = []
+        for label in labels:                
+            for postfix in postfixes:
+                self.labels.append(label + postfix)

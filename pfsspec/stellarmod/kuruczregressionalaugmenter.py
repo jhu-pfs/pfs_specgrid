@@ -6,14 +6,14 @@ from pfsspec.data.regressionaldatasetaugmenter import RegressionalDatasetAugment
 from pfsspec.stellarmod.kuruczaugmenter import KuruczAugmenter
 
 class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter):
-    def __init__(self):
-        RegressionalDatasetAugmenter.__init__(self)
-        KuruczAugmenter.__init__(self)
+    def __init__(self, orig=None):
+        RegressionalDatasetAugmenter.__init__(self, orig=orig)
+        KuruczAugmenter.__init__(self, orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
         d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
-                                  batch_size=batch_size, shuffle=shuffle, seed=seed)
+                                  batch_size=batch_size, shuffle=shuffle, chunk_size=chunk_size, seed=seed)
         return d
 
     def add_args(self, parser):
@@ -28,7 +28,7 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
         super(KuruczRegressionalAugmenter, self).on_epoch_end()
         KuruczAugmenter.on_epoch_end(self)
 
-    def augment_batch(self, idx):
-        flux, labels, weight = RegressionalDatasetAugmenter.augment_batch(self, idx)
-        flux, labels, weight = KuruczAugmenter.augment_batch(self, self.dataset, idx, flux, labels, weight)
+    def augment_batch(self, chunk_id, idx):
+        flux, labels, weight = RegressionalDatasetAugmenter.augment_batch(self, chunk_id, idx)
+        flux, labels, weight = KuruczAugmenter.augment_batch(self, self.dataset, chunk_id, idx, flux, labels, weight)
         return flux, labels, weight

@@ -4,9 +4,9 @@ from pfsspec.data.autoencodingdatasetaugmenter import AutoencodingDatasetAugment
 from pfsspec.stellarmod.kuruczaugmenter import KuruczAugmenter
 
 class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter):
-    def __init__(self):
-        super(KuruczAutoencodingAugmenter, self).__init__()
-        KuruczAugmenter.__init__(self)
+    def __init__(self, orig=None):
+        AutoencodingDatasetAugmenter.__init__(self, orig=orig)
+        KuruczAugmenter.__init__(self, orig=orig)
 
     @classmethod
     def from_datasets(cls, input_dataset, output_dataset, weight=None, batch_size=1, shuffle=True, seed=None):
@@ -15,11 +15,6 @@ class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter)
                                                                shuffle=shuffle,
                                                                seed=seed)
         return d
-
-    def copy(self):
-        new = KuruczAutoencodingAugmenter(self.dataset, self.labels, self.coeffs,
-                                        self.batch_size, self.shuffle, self.seed)
-        return new
 
     def add_args(self, parser):
         AutoencodingDatasetAugmenter.add_args(self, parser)
@@ -33,7 +28,10 @@ class KuruczAutoencodingAugmenter(AutoencodingDatasetAugmenter, KuruczAugmenter)
         super(KuruczAutoencodingAugmenter, self).on_epoch_end()
         KuruczAugmenter.on_epoch_end(self)
 
-    def augment_batch(self, idx):
-        input, output, weight = AutoencodingDatasetAugmenter.augment_batch(self, idx)
-        input, _, weight = KuruczAugmenter.augment_batch(self, self.input_dataset, idx, input, None, weight)
+    def augment_batch(self, chunk_id, idx):
+        # TODO: extend this to read chunks and slice into those with idx from HDF5
+        raise NotImplementedError()
+
+        input, output, weight = AutoencodingDatasetAugmenter.augment_batch(self, chunk_id, idx)
+        input, _, weight = KuruczAugmenter.augment_batch(self, self.input_dataset, chunk_id, idx, input, None, weight)
         return input, output, weight
