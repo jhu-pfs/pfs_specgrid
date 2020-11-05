@@ -207,7 +207,7 @@ class KuruczAugmenter():
     def cut_lowsnr(self, flux, error, labels, weight):
         # Mask out points where noise is too high
         if self.lowsnr is not None and self.lowsnr_value is not None and error is not None:
-            mask = (error == 0.0) & (np.abs(flux / error) < self.lowsnr)
+            mask = (error == 0.0) | (np.abs(flux / error) < self.lowsnr)
             if len(self.lowsnr_value) == 1:
                 flux[mask] = self.lowsnr_value[0]
             else:
