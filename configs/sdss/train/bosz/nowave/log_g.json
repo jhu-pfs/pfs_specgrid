@@ -1,0 +1,15 @@
+{
+    "config": [
+        "./configs/sdss/train/bosz/nowave/model.json",
+        "./configs/sdss/train/bosz/nowave/augmentation.json"
+    ],
+
+    "labels": ["log_g"],
+    "lr": [0.015, 10.0, 0.8],
+
+    "in": [
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_1M/train",
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid"
+    ],
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/run/"
+}
