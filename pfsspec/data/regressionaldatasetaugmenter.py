@@ -45,11 +45,11 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         
         for i, label in enumerate(self.labels):
             if label not in self.dataset.params.columns:
-                self.dataset.params.loc[:, label] = np.zeros((), dtype=input.dtype)
+                self.dataset.params.loc[:, label] = np.zeros((), dtype=output.dtype)
             if chunk_id is None:
-                self.dataset.params[label].iloc[idx] = input[..., i]
+                self.dataset.params[label].iloc[idx] = output[..., i]
             else:
-                self.dataset.params[label].iloc[chunk_id * self.chunk_size + idx] = input[..., i]
+                self.dataset.params[label].iloc[chunk_id * self.chunk_size + idx] = output[..., i]
 
     def augment_batch(self, chunk_id, idx):
         input, output, weight = super(RegressionalDatasetAugmenter, self).augment_batch(chunk_id, idx)
