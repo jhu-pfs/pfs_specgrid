@@ -39,7 +39,7 @@ class DatasetAugmenter(KerasDataGenerator):
         output = None
 
         if self.weight is not None and 'weight' in self.dataset.params.columns:
-            weight = np.array(self.dataset.params['weight'].iloc[idx], copy=True, dtype=np.float)
+            weight = np.array(self.dataset.get_params(['weight'], idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)[..., 0]
         else:
             weight = None
 

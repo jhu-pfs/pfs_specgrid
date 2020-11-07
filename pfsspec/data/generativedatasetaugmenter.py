@@ -33,8 +33,8 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         # TODO: extend this to read chunks and slice into those with idx from HDF5
         raise NotImplementedError()
 
-        input = np.array(self.dataset.params[self.labels].iloc[idx], copy=True, dtype=np.float)
-        output = np.array(self.dataset.flux[idx], copy=True, dtype=np.float)
+        input = np.array(self.dataset.get_params(self.labels, idx, self.chunk_size, chunk_id))
+        output = np.array(self.dataset.get_flux(idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)
 
         return input, output, weight
 

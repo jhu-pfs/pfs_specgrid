@@ -36,14 +36,14 @@ class AutoencodingDatasetAugmenter(KerasDataGenerator):
         pass
 
     def augment_batch(self, chunk_id, idx):
-        # TODO: extend this to read chunks and slice into those with idx from HDF5
+        # TODO: verify if chunks are read correctly from hdf5
         raise NotImplementedError()
 
-        input = np.array(self.input_dataset.flux[idx], copy=True, dtype=np.float)
-        output = np.array(self.output_dataset.flux[idx], copy=True, dtype=np.float)
+        input = np.array(self.input_dataset.get_flux(idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)
+        output = np.array(self.output_dataset.get_flux(idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)
 
         if self.weight is not None:
-            weight = np.array(self.dataset.params['weight'].iloc[idx], copy=True, dtype=np.float)
+            weight = np.array(self.input_dataset.get_params(['weight'], idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)[..., 0]
         else:
             weight = None
 
