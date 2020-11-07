@@ -5,10 +5,10 @@
     ],
 
     "labels": ["T_eff"],
-    "lr": [0.015, 10.0, 0.8],
+    "lr": [0.0001, 10.0, 0.8],
 
     "in": [
-        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/train",
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_1M/train",
         "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid"
     ],
     "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/run/"
