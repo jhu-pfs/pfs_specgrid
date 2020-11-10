@@ -6,11 +6,6 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
     def __init__(self, orig=None):
         super(RegressionalDatasetAugmenter, self).__init__(orig=orig)
 
-        if isinstance(orig, RegressionalDatasetAugmenter):
-            self.include_wave = orig.include_wave
-        else:
-            self.include_wave = False
-
     @classmethod
     def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
         input_shape = dataset.shape
@@ -26,11 +21,9 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
 
     def add_args(self, parser):
         super(RegressionalDatasetAugmenter, self).add_args(parser)
-        parser.add_argument('--include-wave', action='store_true', help='Include wave vector in training.\n')
 
     def init_from_args(self, args):
         super(RegressionalDatasetAugmenter, self).init_from_args(args)
-        self.include_wave = self.get_arg('include_wave', self.include_wave, args)
 
     def scale_output(self, output):
         values = output / self.coeffs

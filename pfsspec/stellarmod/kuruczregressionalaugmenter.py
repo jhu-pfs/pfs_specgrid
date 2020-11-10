@@ -30,5 +30,18 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
 
     def augment_batch(self, chunk_id, idx):
         flux, labels, weight = RegressionalDatasetAugmenter.augment_batch(self, chunk_id, idx)
-        flux, labels, weight = KuruczAugmenter.augment_batch(self, self.dataset, chunk_id, idx, flux, labels, weight)
+
+        mask = np.full(flux.shape, False)
+        mask = self.get_data_mask(chunk_id, idx, flux, mask)
+        mask = self.generate_random_mask(chunk_id, idx, flux, mask)
+        
+        flux = self.apply_ext(self.dataset, chunk_id, idx, flux)
+        flux = self.apply_calib_bias(self.dataset, chunk_id, idx, flux)
+        flux, error = self.generate_noise(chunk_id, idx, flux)
+        flux = self.augment_flux(chunk_id, idx, flux)
+
+        flux = self.cut_lowsnr(flux, error)
+        flux = self.cut_extreme(flux, error)
+        flux = self.apply_mask(flux, error, mask)
+
         return flux, labels, weight
