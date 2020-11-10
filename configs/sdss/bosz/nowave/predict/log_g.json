@@ -1,0 +1,9 @@
+{
+    "labels": ["log_g"],
+
+    "in": [
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/train",
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid"
+    ],
+    "out": "${PFSSPEC_DATA}/train/sdss/predict/"
+}

@@ -13,7 +13,8 @@
     "noise_freeze": false,
     "cont": null,
     "cont_wave": null,
-    "redden": true,
+
+    "redden": false,
     
     "calib_bias": null,
     "Fe_H": [
@@ -21,11 +22,13 @@
         0.25
     ],
     "T_eff": [
-        4500.0,
-        6400.0
+        3800.0,
+        9200.0
     ],
     "log_g": [
         1.0,
         5.0
-    ]
+    ],
+    "C_M": [ 0.0, 0.0 ],
+    "O_M": [ 0.0, 0.0 ]
 }

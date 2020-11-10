@@ -1,7 +1,7 @@
 {
     "config": [
-        "./configs/sdss/train/bosz/nowave/model.json",
-        "./configs/sdss/train/bosz/nowave/augmentation.json"
+        "./configs/sdss/bosz/nowave/model.json",
+        "./configs/sdss/bosz/nowave/augmentation.json"
     ],
 
     "labels": ["T_eff"],

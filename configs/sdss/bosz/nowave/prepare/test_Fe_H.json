@@ -1,15 +1,18 @@
 {
     "config": [
-        "./configs/sdss/prepare/bosz/nowave/common.json"
+        "./configs/sdss/bosz/nowave/prepare/common.json",
+        "./configs/sdss/bosz/nowave/instrument.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/test_log_g",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/test_Fe_H_100k",
     "sample_mode": "random",
     "sample_dist": "uniform",
-    "sample_count": 20000,
+    "sample_count": 100000,
 
     "interp_mode": "spline",
-    "interp_param": "log_g",
+    "interp_param": "Fe_H",
+
+    "redden": true,
     
     "z_dist": "normal",
     "z": [

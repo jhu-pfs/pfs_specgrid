@@ -3,11 +3,12 @@
         "./configs/sdss/prepare/bosz/nowave/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/valid_100k",
     "sample_count": 100000,
 
     "interp_mode": "spline",
     "interp_param": "random",
+    
     "z_dist": "normal",
     "z": [
         0,

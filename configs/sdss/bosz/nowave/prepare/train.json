@@ -1,10 +1,10 @@
 {
     "config": [
-        "./configs/sdss/prepare/bosz/nowave/common.json"
+        "./configs/sdss//bosz/nowave/prepare/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/train",
-    "sample_count": 100000,
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/train_1M",
+    "sample_count": 1000000,
 
     "interp_mode": "spline",
     "interp_param": "random",
