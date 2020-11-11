@@ -4,11 +4,13 @@ import logging
 
 from pfsspec.data.gridparam import GridParam
 from pfsspec.data.datasetbuilder import DatasetBuilder
+from pfsspec.stellarmod.modeldataset import ModelDataset
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 
 class ModelGridDatasetBuilder(DatasetBuilder):
     def __init__(self, orig=None, random_seed=None):
         super(ModelGridDatasetBuilder, self).__init__(orig=orig, random_seed=random_seed)
+        
         if isinstance(orig, ModelGridDatasetBuilder):
             self.grid = orig.grid
             self.grid_index = None
@@ -56,7 +58,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def add_args(self, parser):
         super(ModelGridDatasetBuilder, self).add_args(parser)
 
-        parser.add_argument('--preload-arrays', action='store_true', help='Do not preload flux arrays to save memory\n')
         parser.add_argument('--sample-mode', type=str, choices=['grid', 'random'], default='grid', help='Sampling mode\n')
         parser.add_argument('--sample-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
         parser.add_argument('--sample-count', type=int, default=None, help='Number of samples to be interpolated between models\n')
@@ -79,9 +80,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def init_from_args(self, args):
         super(ModelGridDatasetBuilder, self).init_from_args(args)
-
-        if 'preload_arrays' in args and args['preload_arrays'] is not None:
-            self.grid.preload_arrays = args['preload_arrays']
 
         if 'sample_mode' in args and args['sample_mode'] is not None:
             self.sample_mode = args['sample_mode']
@@ -123,6 +121,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.grid.use_cont = self.use_cont
         self.grid.load(filename, format='h5')
 
+    def create_dataset(self, preload_arrays=False):
+        return ModelDataset(preload_arrays=preload_arrays)
+
     def get_grid_param_count(self):
         count = 1
         for p in self.params:
@@ -146,9 +147,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def get_wave_count(self):
         return self.pipeline.get_wave_count()
-
-    def create_dataset(self, init_storage=True):
-        return super(ModelGridDatasetBuilder, self).create_dataset(init_storage=init_storage)
 
     def process_item(self, i):
         super(ModelGridDatasetBuilder, self).process_item(i)
