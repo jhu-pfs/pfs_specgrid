@@ -1,7 +1,7 @@
 {
     "config": [
         "./configs/sdss/bosz/nowave/prepare/common.json",
-        "./configs/sdss/bosz/nowave/instrument.json"
+        "./configs/sdss/bosz/nowave/inst_sdss.json"
     ],
 
     "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/test_Fe_H_100k",
