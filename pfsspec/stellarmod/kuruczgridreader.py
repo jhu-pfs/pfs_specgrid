@@ -5,11 +5,13 @@ from pfsspec.stellarmod.modelgridreader import ModelGridReader
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 class KuruczGridReader(ModelGridReader):
-    def __init__(self, grid, path):
-        super(KuruczGridReader, self).__init__(grid)
-        self.path = path
+    # Implements a grid reader that reads Kurucz model spectra from files
+    # where, for each metallicity, all spectra are stored in a single file
 
-    def read_grid(self):
+    def __init__(self, grid):
+        super(KuruczGridReader, self).__init__(grid)
+
+    def read_grid(self, path):
         self.grid.build_params_index()
         for m_h in self.grid.params['Fe_H'].values:
             fn = KuruczGridReader.get_filename(m_h, 2.0, False, False, False)

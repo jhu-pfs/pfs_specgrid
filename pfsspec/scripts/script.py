@@ -49,6 +49,7 @@ class Script():
     def add_args(self, parser):
         parser.add_argument('--config', type=str, nargs='+', help='Load config from json file.')
         parser.add_argument('--debug', action='store_true', help='Run in debug mode\n')
+        parser.add_argument('--threads', type=int, help='Number of processing threads.\n')
         parser.add_argument('--log-level', type=str, default=None, help='Logging level\n')
         parser.add_argument('--random-seed', type=int, default=None, help='Set random seed\n')
 
@@ -85,6 +86,8 @@ class Script():
             # Parse some special but generic arguments
             if 'debug' in self.args and self.args['debug']:
                 self.debug = True
+            if 'threads' in self.args and self.args['threads'] is not None:
+                self.threads = self.args['threads']
             if 'log_level' in self.args and self.args['log_level'] is not None:
                 self.log_level = self.args['log_level']
             if 'random_seed' in self.args and self.args['random_seed'] is not None:

@@ -73,6 +73,7 @@ while (( "$#" )); do
     esac
 done
 
+set -o noglob
 if [[ $RUNMODE == "run" ]]; then
     if [[ $PYTHON_DEBUG == "1" ]]; then
         exec python -m ptvsd --host localhost --port 5678 --wait $COMMAND $PARAMS --debug
@@ -104,5 +105,5 @@ mv \$out \$outdir/slurm.out
 EOF
 else
     echo "Invalid RUNMODE: $RUNMODE"
-    exit -1
 fi
+set +o noglob

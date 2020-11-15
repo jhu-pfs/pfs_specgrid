@@ -151,8 +151,12 @@ class Grid(PfsObject):
         return self.data_index is not None and name in self.data_index and self.data_index[name] is not None
 
     def is_data_item(self, name):
-        return name in self.data and self.data[name] is not None and \
-               name in self.data_index and self.data_index[name] is not None
+        if self.preload_arrays:
+            return name in self.data and self.data[name] is not None and \
+                   name in self.data_index and self.data_index[name] is not None
+        else:
+            return name in self.data and self.has_item(name) and \
+                   name in self.data_index and self.data_index[name] is not None
 
     def is_data_item_idx(self, name, idx):
         if self.is_data_index(name):

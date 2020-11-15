@@ -39,7 +39,7 @@ class ImportSdss(Import):
         logging.info('SciServer token: {}'.format(self.token))
 
     def create_reader(self):
-        self.reader = SdssSpectrumReader(verbose=True, parallel=not self.debug)
+        self.reader = SdssSpectrumReader(verbose=True, parallel=not self.debug, threads=self.threads)
         self.reader.path = self.args['path']
         self.reader.sciserver_token = self.token
 

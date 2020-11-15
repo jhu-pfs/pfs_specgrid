@@ -23,6 +23,7 @@ https://github.com/uqfoundation/multiprocess
 """
 
 # Modules #
+import os, sys
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Pool
 import logging
@@ -100,6 +101,8 @@ class IterableQueue():
             self.length -= 1
             o = self.queue.get()
             if isinstance(o, Exception):
+                print(o, file=sys.stderr)
+                logging.error(str(o))
                 raise o
             else:
                 return o
@@ -107,8 +110,8 @@ class IterableQueue():
             raise StopIteration()
     
 class SmartParallel():
-    def __init__(self, initializer=None, verbose=False, parallel=True):
-        self.cpus = multiprocessing.cpu_count()
+    def __init__(self, initializer=None, verbose=False, parallel=True, threads=None):
+        self.cpus = threads if threads is not None else multiprocessing.cpu_count()
         self.processes = []
         self.queue_in = None
         self.queue_out = None
@@ -118,7 +121,7 @@ class SmartParallel():
 
     def __enter__(self):
         if self.parallel:
-            logging.info("Starting parallel execution.")
+            logging.info("Starting parallel execution on {} CPUs.".format(self.cpus))
         else:
             logging.info("Starting serial execution.")
         return self
@@ -137,6 +140,8 @@ class SmartParallel():
 
     @staticmethod
     def pool_worker(initializer, worker, queue_in, queue_out):
+        logger = multiprocessing.get_logger()
+
         if initializer is not None:
             initializer()
         while True:

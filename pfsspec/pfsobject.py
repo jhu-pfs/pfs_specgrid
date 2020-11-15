@@ -114,10 +114,10 @@ class PfsObject():
         if self.fileformat == 'h5':
             with h5py.File(self.filename, 'a') as f:
                 if name not in f.keys():
-                    chunks = self.get_chunks(shape)
+                    chunks = self.get_chunks(name, shape, None)
                     return f.create_dataset(name, shape=shape, dtype=dtype, chunks=chunks)
 
-    def save_item(self, name, item, s=None):
+    def save_item(self, name, item, s=None, min_string_length=None):
         logging.debug('Saving item {} with type {}'.format(name, type(item).__name__))
 
         if self.fileformat != 'h5' and s is not None:
@@ -134,7 +134,15 @@ class PfsObject():
                 # Do not save if value is None
                 pass
             elif isinstance(item, pd.DataFrame):
-                item.to_hdf(self.filename, name, mode='a')
+                # This is a little bit different for DataFrames when s is defined. When slicing,
+                # arrays are update in place, an operation not supported by HDFStore
+                # TODO: this issue could be solved by first removing the matching rows, then
+                #       appending them.
+
+                if s is None:
+                    item.to_hdf(self.filename, name, mode='a', min_itemsize=min_string_length)
+                else:
+                    item[item['id'] == s].to_hdf(self.filename, name, mode='a', format='table', append=True, min_itemsize=min_string_length)
             elif isinstance(item, np.ndarray):
                 with h5py.File(self.filename, 'a') as f:
                     if s is not None:
@@ -143,7 +151,7 @@ class PfsObject():
                     else:
                         if name in f.keys():
                             del f[name]
-                        chunks = self.get_chunks(item.shape)
+                        chunks = self.get_chunks(name, item.shape, s=s)
                         if chunks is not None:
                             f.create_dataset(name, data=item, chunks=chunks)
                             logging.debug('Saving item {} with chunks {}'.format(name, chunks))
@@ -159,7 +167,7 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
-    def get_chunks(self, shape):
+    def get_chunks(self, name, shape, s=None):
         needchunk = False
         size = 1
         for s in shape:

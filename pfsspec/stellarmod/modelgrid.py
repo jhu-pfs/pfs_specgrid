@@ -71,6 +71,28 @@ class ModelGrid(Grid):
         self.init_data()
         super(ModelGrid, self).load_items(s=s)
 
+    def get_chunks(self, name, shape, s=None):
+        # The chunking strategy for spectrum grids should observe the following
+        # - we often need only parts of the wavelength coverage
+        # - interpolation algorithms iterate over the wavelengths in the outer loop
+        # - interpolation algorithms need nearby models, cubic splines require models
+        #   in memory along the entire interpolation axis
+
+        # The shape of the spectrum grid is (param1, param2, wave)
+        if name in self.data:
+            newshape = []
+            # Keep neighboring 3 models together in every direction
+            for i, k in enumerate(self.params.keys()):
+                if k in ['log_g', 'Fe_H', 'T_eff']:
+                    newshape.append(min(shape[i], 3))
+                else:
+                    newshape.append(1)
+            # Use small chunks along the wavelength direction
+            newshape.append(min(128, shape[-1]))
+            return tuple(newshape)
+        else:
+            return None
+
 ###
 
     def set_flux(self, flux, cont=None, **kwargs):

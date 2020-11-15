@@ -47,9 +47,10 @@ class GridReader():
                 self.i += 1
                 return ci, cr
 
-    def __init__(self, grid, parallel=True, max=None):
+    def __init__(self, grid, parallel=True, threads=None, max=None):
         self.grid = grid
         self.parallel = parallel
+        self.threads = threads
         self.max = max
 
     def read_grid(self):
@@ -62,7 +63,7 @@ class GridReader():
             logging.info("Loading will stop after {} items.".format(self.max))
 
         g = GridReader.EnumParamsGenerator(self.grid, max=self.max)
-        with SmartParallel(verbose=True, parallel=self.parallel) as p:
+        with SmartParallel(verbose=True, parallel=self.parallel, threads=self.threads) as p:
             for res in p.map(self.process_item, g):
                 self.store_item(res)
 
@@ -76,7 +77,7 @@ class GridReader():
             files = files[:min(self.max, len(files))]
 
         k = 0
-        with SmartParallel(verbose=True, parallel=self.parallel) as p:
+        with SmartParallel(verbose=True, parallel=self.parallel, threads=self.threads) as p:
             for res in p.map(self.process_file, files):
                 self.store_item(res)
                 k += 1

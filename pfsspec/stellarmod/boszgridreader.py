@@ -7,15 +7,14 @@ from pfsspec.stellarmod.modelgridreader import ModelGridReader
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 
 class BoszGridReader(ModelGridReader):
-    def __init__(self, grid, reader, max=None, parallel=True):
-        super(BoszGridReader, self).__init__(grid=grid, max=max, parallel=parallel)
-        self.reader = reader
+    def __init__(self, grid, reader, parallel=True, threads=None, max=None):
+        super(BoszGridReader, self).__init__(grid, reader, parallel=parallel, threads=threads, max=max)
 
     def process_item(self, i):
         logger = multiprocessing.get_logger()
 
         index, params = i
-        fn = self.reader.get_filename(**params)
+        fn = self.reader.get_filename(R=self.reader.resolution, **params)
         fn = os.path.join(self.reader.path, fn)
 
         if os.path.isfile(fn):

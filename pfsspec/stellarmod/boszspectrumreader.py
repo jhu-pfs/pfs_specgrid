@@ -52,14 +52,14 @@ class BoszSpectrumReader(SpectrumReader):
         'p05': 0.5,
     }
 
-    def __init__(self, path=None, wave_lim=None, res=None):
+    def __init__(self, path=None, wave_lim=None, resolution=None):
         super(BoszSpectrumReader, self).__init__()
         self.path = path
         self.wave_lim = wave_lim
-        self.res = res
+        self.resolution = resolution
 
     def correct_wave_grid(self, wlim):
-        RESOLU = self.res
+        RESOLU = self.resolution
         WLBEG = wlim[0]  # nm
         WLEND = wlim[1]  # nm
         RATIO = 1. + 1. / RESOLU
@@ -111,7 +111,7 @@ class BoszSpectrumReader(SpectrumReader):
         else:
             filt = slice(None)
 
-        spec.wave = df['wave'][filt]
+        spec.wave = np.array(df['wave'][filt])
 
         spec.cont = np.array(df['cont'][filt])
         spec.flux = np.array(df['flux'][filt])

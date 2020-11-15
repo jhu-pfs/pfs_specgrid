@@ -21,8 +21,8 @@ class ImportKurucz(Import):
         super(ImportKurucz, self).run()
 
         grid = KuruczGrid(self.args['grid'])
-        reader = KuruczGridReader(grid, self.args['path'])
-        reader.read_grid()
+        reader = KuruczGridReader(grid)
+        reader.read_grid(self.args['path'])
         grid.save(os.path.join(self.args['out'], 'spectra.npz'))
 
 def main():
