@@ -9,13 +9,13 @@ from pfsspec.obsmod.filter import Filter
 class TestBase(TestCase):
 
     @classmethod
-    def setUpClass(self):
-        self.PFSSPEC_DATA_PATH = os.environ['PFSSPEC_DATA'].strip('"') if 'PFSSPEC_DATA' in os.environ else None
-        self.PFSSPEC_TEST_PATH = os.environ['PFSSPEC_TEST'].strip('"') if 'PFSSPEC_TEST' in os.environ else None
-        self.PFSSPEC_SDSS_DATA_PATH = os.environ['PFSSPEC_SDSS_DATA'].strip('"') if 'PFSSPEC_SDSS_DATA' in os.environ else None
-        self.kurucz_grid = None
-        self.sdss_dataset = None
-        self.hsc_filters = None
+    def setUpClass(cls):
+        cls.PFSSPEC_DATA_PATH = os.environ['PFSSPEC_DATA'].strip('"') if 'PFSSPEC_DATA' in os.environ else None
+        cls.PFSSPEC_TEST_PATH = os.environ['PFSSPEC_TEST'].strip('"') if 'PFSSPEC_TEST' in os.environ else None
+        cls.PFSSPEC_SDSS_DATA_PATH = os.environ['PFSSPEC_SDSS_DATA'].strip('"') if 'PFSSPEC_SDSS_DATA' in os.environ else None
+        cls.kurucz_grid = None
+        cls.sdss_dataset = None
+        cls.hsc_filters = None
 
     def setUp(self):
         plt.figure(figsize=(10, 6))
