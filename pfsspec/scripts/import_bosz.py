@@ -36,12 +36,20 @@ class ImportBosz(Import):
         self.resolution = self.get_arg('resolution', self.resolution)
         self.max = self.get_arg('max', self.max)
         self.preload_arrays = self.get_arg('preload_arrays', self.preload_arrays)
+        self.continue_import = self.get_arg('continue', self.continue_import)
 
     def run(self):
         super(ImportBosz, self).run()
 
+        filename =os.path.join(self.args['out'], 'spectra.h5')
+
         grid = BoszGrid()
         grid.preload_arrays = self.preload_arrays
+        if self.continue_import:
+            if grid.preload_arrays:
+                raise NotImplementedError("Can only continue import when preload_arrays is False.")
+            grid.load(filename, format='h5')
+        
         reader = BoszSpectrumReader(self.path, self.wave, self.resolution)
         gridreader = BoszGridReader(grid, reader, parallel=not self.debug, threads=self.threads, max=self.max)
 
@@ -56,6 +64,7 @@ class ImportBosz(Import):
         else:
             logging.info('Running in file list mode')
             files = glob.glob(os.path.expandvars(self.path))
+            files.sort()
             logging.info('Found {} files.'.format(len(files)))
 
             # Load the first spectrum to get wavelength grid
@@ -64,18 +73,19 @@ class ImportBosz(Import):
         logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
 
         # Initialize the wavelength grid based on the first spectrum read
-        grid.wave = spec.wave
-        grid.allocate_data()
-        grid.build_params_index()
-        grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
+        if not self.continue_import:
+            grid.wave = spec.wave
+            grid.allocate_data()
+            grid.build_params_index()
+            grid.save(filename, format='h5')
 
         if os.path.isdir(self.path):
-            gridreader.read_grid()
+            gridreader.read_grid(cont=self.continue_import)
         else:
-            gridreader.read_files(files)
+            gridreader.read_files(files, cont=self.continue_import)
 
         #r.grid.build_flux_index(rebuild=True)
-        grid.save(os.path.join(self.args['out'], 'spectra.h5'), 'h5')
+        grid.save(filename, format='h5')
 
 def main():
     script = ImportBosz()

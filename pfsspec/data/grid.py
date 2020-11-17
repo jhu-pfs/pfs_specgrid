@@ -25,6 +25,8 @@ class Grid(PfsObject):
         return shape
 
     def get_data_item_shape(self, name):
+        # Gets the full shape of the grid. It assumes different last
+        # dimensions for each data array.
         shape = self.get_shape() + self.data_shape[name]
         return shape
 
@@ -159,8 +161,10 @@ class Grid(PfsObject):
                    name in self.data_index and self.data_index[name] is not None
 
     def is_data_item_idx(self, name, idx):
+        # Returns true if the specified grid point or points are filled, i.e. the
+        # corresponding index values are all set to True
         if self.is_data_index(name):
-            return np.all(self.data_index[name][idx])
+            return np.all(self.data_index[name][tuple(idx)])
         else:
             return True
 
@@ -179,7 +183,10 @@ class Grid(PfsObject):
     def set_data_item_idx(self, name, idx, data, s=None):
         idx = Grid.rectify_index(idx)
         if self.is_data_index(name):
-            self.data_index[name][idx] = self.is_data_valid(name, data)
+            valid = self.is_data_valid(name, data)
+            self.data_index[name][idx] = valid
+            if not self.preload_arrays:
+                self.save_item(name + '_idx', np.array(valid), s=idx)
 
         idx = Grid.rectify_index(idx, s)
         if self.preload_arrays:
@@ -240,6 +247,7 @@ class Grid(PfsObject):
                 logging.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
 
     def load_data(self, s=None):
+        gridshape = self.get_shape()
         for name in self.data:
             # If not running in memory saver mode, load entire array
             if self.preload_arrays:
@@ -251,7 +259,13 @@ class Grid(PfsObject):
                     logging.info('Loading grid "{}" of size {}'.format(name, self.data_shape[name]))
                     self.data[name] = self.load_item(name, np.ndarray)
                     logging.info('Loaded grid "{}" of size {}'.format(name, self.data_shape[name]))
+                self.data_shape[name] = self.data[name].shape[len(gridshape):]
             else:
+                if s is not None:
+                    # TODO: how to figure out data shape when we do slicing and lazy-loading?
+                    raise NotImplementedError()
+                else:
+                    self.data_shape[name] = self.get_item_shape(name)[len(gridshape):]
                 logging.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
 
     def save_data_index(self):
