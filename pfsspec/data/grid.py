@@ -106,6 +106,7 @@ class Grid(PfsObject):
         return tuple(idx)
 
     def get_limited_data_index(self, name):
+        # TODO: test this with lazy-loading, we might just skip this entirely in that case
         idx = ()
         for p in self.params:
             start = np.where(self.params[p].values >= self.params[p].min)[0][0]
@@ -261,11 +262,8 @@ class Grid(PfsObject):
                     logging.info('Loaded grid "{}" of size {}'.format(name, self.data_shape[name]))
                 self.data_shape[name] = self.data[name].shape[len(gridshape):]
             else:
-                if s is not None:
-                    # TODO: how to figure out data shape when we do slicing and lazy-loading?
-                    raise NotImplementedError()
-                else:
-                    self.data_shape[name] = self.get_item_shape(name)[len(gridshape):]
+                # When lazy-loading, we simply ignore the slice
+                self.data_shape[name] = self.get_item_shape(name)[len(gridshape):]
                 logging.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
 
     def save_data_index(self):
