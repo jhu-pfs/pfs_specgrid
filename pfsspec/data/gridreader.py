@@ -5,14 +5,14 @@ from pfsspec.parallel import SmartParallel
 
 class GridReader():
     class EnumParamsGenerator():
-        def __init__(self, grid=None, max=None, cont=False):
+        def __init__(self, grid=None, max=None, resume=False):
             self.grid = grid
             self.limits = [grid.params[p].values.shape[0] for p in grid.params]
             self.i = 0
             self.max = max
             self.current = [0 for p in grid.params]
             self.stop = False
-            self.cont = cont
+            self.resume = resume
 
         def __iter__(self):
             return self
@@ -50,7 +50,7 @@ class GridReader():
 
                     self.i += 1
 
-                    if self.cont:
+                    if self.resume:
                         # Test if item is already in the grid
                         mask = None
                         for name in self.grid.data_index:
@@ -68,15 +68,15 @@ class GridReader():
 
                 return ci, cr
 
-    def __init__(self, grid, parallel=True, threads=None, max=None, cont=False):
+    def __init__(self, grid, parallel=True, threads=None, max=None, resume=False):
         self.grid = grid
         self.parallel = parallel
         self.threads = threads
         self.max = max
-        self.cont = cont
+        self.resume = resume
 
-    def read_grid(self, cont=False):
-        if not cont:
+    def read_grid(self, resume=False):
+        if not resume:
             self.grid.init_data()
             self.grid.allocate_data()
 
@@ -85,15 +85,15 @@ class GridReader():
         if self.max is not None:
             logging.info("Reading grid will stop after {} items.".format(self.max))
 
-        g = GridReader.EnumParamsGenerator(self.grid, max=self.max, cont=cont)
+        g = GridReader.EnumParamsGenerator(self.grid, max=self.max, resume=resume)
         with SmartParallel(verbose=True, parallel=self.parallel, threads=self.threads) as p:
             for res in p.map(self.process_item, g):
                 self.store_item(res)
 
         logging.info("Grid loaded.")
 
-    def read_files(self, files, cont=False):
-        if cont:
+    def read_files(self, files, resume=False):
+        if resume:
             # TODO: get ids from existing params data frame and remove the ones
             #       from the list that have already been imported
             raise NotImplementedError()

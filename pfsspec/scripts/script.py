@@ -203,9 +203,9 @@ class Script():
         with open(filename, 'r') as f:
             return json.load(f)
 
-    def create_output_dir(self, dir, cont=False):
+    def create_output_dir(self, dir, resume=False):
         logging.info('Output directory is {}'.format(dir))
-        if cont:
+        if resume:
             if os.path.exists(dir):
                 logging.info('Found output directory.')
             else:

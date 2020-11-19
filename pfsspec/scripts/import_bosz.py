@@ -36,7 +36,6 @@ class ImportBosz(Import):
         self.resolution = self.get_arg('resolution', self.resolution)
         self.max = self.get_arg('max', self.max)
         self.preload_arrays = self.get_arg('preload_arrays', self.preload_arrays)
-        self.continue_import = self.get_arg('continue', self.continue_import)
 
     def run(self):
         super(ImportBosz, self).run()
@@ -45,9 +44,9 @@ class ImportBosz(Import):
 
         grid = BoszGrid()
         grid.preload_arrays = self.preload_arrays
-        if self.continue_import:
+        if self.resume:
             if grid.preload_arrays:
-                raise NotImplementedError("Can only continue import when preload_arrays is False.")
+                raise NotImplementedError("Can only resume import when preload_arrays is False.")
             grid.load(filename, format='h5')
         
         reader = BoszSpectrumReader(self.path, self.wave, self.resolution)
@@ -73,16 +72,16 @@ class ImportBosz(Import):
         logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
 
         # Initialize the wavelength grid based on the first spectrum read
-        if not self.continue_import:
+        if not self.resume:
             grid.wave = spec.wave
             grid.allocate_data()
             grid.build_params_index()
             grid.save(filename, format='h5')
 
         if os.path.isdir(self.path):
-            gridreader.read_grid(cont=self.continue_import)
+            gridreader.read_grid(resume=self.resume)
         else:
-            gridreader.read_files(files, cont=self.continue_import)
+            gridreader.read_files(files, resume=self.resume)
 
         #r.grid.build_flux_index(rebuild=True)
         grid.save(filename, format='h5')
