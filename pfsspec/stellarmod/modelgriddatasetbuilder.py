@@ -213,7 +213,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             params[p] = self.grid.params[p].min + r * (self.grid.params[p].max - self.grid.params[p].min)
 
         if self.interp_param == 'random':
-            free_param = self.random_state.choice(list(self.grid.params.keys()))
+            choices = [k for k in self.grid.params.keys() if self.grid.params[k].min != self.grid.params[k].max]
+            free_param = self.random_state.choice(choices)
         else:
             free_param = self.interp_param
 
@@ -271,11 +272,14 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         return spec, params
 
     def build(self):
-        if self.grid.is_data_index('flux'):
+        # If the parameter range is limited to a subset of the grid, we generate
+        # a limited cube of the index array.
+        if not self.grid.preload_arrays and self.grid.is_data_index('flux'):
             # rows: parameters, columns: models
             index = self.grid.get_limited_data_index('flux')
             self.grid_index = np.array(np.where(index))
 
+        # TODO: review this but this has something to do with parameter ranges
         count = 0
         size = 1
         shape = ()

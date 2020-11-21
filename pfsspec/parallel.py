@@ -111,7 +111,14 @@ class IterableQueue():
     
 class SmartParallel():
     def __init__(self, initializer=None, verbose=False, parallel=True, threads=None):
-        self.cpus = threads if threads is not None else multiprocessing.cpu_count()
+        if threads is not None:
+            self.cpus = threads
+        elif 'SLURM_CPUS_PER_TASK' in os.environ:
+            self.cpus = int(os.environ['SLURM_CPUS_PER_TASK'])
+        else:
+            self.cpus = multiprocessing.cpu_count() // 2
+        
+        
         self.processes = []
         self.queue_in = None
         self.queue_out = None
@@ -121,18 +128,19 @@ class SmartParallel():
 
     def __enter__(self):
         if self.parallel:
-            logging.info("Starting parallel execution on {} CPUs.".format(self.cpus))
+            logging.debug("Starting parallel execution on {} CPUs.".format(self.cpus))
         else:
-            logging.info("Starting serial execution.")
+            logging.debug("Starting serial execution.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for p in self.processes:
-            p.join()
         if self.parallel:
-            logging.info("Finished parallel execution.")
+            logging.debug("Joining worker processes.")
+            for p in self.processes:
+                p.join()
+            logging.debug("Finished parallel execution.")
         else:
-            logging.info("Finished serial execution.")
+            logging.debug("Finished serial execution.")
         return False
 
     def __del__(self):

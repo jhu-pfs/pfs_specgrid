@@ -20,7 +20,8 @@ class PfsObject():
             'file',
             'filename',
             'fileformat',
-            'filedata'
+            'filedata,'
+            'hdf5file'
         ])
 
         if isinstance(orig, PfsObject):
@@ -130,42 +131,59 @@ class PfsObject():
         elif self.fileformat == 'npz':
             self.filedata[name] = item
         elif self.fileformat == 'h5':
-            if item is None:
-                # Do not save if value is None
-                pass
-            elif isinstance(item, pd.DataFrame):
-                # This is a little bit different for DataFrames when s is defined. When slicing,
-                # arrays are update in place, an operation not supported by HDFStore
-                # TODO: this issue could be solved by first removing the matching rows, then
-                #       appending them.
-
-                if s is None:
-                    item.to_hdf(self.filename, name, mode='a', min_itemsize=min_string_length)
-                else:
-                    item[item['id'] == s].to_hdf(self.filename, name, mode='a', format='table', append=True, min_itemsize=min_string_length)
-            elif isinstance(item, np.ndarray):
-                with h5py.File(self.filename, 'a') as f:
-                    if s is not None:
-                        # in-place update
-                        f[name][s] = item
-                    else:
-                        if name in f.keys():
-                            del f[name]
-                        chunks = self.get_chunks(name, item.shape, s=s)
-                        if chunks is not None:
-                            f.create_dataset(name, data=item, chunks=chunks)
-                            logging.debug('Saving item {} with chunks {}'.format(name, chunks))
-                        else:
-                            f.create_dataset(name, data=item)
-            elif isinstance(item, numbers.Number):
-                with h5py.File(self.filename, 'a') as f:
-                    if name in f.keys():
-                        del f[name]
-                    f.create_dataset(name, data=item)
-            else:
-                raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
+            self.save_item_hdf5(name, item, s=s, min_string_length=min_string_length)
         else:
             raise NotImplementedError()
+
+    def save_item_hdf5(self, name, item, s=None, min_string_length=None):
+        def open_hdf5():
+            if self.file is None:
+                return h5py.File(self.filename, 'a')
+            else:
+                return self.file
+
+        def close_hdf5(f):
+            if self.file is None:
+                f.close()
+            else:
+                pass
+
+        f = open_hdf5()
+
+        if item is None:
+            # Do not save if value is None
+            pass
+        elif isinstance(item, pd.DataFrame):
+            # This is a little bit different for DataFrames when s is defined. When slicing,
+            # arrays are update in place, an operation not supported by HDFStore
+            # TODO: this issue could be solved by first removing the matching rows, then
+            #       appending them.
+
+            if s is None:
+                item.to_hdf(self.filename, name, mode='a', min_itemsize=min_string_length)
+            else:
+                item.to_hdf(self.filename, name, mode='a', format='table', append=True, min_itemsize=min_string_length)
+        elif isinstance(item, np.ndarray):
+            if s is not None:
+                # in-place update
+                f[name][s] = item
+            else:
+                if name in f.keys():
+                    del f[name]
+                chunks = self.get_chunks(name, item.shape, s=s)
+                if chunks is not None:
+                    f.create_dataset(name, data=item, chunks=chunks)
+                    logging.debug('Saving item {} with chunks {}'.format(name, chunks))
+                else:
+                    f.create_dataset(name, data=item)
+        elif isinstance(item, numbers.Number):
+            if name in f.keys():
+                del f[name]
+            f.create_dataset(name, data=item)
+        else:
+            raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
+
+        close_hdf5(f)
 
     def get_chunks(self, name, shape, s=None):
         needchunk = False
