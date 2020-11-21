@@ -3,7 +3,7 @@
         "./configs/prepare/bosz/nowave/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_500k/valid",
+    "out": "${PFSSPEC_DATA}/train/dataset/pfs_stellar_model/bosz/nowave_500k/valid",
     "sample_count": 500000,
 
     "interp_mode": "spline",

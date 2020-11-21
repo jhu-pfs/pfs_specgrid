@@ -6,6 +6,8 @@
     "sample_mode": "random",
     "sample_dist": "beta",
     
+    "chunk_size": 1000,
+    
     "interp_mode": "spline",
     "interp_param": "random",
 

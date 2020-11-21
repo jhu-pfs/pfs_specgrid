@@ -1,9 +1,9 @@
 {
     "config": [
-        "./configs/pfs/prepare/bosz/nowave/common.json"
+        "./configs/pfs/bosz/nowave/prepare/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_100k/train",
+    "out": "${PFSSPEC_DATA}/train/dataset/pfs_stellar_model/bosz/nowave_100k/train",
     "sample_count": 100000,
 
     "interp_mode": "spline",

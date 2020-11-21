@@ -5,8 +5,18 @@
     "sample_mode": "random",
     "sample_dist": "beta",
 
-    "exp_count": 16,
-    "exp_time": 450.0,
+    "mag_filter": "${PFSSPEC_DATA}/subaru/hsc/hsc_g.dat",
+    "wave": null,
+    "wave_bins": null,
+    "wave_log": false,
+    "norm": "median",
+    "norm_wave": [
+        6500.0,
+        9500.0
+    ],
+
+    "exp_count": 12,
+    "exp_time": 900.0,
   
     "calib_bias": null,
     "noise": null,

@@ -3,7 +3,7 @@
         "./configs/prepare/bosz/nowave/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave/test_T_eff",
+    "out": "${PFSSPEC_DATA}/train/dataset/pfs_stellar_model/bosz/nowave/test_T_eff",
     "sample_mode": "random",
     "sample_dist": "uniform",
     "sample_count": 20000,

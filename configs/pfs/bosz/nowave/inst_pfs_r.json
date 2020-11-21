@@ -1,13 +1,4 @@
 {
-    "mag_filter": "${PFSSPEC_DATA}/subaru/hsc/hsc_r.dat",
-    "wave": null,
-    "wave_bins": null,
-    "wave_log": false,
-    "norm": "median",
-    "norm_wave": [
-        6500.0,
-        9500.0
-    ],
     "detector": "${PFSSPEC_DATA}/subaru/pfs/arms/r.json",
     "detector_map": null,
 
