@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from pfsspec.data.dataset import Dataset
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
+from pfsspec.stellarmod.boszgrid import BoszGrid
 from pfsspec.obsmod.filter import Filter
 
 class TestBase(TestCase):
@@ -14,6 +15,7 @@ class TestBase(TestCase):
         cls.PFSSPEC_TEST_PATH = os.environ['PFSSPEC_TEST'].strip('"') if 'PFSSPEC_TEST' in os.environ else None
         cls.PFSSPEC_SDSS_DATA_PATH = os.environ['PFSSPEC_SDSS_DATA'].strip('"') if 'PFSSPEC_SDSS_DATA' in os.environ else None
         cls.kurucz_grid = None
+        cls.bosz_grid = None
         cls.sdss_dataset = None
         cls.hsc_filters = None
 
@@ -21,6 +23,9 @@ class TestBase(TestCase):
         plt.figure(figsize=(10, 6))
 
     def get_kurucz_grid(self):
+        # TODO: file location is broken
+        raise NotImplementedError()
+
         if self.kurucz_grid is None:
             file = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/compressed/kurucz.h5')
             self.kurucz_grid = KuruczGrid(model='test')
@@ -28,6 +33,14 @@ class TestBase(TestCase):
 
         return self.kurucz_grid
 
+    def get_bosz_grid(self):
+        if self.bosz_grid is None:
+            file = os.path.join(self.PFSSPEC_DATA_PATH, 'import/stellar/grid/bosz_5000/spectra.h5')
+            self.bosz_grid = BoszGrid()
+            self.bosz_grid.load(file, s=None, format='h5')
+
+        return self.bosz_grid
+            
     def get_sdss_dataset(self):
         if self.sdss_dataset is None:
             file = os.path.join(self.PFSSPEC_DATA_PATH, 'pfs_spec_test/sdss_test/dataset.dat')
