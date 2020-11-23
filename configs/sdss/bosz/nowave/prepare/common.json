@@ -15,8 +15,6 @@
     "noise_freeze": false,
     "cont": null,
     "cont_wave": null,
-
-    "redden": false,
     
     "calib_bias": null,
     "Fe_H": [

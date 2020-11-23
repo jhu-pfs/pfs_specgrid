@@ -11,6 +11,7 @@
     "units": 2048,
     "act": "relu",
     "loss": "mean_squared_error",
+    "chunk_size": 1600,
     "patience": 1000,
     "opt": "sgd",
     "lr_sch": "slowdrop",

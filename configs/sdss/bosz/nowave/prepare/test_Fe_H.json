@@ -11,8 +11,6 @@
 
     "interp_mode": "spline",
     "interp_param": "Fe_H",
-
-    "redden": true,
     
     "z_dist": "normal",
     "z": [
@@ -28,5 +26,6 @@
     "ext": [
         -2.5,
         0.6
-    ]
+    ],
+    "redden": true
 }

@@ -8,8 +8,8 @@
     "lr": [0.01, 10.0, 0.8],
 
     "in": [
-        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_1M/train",
-        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave_100k/valid"
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/train_1M",
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/valid_100k"
     ],
     "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/run/"
 }
