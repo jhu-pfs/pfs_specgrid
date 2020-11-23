@@ -140,21 +140,25 @@ class DatasetAugmenter(KerasDataGenerator):
         return mask
 
     def generate_random_mask(self, chunk_id, idx, flux, mask):
-        # Generate random mask
+        # Generate random mask. First pick the number of masked intervals, then
+        # generate the central wavelength of each and the normally distributed length.
         if self.mask_random is not None and self.mask_value is not None:
-            # TODO: test this functionality with lazy-loaded datasets
-            raise NotImplementedError()
+            # TODO: what if wave is not a constant vector?
+            wl = self.dataset.get_wave(idx, self.chunk_size, chunk_id)
+            max_n = int(self.mask_random[0])
 
+            # Generate parameters of random intervals
+            n = np.random.randint(0, max_n + 1, size=(flux.shape[0],))
+            wc = wl[0] + np.random.rand(flux.shape[0], max_n) * (wl[-1] - wl[0])
+            ww = np.maximum(0.0, np.random.normal(self.mask_random[1], self.mask_random[2], size=(flux.shape[0], max_n)))
+
+            # Find corresponding indices
+            mx = np.digitize([wc - ww / 2, wc + ww / 2], wl)  # shape: (2, flux.shape[0], max_n)
+
+            # TODO: Can we vectorize this? The number of masks varies from spectrum to spectrum.
             for k in range(flux.shape[0]):
-                n = np.random.randint(0, self.mask_random[0] + 1)
-                for i in range(n):
-                    wl = self.dataset.get_wave(idx, self.chunk_size, chunk_id)
-                    wl = wl + np.random.rand() * (wl[-1] - wl[0])
-                    ww = max(0.0, np.random.normal(self.mask_random[1], self.mask_random[2]))
-
-                    # TODO: what if wave is not a constant vector?
-                    mx = np.digitize([wl - ww / 2, wl + ww / 2], self.dataset.wave)
-                    mask[k, mx[0]:mx[1]] = True
+                for l in range(n[k]):
+                    mask[k, mx[0, k, l]:mx[1, k, l]] = True
 
         return mask
 
