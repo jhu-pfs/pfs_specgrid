@@ -157,14 +157,14 @@ class ModelGrid(Grid):
         r = self.interpolate_data_item_spline('flux', free_param, **kwargs)
         if r is None:
             return None
-        flux, kwargs = r
+        flux, bestargs = r
 
         if flux is not None:
-            spec = self.get_parameterized_spectrum(**kwargs)
+            spec = self.get_parameterized_spectrum(**bestargs)
             spec.interp_param = free_param
             spec.flux = flux
             if self.is_data_item('cont'):
-                spec.cont = self.interpolate_data_item_spline('cont', free_param, **kwargs)
+                spec.cont, _ = self.interpolate_data_item_spline('cont', free_param, **kwargs)
             return spec
         else:
             return None
