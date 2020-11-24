@@ -28,7 +28,7 @@ class Script():
         if 'SLURM_CPUS_PER_TASK' in os.environ:
             self.threads = int(os.environ['SLURM_CPUS_PER_TASK'])
         else:
-            self.threads = multiprocessing.cpu_count()
+            self.threads = multiprocessing.cpu_count() // 2
 
     def create_parser(self):
         self.parser = argparse.ArgumentParser()
