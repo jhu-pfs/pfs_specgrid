@@ -25,13 +25,13 @@ class ImportBoszAtm(Import):
         grid = BoszAtmGrid()
         r = BoszAtmReader(self.args['path'])
         gr = BoszAtmGridReader(grid, r, self.args['max'])
-        gr.parallel = not self.debug
+        gr.parallel = self.threads != 1
 
         if 'preload_arrays' in self.args and self.args['preload_arrays'] is not None:
             grid.preload_arrays = self.args['preload_arrays']
 
         if os.path.isdir(self.args['path']):
-            logging.info('Running in grid mode')
+            self.logger.info('Running in grid mode')
 
             # Load the first spectrum to get wavelength grid
             # fn = BoszSpectrumReader.get_filename(Fe_H=0.0, T_eff=5000.0, log_g=1.0, O_M=0.0, C_M=0.0, R=res)
@@ -39,9 +39,9 @@ class ImportBoszAtm(Import):
             # spec = r.read(fn)
             raise NotImplementedError()
         else:
-            logging.info('Running in file list mode')
+            self.logger.info('Running in file list mode')
             files = glob.glob(os.path.expandvars(self.args['path']))
-            logging.info('Found {} files.'.format(len(files)))
+            self.logger.info('Found {} files.'.format(len(files)))
 
         grid.init_data()
         grid.build_params_index()

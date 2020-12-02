@@ -8,8 +8,12 @@ from nbconvert.preprocessors import ClearOutputPreprocessor, ClearMetadataPrepro
 from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
 from nbconvert import HTMLExporter
 
-class NotebookRunner():
-    def __init__(self):
+from pfsspec.pfsobject import PfsObject
+
+class NotebookRunner(PfsObject):
+    def __init__(self, orig=None):
+        super(NotebookRunner, self).__init__(orig=orig)
+
         self.input_notebook = None
         self.working_dir = None
         self.output_notebook = None
@@ -57,7 +61,7 @@ class NotebookRunner():
         try:
             self.nb, resources = epp.preprocess(self.nb, resources)
         except Exception as ex:
-            logging.error('An error has occured while execution notebook {}'.format(self.input_notebook))
+            self.logger.error('An error has occured while execution notebook {}'.format(self.input_notebook))
             # Error is not propagated to allow saving notebook
 
     def save_notebook(self):

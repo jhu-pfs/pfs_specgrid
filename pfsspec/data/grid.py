@@ -62,12 +62,12 @@ class Grid(PfsObject):
             self.data_shape[name] = shape
 
             if self.preload_arrays:
-                logging.info('Initializing memory for grid "{}" of size {}...'.format(name, datashape))
+                self.logger.info('Initializing memory for grid "{}" of size {}...'.format(name, datashape))
                 self.data[name] = np.full(datashape, np.nan)
-                logging.info('Initialized memory for grid "{}" of size {}.'.format(name, datashape))
+                self.logger.info('Initialized memory for grid "{}" of size {}.'.format(name, datashape))
             else:
                 self.data[name] = None
-                logging.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
+                self.logger.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
 
             self.data_index[name] = np.full(gridshape, False, dtype=np.bool)
 
@@ -89,11 +89,11 @@ class Grid(PfsObject):
         if rebuild and not self.preload_arrays:
             raise Exception('Cannot build index on lazy-loaded grid.')
         elif rebuild or name not in self.data_index or self.data_index[name] is None:
-            logging.debug('Building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
+            self.logger.debug('Building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
             self.data_index[name] = self.is_data_valid(name, self.data[name])
         else:
-            logging.debug('Skipped building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
-        logging.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.data_index[name]), name))
+            self.logger.debug('Skipped building indexes on grid "{}" of size {}'.format(name, self.data_shape[name]))
+        self.logger.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.data_index[name]), name))
 
     @staticmethod
     def rectify_index(idx, s=None):
@@ -238,14 +238,14 @@ class Grid(PfsObject):
     def save_data(self):
         for name in self.data:
             if self.preload_arrays:
-                logging.info('Saving grid "{}" of size {}'.format(name, self.data[name].shape))
+                self.logger.info('Saving grid "{}" of size {}'.format(name, self.data[name].shape))
                 self.save_item(name, self.data[name])
-                logging.info('Saved grid "{}" of size {}'.format(name, self.data[name].shape))
+                self.logger.info('Saved grid "{}" of size {}'.format(name, self.data[name].shape))
             else:
                 shape = self.get_data_item_shape(name)
-                logging.info('Allocating grid "{}" with size {}...'.format(name, shape))
+                self.logger.info('Allocating grid "{}" with size {}...'.format(name, shape))
                 self.allocate_item(name, shape, np.float)
-                logging.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
+                self.logger.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
 
     def load_data(self, s=None):
         gridshape = self.get_shape()
@@ -253,18 +253,18 @@ class Grid(PfsObject):
             # If not running in memory saver mode, load entire array
             if self.preload_arrays:
                 if s is not None:
-                    logging.info('Loading grid "{}" of size {}'.format(name, s))
+                    self.logger.info('Loading grid "{}" of size {}'.format(name, s))
                     self.data[name][s] = self.load_item(name, np.ndarray, s=s)
-                    logging.info('Loaded grid "{}" of size {}'.format(name, s))
+                    self.logger.info('Loaded grid "{}" of size {}'.format(name, s))
                 else:
-                    logging.info('Loading grid "{}" of size {}'.format(name, self.data_shape[name]))
+                    self.logger.info('Loading grid "{}" of size {}'.format(name, self.data_shape[name]))
                     self.data[name] = self.load_item(name, np.ndarray)
-                    logging.info('Loaded grid "{}" of size {}'.format(name, self.data_shape[name]))
+                    self.logger.info('Loaded grid "{}" of size {}'.format(name, self.data_shape[name]))
                 self.data_shape[name] = self.data[name].shape[len(gridshape):]
             else:
                 # When lazy-loading, we simply ignore the slice
                 self.data_shape[name] = self.get_item_shape(name)[len(gridshape):]
-                logging.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
+                self.logger.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
 
     def save_data_index(self):
         for name in self.data:
@@ -357,7 +357,7 @@ class Grid(PfsObject):
         # Find nearest model to requested parameters
         idx = list(self.get_nearest_index(**kwargs))
         if idx is None:
-            logging.debug('No nearest model found.')
+            self.logger.debug('No nearest model found.')
             return None
 
         # Set all params to nearest value except the one in which we interpolate
@@ -377,7 +377,7 @@ class Grid(PfsObject):
         # interpolate over zero valid parameters, in this case return None and
         # the calling code will generate another set of random parameters
         if pars.shape[0] < 2 or kwargs[free_param] < pars.min() or pars.max() < kwargs[free_param]:
-            logging.debug('Parameters are at the edge of grid, no interpolation possible.')
+            self.logger.debug('Parameters are at the edge of grid, no interpolation possible.')
             return None
 
         if self.preload_arrays:
@@ -387,7 +387,7 @@ class Grid(PfsObject):
             data = self.load_item(name, np.ndarray, idx)
             data = data[valid_data]
 
-        logging.debug('Interpolating data to {} using cubic splines along {}.'.format(kwargs, free_param))
+        self.logger.debug('Interpolating data to {} using cubic splines along {}.'.format(kwargs, free_param))
 
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
         x, y = pars, data

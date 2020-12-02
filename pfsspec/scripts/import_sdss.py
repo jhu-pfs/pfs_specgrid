@@ -36,7 +36,7 @@ class ImportSdss(Import):
                 self.user = self.args['user']
             password = getpass.getpass()
             self.token = Authentication.login(self.user, password)
-        logging.info('SciServer token: {}'.format(self.token))
+        self.logger.info('SciServer token: {}'.format(self.token))
 
     def create_reader(self):
         self.reader = SdssSpectrumReader(verbose=True, parallel=not self.debug, threads=self.threads)
@@ -55,10 +55,10 @@ class ImportSdss(Import):
     def run(self):
         super(ImportSdss, self).run()
         params = self.find_stars()
-        logging.info(params.head(10))
+        self.logger.info(params.head(10))
         survey = self.reader.load_survey(params)
         survey.save(os.path.join(self.args['out'], 'spectra.dat'))
-        logging.info('Saved %d spectra.' % len(survey.spectra))
+        self.logger.info('Saved %d spectra.' % len(survey.spectra))
 
     def execute_notebooks(self):
         super(ImportSdss, self).execute_notebooks()

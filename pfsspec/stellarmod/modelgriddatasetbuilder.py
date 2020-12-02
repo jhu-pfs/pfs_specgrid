@@ -165,7 +165,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 self.pipeline.run(spec, **params)
                 return spec
             except Exception as e:
-                logging.exception(e)
+                self.logger.exception(e)
                 spec = None
 
     def get_params(self, i):

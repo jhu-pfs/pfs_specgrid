@@ -11,9 +11,9 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
         KuruczAugmenter.__init__(self, orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, partitions=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
         d = super(KuruczRegressionalAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
-                                  batch_size=batch_size, shuffle=shuffle, chunk_size=chunk_size, seed=seed)
+                                  partitions=partitions, batch_size=batch_size, shuffle=shuffle, chunk_size=chunk_size, seed=seed)
         return d
 
     def add_args(self, parser):

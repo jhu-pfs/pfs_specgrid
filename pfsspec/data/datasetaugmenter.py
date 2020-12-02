@@ -2,14 +2,30 @@ import numpy as np
 
 import pfsspec.util as util
 from pfsspec.obsmod.spectrum import Spectrum
-from pfsspec.ml.dnn.keras.kerasdatagenerator import KerasDataGenerator
+from pfsspec.ml.dnn.keras.kerasdataaugmenter import KerasDataAugmenter
 
-class DatasetAugmenter(KerasDataGenerator):
+class DatasetAugmenter(KerasDataAugmenter):
+    # The issue to solve is that in order
+    # to get a reasonable training performance, chunks of batches have to be
+    # kept together and read from the storage in one single operation. Chunks
+    # will be read in random order but they're large enough to support sustained
+    # sequential reads.
+    #
+    # This class also implements very basic augmentation functionality such as
+    # offsetting and scaling, as well as masking invalid and outlier data.
+    # TODO: maybe these should be shoveled into an auxilliary class to focus on
+    #       dataset chunking here.
+
     def __init__(self, orig=None):
         super(DatasetAugmenter, self).__init__(orig=orig)
 
         if isinstance(orig, DatasetAugmenter):
             self.dataset = orig.dataset
+            
+            self.chunk_count = orig.chunk_count
+            self.chunk_size = orig.chunk_size
+            self.chunk_index = orig.chunk_index
+
             self.labels = orig.labels
             self.coeffs = orig.coeffs
             self.weight = orig.weight
@@ -30,6 +46,11 @@ class DatasetAugmenter(KerasDataGenerator):
             self.include_wave = orig.include_wave
         else:
             self.dataset = None
+            
+            self.chunk_count = None
+            self.chunk_size = None
+            self.chunk_index = None
+
             self.labels = None
             self.coeffs = None
             self.weight = None
@@ -50,15 +71,18 @@ class DatasetAugmenter(KerasDataGenerator):
             self.include_wave = False
 
     @classmethod
-    def from_dataset(cls, input_shape, output_shape, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
-        d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, batch_size=batch_size, shuffle=shuffle, chunk_size=chunk_size, seed=seed)
+    def from_dataset(cls, input_shape, output_shape, dataset, labels, coeffs, weight=None, partitions=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
+        d = super(DatasetAugmenter, cls).from_shapes(input_shape, output_shape, partitions=partitions, batch_size=batch_size, shuffle=shuffle, seed=seed)
 
         d.dataset = dataset
+        d.chunk_size = chunk_size
         d.labels = labels
         d.coeffs = coeffs
         d.weight = weight
                
         return d
+
+    #region Command-line arguments
 
     def add_args(self, parser):
         super(DatasetAugmenter, self).add_args(parser)
@@ -103,6 +127,114 @@ class DatasetAugmenter(KerasDataGenerator):
 
         self.include_wave = self.get_arg('include_wave', self.include_wave, args)
 
+    #endregion
+
+    def get_chunk_count(self):
+        return self.chunk_count
+
+    def reshuffle(self):
+        if self.chunk_size is None:
+            super(DatasetAugmenter, self).reshuffle()
+        else:
+            # Shuffle chunks and the batches inside chunks. By keeping the
+            # chunk size big enough, sustained sequential reads from the storage
+            # will be possible. 
+
+            # First we shuffle chunks then shuffle batch_ids within chunks only.
+            # We assume that batch_ids can be converted into chunk_ids by simple
+            # integer division.
+            # Next, data items are shuffled within chunks.
+            # When using chunks, data index should be relative to the chunk.
+
+            if self.chunk_size is not None and self.chunk_size % self.batch_size != 0:
+                raise Exception('Chunk size must be a multiple of batch size.')
+
+            if self.chunk_size is not None and self.filter is not None:
+                raise Exception('Data augmenter filtering and data chunking cannot be used together.')
+
+            if self.rng is None:
+                self.rng = np.random.RandomState(self.seed)
+
+            self.input_count = self.dataset.shape[0]
+            self.chunk_count = np.int32(np.ceil(self.input_count / self.chunk_size))
+            self.batch_count = np.int32(np.ceil(self.input_count / self.batch_size))
+            
+            # Shuffle chunks
+            ci = np.arange(self.chunk_count)
+            if self.shuffle:
+                ci = ci[self.rng.permutation(ci.shape[0])]
+
+            # Split up chunks among worker threads
+            self.chunk_index = np.array_split(ci, self.partitions)
+
+            # Split up batches among worker threads but make sure they're
+            # kept together within a chunk
+            self.batch_index = []
+            for s in range(self.partitions):
+                bb = []
+                for chunk_id in self.chunk_index[s]:
+                    batch_start = chunk_id * (self.chunk_size // self.batch_size)
+                    batch_end = min(self.batch_count, (chunk_id + 1) * (self.chunk_size // self.batch_size))
+                    bi = np.arange(batch_start, batch_end)
+                    if self.shuffle:
+                        bi = bi[self.rng.permutation(bi.shape[0])]
+                    bb.append(bi)
+                self.batch_index.append(np.concatenate(bb))
+
+            # Shuffle data items within chunks, use relative indexing
+            di = []
+            for chunk_id in range(self.chunk_count):
+                idx_start = chunk_id * self.chunk_size
+                idx_end = min(self.input_count, (chunk_id + 1) * self.chunk_size)
+                idx = np.arange(idx_end - idx_start)
+                if self.shuffle:
+                    idx = idx[self.rng.permutation(idx.shape[0])]
+                di.append(idx)
+            self.data_index = np.concatenate(di)
+
+    def get_batch_index(self, batch_id):
+        _, batch_idx = super(DatasetAugmenter, self).get_batch_index(batch_id)
+
+        # Calculate the chunk_id from batch_id if chunking is turned on
+        if self.chunk_size is None:
+            chunk_id = None
+        else:
+            chunk_id = batch_id // (self.chunk_size // self.batch_size)
+        
+        return chunk_id, batch_idx
+
+    def get_batch(self, batch_id):
+        chunk_id, idx = self.get_batch_index(batch_id)
+        input, output, weight = self.augment_batch(chunk_id, idx)
+        return input, output, weight
+
+    def augment_batch(self, chunk_id, idx):
+        input = None
+        output = None
+
+        if self.weight is not None and 'weight' in self.dataset.params.columns:
+            weight = np.array(self.dataset.get_params(['weight'], idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)[..., 0]
+        else:
+            weight = None
+
+        return input, output, weight
+
+    def get_output_labels(self, model):
+        # Override this to return list of labels and postfixes for prediction
+        pass
+
+    def init_output_labels(self, labels, postfixes):
+        # Override this if new labels need to be created for prediction
+        pass
+
+
+
+
+
+
+
+    # TODO: these should go to a SpectrumAugmenter auxilliary class
+
     def noise_scheduler_linear_onestep(self):
         break_point = int(0.5 * self.total_epochs)
         if self.current_epoch < break_point:
@@ -119,17 +251,6 @@ class DatasetAugmenter(KerasDataGenerator):
             return (self.current_epoch - break_point_1) / (self.total_epochs - break_point_1 - break_point_2)
         else:
             return 1.0
-
-    def augment_batch(self, chunk_id, idx):
-        input = None
-        output = None
-
-        if self.weight is not None and 'weight' in self.dataset.params.columns:
-            weight = np.array(self.dataset.get_params(['weight'], idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)[..., 0]
-        else:
-            weight = None
-
-        return input, output, weight
 
     def get_data_mask(self, chunk_id, idx, flux, mask):
         # Take mask from dataset
@@ -244,14 +365,3 @@ class DatasetAugmenter(KerasDataGenerator):
     #         nflux[:, :, 0] = flux            
     #         nflux[:, :, 1] = self.dataset.wave
     #         flux = nflux
-
-    def get_output_mean(self):
-        raise NotImplementedError()
-
-    def get_output_labels(self, model):
-        # Override this to return list of labels and postfixes for prediction
-        pass
-
-    def init_output_labels(self, labels, postfixes):
-        # Override this if new labels need to be created for prediction
-        pass

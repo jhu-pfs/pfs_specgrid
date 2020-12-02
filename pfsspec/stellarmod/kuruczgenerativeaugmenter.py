@@ -7,7 +7,7 @@ class KuruczGenerativeAugmenter(GenerativeDatasetAugmenter):
         super(KuruczGenerativeAugmenter, self).__init__(orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
         d = super(KuruczGenerativeAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
                                                                batch_size=batch_size,
                                                                shuffle=shuffle,

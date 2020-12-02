@@ -90,6 +90,7 @@ def srl_map(init_func, worker_func, items, verbose=False):
 
 class IterableQueue():
     def __init__(self, queue, length):
+        self.logger = logging.getLogger()
         self.queue = queue
         self.length = length
 
@@ -102,7 +103,7 @@ class IterableQueue():
             o = self.queue.get()
             if isinstance(o, Exception):
                 print(o, file=sys.stderr)
-                logging.error(str(o))
+                self.logger.error(str(o))
                 raise o
             else:
                 return o
@@ -118,6 +119,7 @@ class SmartParallel():
         else:
             self.cpus = multiprocessing.cpu_count() // 2
         
+        self.logger = logging.getLogger()
         
         self.processes = []
         self.queue_in = None
@@ -128,19 +130,19 @@ class SmartParallel():
 
     def __enter__(self):
         if self.parallel:
-            logging.debug("Starting parallel execution on {} CPUs.".format(self.cpus))
+            self.logger.debug("Starting parallel execution on {} CPUs.".format(self.cpus))
         else:
-            logging.debug("Starting serial execution.")
+            self.logger.debug("Starting serial execution.")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.parallel:
-            logging.debug("Joining worker processes.")
+            self.logger.debug("Joining worker processes.")
             for p in self.processes:
                 p.join()
-            logging.debug("Finished parallel execution.")
+            self.logger.debug("Finished parallel execution.")
         else:
-            logging.debug("Finished serial execution.")
+            self.logger.debug("Finished serial execution.")
         return False
 
     def __del__(self):
@@ -148,8 +150,6 @@ class SmartParallel():
 
     @staticmethod
     def pool_worker(initializer, worker, queue_in, queue_out):
-        logger = multiprocessing.get_logger()
-
         if initializer is not None:
             initializer()
         while True:

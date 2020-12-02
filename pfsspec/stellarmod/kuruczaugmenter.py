@@ -9,8 +9,7 @@ from pfsspec.obsmod.spectrum import Spectrum
 
 class KuruczAugmenter():
     def __init__(self, orig=None):
-
-        if isinstance(orig, KuruczAugmenter):           
+        if isinstance(orig, KuruczAugmenter):
             self.calib_bias = orig.calib_bias
             self.calib_bias_count = orig.calib_bias_count
             self.calib_bias_bandwidth = orig.calib_bias_bandwidth
@@ -63,7 +62,7 @@ class KuruczAugmenter():
         return flux
 
     def generate_calib_bias(self, wave):
-        logging.info('Generating {} realization of calibration bias'.format(self.calib_bias_count))
+        self.logger.debug('Generating {} realization of calibration bias'.format(self.calib_bias_count))
         
         wave = wave if len(wave.shape) == 1 else wave[0]
         self.calib_bias = np.empty((self.calib_bias_count, wave.shape[0]))
@@ -72,7 +71,7 @@ class KuruczAugmenter():
                                                                  bandwidth=self.calib_bias_bandwidth,
                                                                  amplitude=self.calib_bias_amplitude)
 
-        logging.info('Generated {} realization of calibration bias'.format(self.calib_bias_count))
+        self.logger.debug('Generated {} realization of calibration bias'.format(self.calib_bias_count))
 
     def apply_ext(self, dataset, chunk_id, idx, flux):
         if self.ext_count is not None:
@@ -91,7 +90,7 @@ class KuruczAugmenter():
         # This function generates a range of random extinction curves. Note that
         # it work only with fixed wavelength grids
 
-        logging.info('Generating {} realization of extinction curve'.format(self.ext_count))
+        self.logger.debug('Generating {} realization of extinction curve'.format(self.ext_count))
 
         wave = wave if len(wave.shape) == 1 else wave[0]
         self.ext = np.empty((self.ext_count, wave.shape[0]))
@@ -101,4 +100,4 @@ class KuruczAugmenter():
             obs = spec * pysynphot.reddening.Extinction(extval, 'mwavg')
             self.ext[i, :] = obs.flux
 
-        logging.info('Generated {} realization of extinction curve'.format(self.ext_count))
+        self.logger.debug('Generated {} realization of extinction curve'.format(self.ext_count))

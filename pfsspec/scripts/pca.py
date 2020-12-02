@@ -22,8 +22,8 @@ class Pca(Convert):
         self.dsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.h5'), 'h5')
         self.dsbuilder.dataset.save_pca(os.path.join(self.args['out'], 'pca.h5'), 'h5')
 
-        logging.info(self.dsbuilder.dataset.params.head())
-        logging.info('Results are written to {}'.format(self.args['out']))
+        self.logger.info(self.dsbuilder.dataset.params.head())
+        self.logger.info('Results are written to {}'.format(self.args['out']))
 
     def execute_notebooks(self):
         super(Convert, self).execute_notebooks()

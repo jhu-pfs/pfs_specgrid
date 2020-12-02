@@ -49,5 +49,3 @@ class AutoencodingDatasetAugmenter(KerasDataGenerator):
 
         return input, output, weight
 
-    def get_output_mean(self):
-        return np.mean(self.output_dataset.flux, axis=0)

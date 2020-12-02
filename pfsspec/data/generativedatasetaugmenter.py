@@ -7,7 +7,7 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         super(GenerativeDatasetAugmenter, self).__init__(orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
         input_shape = (dataset.shape[0], len(labels),)
         output_shape = dataset.shape[1:]
         d = super(GenerativeDatasetAugmenter, cls).from_dataset(input_shape, output_shape,
@@ -37,6 +37,3 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         output = np.array(self.dataset.get_flux(idx, self.chunk_size, chunk_id), copy=True, dtype=np.float)
 
         return input, output, weight
-
-    def get_output_mean(self):
-        return np.mean(self.dataset.flux, axis=0)

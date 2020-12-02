@@ -28,7 +28,7 @@ class KuruczGridReader(ModelGridReader):
         
         self.grid.build_data_index(rebuild=True)
 
-        logging.info("Grid loaded with flux shape {}".format(self.grid.get_data_item_shape('flux')))
+        self.logger.info("Grid loaded with flux shape {}".format(self.grid.get_data_item_shape('flux')))
 
     @staticmethod
     def get_filename(Fe_H, v_turb, alpha=False, nover=False, odfnew=False):

@@ -2,8 +2,9 @@ import logging
 import numpy as np
 
 from pfsspec.parallel import SmartParallel
+from pfsspec.pfsobject import PfsObject
 
-class GridReader():
+class GridReader(PfsObject):
     class EnumParamsGenerator():
         def __init__(self, grid=None, max=None, resume=False):
             self.grid = grid
@@ -68,7 +69,9 @@ class GridReader():
 
                 return ci, cr
 
-    def __init__(self, grid, parallel=True, threads=None, max=None, resume=False):
+    def __init__(self, grid, orig=None, parallel=True, threads=None, max=None, resume=False):
+        super(GridReader, self).__init__(orig=orig)
+
         self.grid = grid
         self.parallel = parallel
         self.threads = threads
@@ -81,16 +84,16 @@ class GridReader():
             self.grid.allocate_data()
 
         # Iterate over the grid points and call a function for each
-        logging.info("Reading grid {}.".format(type(self.grid).__name__))
+        self.logger.info("Reading grid {}.".format(type(self.grid).__name__))
         if self.max is not None:
-            logging.info("Reading grid will stop after {} items.".format(self.max))
+            self.logger.info("Reading grid will stop after {} items.".format(self.max))
 
         g = GridReader.EnumParamsGenerator(self.grid, max=self.max, resume=resume)
         with SmartParallel(verbose=True, parallel=self.parallel, threads=self.threads) as p:
             for res in p.map(self.process_item, g):
                 self.store_item(res)
 
-        logging.info("Grid loaded.")
+        self.logger.info("Grid loaded.")
 
     def read_files(self, files, resume=False):
         if resume:
@@ -99,9 +102,9 @@ class GridReader():
             raise NotImplementedError()
 
         # Iterate over a list of files and call a function for each
-        logging.info("Loading {}".format(type(self.grid).__name__))
+        self.logger.info("Loading {}".format(type(self.grid).__name__))
         if self.max is not None:
-            logging.info("Loading will stop after {} spectra".format(self.max))
+            self.logger.info("Loading will stop after {} spectra".format(self.max))
             files = files[:min(self.max, len(files))]
 
         k = 0
@@ -110,7 +113,7 @@ class GridReader():
                 self.store_item(res)
                 k += 1
 
-        logging.info('{} files loaded.'.format(k))
+        self.logger.info('{} files loaded.'.format(k))
 
     def process_item(self, i):
         raise NotImplementedError()

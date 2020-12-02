@@ -50,10 +50,10 @@ class ImportBosz(Import):
             grid.load(filename, format='h5')
         
         reader = BoszSpectrumReader(self.path, self.wave, self.resolution)
-        gridreader = BoszGridReader(grid, reader, parallel=not self.debug, threads=self.threads, max=self.max)
+        gridreader = BoszGridReader(grid, reader, parallel=self.thread != 1, threads=self.threads, max=self.max)
 
         if os.path.isdir(self.path):
-            logging.info('Running in grid mode')
+            self.logger.info('Running in grid mode')
 
             # Load the first spectrum to get wavelength grid. Here we use constants
             # because this particular model must exist in every grid.
@@ -61,15 +61,15 @@ class ImportBosz(Import):
             fn = os.path.join(self.path, fn)
             spec = reader.read(fn)
         else:
-            logging.info('Running in file list mode')
+            self.logger.info('Running in file list mode')
             files = glob.glob(os.path.expandvars(self.path))
             files.sort()
-            logging.info('Found {} files.'.format(len(files)))
+            self.logger.info('Found {} files.'.format(len(files)))
 
             # Load the first spectrum to get wavelength grid
             spec = reader.read(files[0])
 
-        logging.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
+        self.logger.info('Found spectrum with {} wavelength elements.'.format(spec.wave.shape))
 
         # Initialize the wavelength grid based on the first spectrum read
         if not self.resume:

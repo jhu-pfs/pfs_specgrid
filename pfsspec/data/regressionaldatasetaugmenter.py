@@ -7,12 +7,13 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         super(RegressionalDatasetAugmenter, self).__init__(orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=1, shuffle=True, chunk_size=None, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, partitions=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
         input_shape = dataset.shape
         output_shape = (len(labels),)
         d = super(RegressionalDatasetAugmenter, cls).from_dataset(input_shape, output_shape,
                                                                   dataset, labels, coeffs,
                                                                   weight=weight,
+                                                                  partitions=partitions,
                                                                   batch_size=batch_size,
                                                                   shuffle=shuffle,
                                                                   chunk_size=chunk_size,
@@ -44,9 +45,6 @@ class RegressionalDatasetAugmenter(DatasetAugmenter):
         output = np.array(self.dataset.get_params(self.labels, idx, self.chunk_size, chunk_id))
 
         return input, output, weight
-
-    def get_output_mean(self):
-        return np.mean(np.array(self.dataset.params[self.labels]), axis=0) / self.coeffs
 
     def get_output_labels(self, model):
         if model.mc_count is None:

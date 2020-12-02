@@ -6,6 +6,7 @@ import logging
 import argparse
 import numpy as np
 import multiprocessing
+from multiprocessing import set_start_method
 import socket
 from collections.abc import Iterable
 
@@ -13,13 +14,17 @@ import pfsspec.util as util
 from pfsspec.notebookrunner import NotebookRunner
 
 class Script():
-    def __init__(self, logging=True):
+    def __init__(self, logging_enabled=True):
+
+        # Spawning worker processes is slower but might help with deadlocks
+        # multiprocessing.set_start_method("spawn")
+
         self.parser = None
         self.args = None
         self.debug = False
         self.random_seed = None
-        self.logging = logging
         self.log_level = None
+        self.logging_enabled = logging_enabled
         self.logging_console_handler = None
         self.logging_file_handler = None
         self.dir_history = []
@@ -204,17 +209,17 @@ class Script():
             return json.load(f)
 
     def create_output_dir(self, dir, resume=False):
-        logging.info('Output directory is {}'.format(dir))
+        self.logger.info('Output directory is {}'.format(dir))
         if resume:
             if os.path.exists(dir):
-                logging.info('Found output directory.')
+                self.logger.info('Found output directory.')
             else:
                 raise Exception("Output directory doesn't exist, can't continue.")
         elif os.path.exists(dir):
             if len(os.listdir(dir)) != 0:
                 raise Exception('Output directory is not empty.')
         else:
-            logging.info('Creating output directory {}'.format(dir))
+            self.logger.info('Creating output directory {}'.format(dir))
             os.makedirs(dir)
 
     def pushd(self, dir):
@@ -226,7 +231,9 @@ class Script():
         del self.dir_history[-1]
 
     def get_logging_level(self):
-        if self.debug:
+        if not self.logging_enabled:
+            return logging.FATAL
+        elif self.debug:
             return logging.DEBUG
         elif self.log_level is not None:
             return getattr(logging, self.log_level)
@@ -234,8 +241,11 @@ class Script():
             return logging.INFO
 
     def setup_logging(self, logfile=None):
-        root = logging.getLogger()
-        root.setLevel(self.get_logging_level())
+        if self.logging_enabled:
+            multiprocessing.log_to_stderr(self.get_logging_level())
+
+        self.logger = logging.getLogger()
+        self.logger.setLevel(self.get_logging_level())
 
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -243,15 +253,15 @@ class Script():
             self.logging_file_handler = logging.FileHandler(logfile)
             self.logging_file_handler.setLevel(self.get_logging_level())
             self.logging_file_handler.setFormatter(formatter)
-            root.addHandler(self.logging_file_handler)
+            self.logger.addHandler(self.logging_file_handler)
 
         if self.logging_console_handler is None:
             self.logging_console_handler = logging.StreamHandler(sys.stdout)
             self.logging_console_handler.setLevel(self.get_logging_level())
             self.logging_console_handler.setFormatter(formatter)
-            root.addHandler(self.logging_console_handler)
+            self.logger.addHandler(self.logging_console_handler)
 
-        logging.info('Running script on {}'.format(socket.gethostname()))
+        self.logger.info('Running script on {}'.format(socket.gethostname()))
 
     def suspend_logging(self):
         if self.logging_console_handler is not None:
@@ -270,11 +280,10 @@ class Script():
             f.write(' '.join(sys.argv))
     
     def init_logging(self, outdir):
-        if self.logging:
-            self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))
-            self.save_command_line(os.path.join(outdir, 'command.sh'))
-            self.dump_env(os.path.join(outdir, 'env.sh'))
-            self.dump_args_json(os.path.join(outdir, 'args.json'))
+        self.setup_logging(os.path.join(outdir, type(self).__name__.lower() + '.log'))
+        self.save_command_line(os.path.join(outdir, 'command.sh'))
+        self.dump_env(os.path.join(outdir, 'env.sh'))
+        self.dump_args_json(os.path.join(outdir, 'args.json'))
 
     def execute(self):
         self.prepare()
@@ -284,7 +293,7 @@ class Script():
     def prepare(self):
         self.create_parser()
         self.parse_args()
-        if self.logging:
+        if self.logging_enabled:
             self.setup_logging()
         if self.debug:
             np.seterr(all='raise')
@@ -304,7 +313,7 @@ class Script():
         # Note that jupyter kernels in the current env might be different from the ones
         # in the jupyterhub environment
 
-        logging.info('Executing notebook {}'.format(notebook_name))
+        self.logger.info('Executing notebook {}'.format(notebook_name))
 
         if outdir is None:
             outdir = self.args['out']
