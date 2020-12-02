@@ -73,20 +73,24 @@ while (( "$#" )); do
     esac
 done
 
+if [[ $PYTHON_DEBUG == "1" ]]; then
+    #DEBUGGER="-m ptvsd --host localhost --port 5678 --wait"
+    DEBUGGER="-m debugpy --listen 0.0.0.0:5678 --wait-for-client"
+    PARAMS="$PARAMS --debug"
+else
+    DEBUGGER=""
+fi
+
 set -o noglob
 if [[ $RUNMODE == "run" ]]; then
-    if [[ $PYTHON_DEBUG == "1" ]]; then
-        exec python -m ptvsd --host localhost --port 5678 --wait $COMMAND $PARAMS --debug
-    else
-        exec python $COMMAND $PARAMS
-    fi
+    exec python $DEBUGGER $COMMAND $PARAMS
 elif [[ $RUNMODE == "srun" ]]; then
     exec srun --partition $SBATCH_PARTITION \
               --gres gpu:$SBATCH_GPUS \
               --cpus-per-task $SBATCH_CPUS_PER_TASK \
               --mem $SBATCH_MEM \
               --time $SBATCH_TIME \
-              python $COMMAND $PARAMS
+              python $DEBUGGER $COMMAND $PARAMS
 elif [[ $RUNMODE == "sbatch" ]]; then
     sbatch <<EOF
 #!/bin/bash
