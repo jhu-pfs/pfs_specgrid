@@ -3,7 +3,7 @@
         "./configs/prepare/bosz/nowave/common.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/dataset/pfs_stellar_model/bosz/nowave/test_Fe_H",
+    "out": "${PFSSPEC_DATA}/train/pfs_stellar_model/dataset/bosz/nowave/test_Fe_H",
     "sample_mode": "random",
     "sample_dist": "uniform",
     "sample_count": 20000,
@@ -25,5 +25,6 @@
     "ext": [
         -3.2,
         0.2
-    ]
+    ],
+    "redden": false
 }

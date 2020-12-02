@@ -1,7 +1,7 @@
 {
     "method": "reg",
     "type": "dense",
-    "generator": "bosz",
+    "augmenter": "bosz",
     "labels": ["Fe_H"],
     "noise": 1.0,
     "mask_value": [ 0, 1 ],

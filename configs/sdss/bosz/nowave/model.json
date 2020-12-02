@@ -1,7 +1,7 @@
 {
     "method": "reg",
     "type": "dense",
-    "generator": "bosz",
+    "augmenter": "bosz",
     "weight": "snr",
     "normalize_input": false,
     "normalize_output": true,

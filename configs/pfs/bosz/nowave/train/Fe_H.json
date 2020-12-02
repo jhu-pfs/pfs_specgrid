@@ -1,7 +1,7 @@
 {
     "method": "reg",
     "type": "dense",
-    "generator": "bosz",
+    "augmenter": "bosz",
     "labels": ["Fe_H"],
     "noise": 1.0,
     "mask_lowsnr": 0.1,
@@ -25,9 +25,9 @@
     "reg_kernel": [0, 1e-6],
     "reg_bias": [0, 1e-6],
     "in": [
-        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_r_100k/train",
-        "${PFSSPEC_DATA}/train/dataset/stellar/bosz/nowave_r_100k/valid"
+        "${PFSSPEC_DATA}/train/pfs_stellar_model/dataset/bosz/nowave_r/train_1M",
+        "${PFSSPEC_DATA}/train/pfs_stellar_model/dataset/bosz/nowave_r/valid_100k"
     ],
-    "out": "${PFSSPEC_DATA}/train/run/stellar/bosz",
+    "out": "${PFSSPEC_DATA}/train/run",
     "checkpoint_period": 100
 }
