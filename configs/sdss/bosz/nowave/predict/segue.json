@@ -1,0 +1,18 @@
+{
+    "config": [
+        "./configs/sdss/bosz/nowave/model.json"
+    ],
+    "model": "${PFSSPEC_DATA}/train/sdss_stellar_model/run/",
+    "in": [
+        "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/segue/nowave/test"
+    ],
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/predict/segue",
+
+    "lowsnr": 5,
+    "lowsnr_value": [0.0, 1.0],
+    "extreme": [-10, 10],
+    "extreme_value": [0.0, 1.0],
+
+    "mask_random": [8, 10.0, 5.0],
+    "mask_value": [0.0, 1.0]
+}

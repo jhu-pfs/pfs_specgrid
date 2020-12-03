@@ -8,7 +8,7 @@
     "pipeline": "basic",
 
     "in": "${PFSSPEC_DATA}/import/stellar/survey/sdss_nice_4",
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/sdss/nowave/test",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/segue/nowave/test",
     "sample_mode": "survey",
 
     "redden": false,
