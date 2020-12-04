@@ -7,10 +7,10 @@ class Physics():
 
     @staticmethod
     def planck(wave, T):
-        a = 2.0 * Physics.h * Physics.c**2
-        b = Physics.h * Physics.c / (wave * Physics.k_B * T)
-        intensity = a / (wave**5 * (np.exp(b) - 1.0))
-        return intensity        # J/m2/m
+        a = 2.0 * Physics.h * Physics.c**2                      # J m+2 s-1
+        b = Physics.h * Physics.c / (wave * Physics.k_B * T)    # 1
+        intensity = a / (wave**5 * (np.exp(b) - 1.0))           # J m-2 m-1 s-1
+        return intensity
 
     @staticmethod
     def angstrom_to_nm(wave):
