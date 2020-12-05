@@ -35,19 +35,17 @@ class TestBoszSpectrumReader(TestBase):
         self.assertEqual(3500, p['T_eff'])
         self.assertEqual(2.5, p['log_g'])
 
-    def test_enum_parameters(self):
-        print('Executing test_enum_parameters')
-
+    def test_enum_axes(self):
         grid = BoszGrid()
         r = BoszSpectrumReader(grid)
 
-        g = BoszSpectrumReader.EnumParamsGenerator(grid)
+        g = BoszSpectrumReader.EnumAxesGenerator(grid)
         k = 0
         for i in g:
             k += 1
 
         s = 1
-        for p in grid.params:
-            s *= grid.params[p].values.shape[0]
+        for p in grid.axes:
+            s *= grid.axes[p].values.shape[0]
 
         self.assertEqual(s, k)

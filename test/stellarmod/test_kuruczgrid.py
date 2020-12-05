@@ -17,7 +17,7 @@ class TestKuruczGrid(TestBase):
         grid.preload_arrays = True
         reader = KuruczGridReader(grid, path)
         reader.read_grid()
-        self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
+        self.assertEqual((2, 61, 11, 1221), grid.values['flux'].shape)
 
         grid.save(file, format=format)
 
@@ -25,7 +25,7 @@ class TestKuruczGrid(TestBase):
         grid.preload_arrays = True
         grid.load(file, format=format)
         self.assertEqual((1221, ), grid.wave.shape)
-        self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
+        self.assertEqual((2, 61, 11, 1221), grid.values['flux'].shape)
         #self.assertIsNone(grid.cont)
 
     def test_save_numpy(self):
@@ -44,7 +44,7 @@ class TestKuruczGrid(TestBase):
             grid.preload_arrays = True
             reader = KuruczGridReader(grid, path)
             reader.read_grid()
-            self.assertEqual((18, 61, 11, 1221), grid.data['flux'].shape)
+            self.assertEqual((18, 61, 11, 1221), grid.values['flux'].shape)
 
             grid.save(file, 'h5')
 

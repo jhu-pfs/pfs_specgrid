@@ -50,4 +50,4 @@ class BoszGridReader(ModelGridReader):
             if self.grid.wave is None:
                 self.grid.wave = spec.wave
 
-            self.grid.set_flux_idx(index, spec.flux, spec.cont)
+            self.grid.set_flux_at(index, spec.flux, spec.cont)

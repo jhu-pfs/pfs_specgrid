@@ -17,11 +17,11 @@ class TestBoszGridReader(TestBase):
         grid = BoszGrid()
         grid.preload_arrays = True
         grid.wave = spec.wave
-        grid.init_data()
-        grid.build_params_index()
+        grid.init_values()
+        grid.build_axis_indexes()
         
         BoszGridReader(grid, reader, max=10, parallel=False).read_grid()
-        self.assertEqual((14, 67, 11, 6, 4, 10986), grid.data['flux'].shape)
+        self.assertEqual((14, 67, 11, 6, 4, 10986), grid.values['flux'].shape)
 
     def test_get_filename(self):
         self.skipTest()

@@ -43,8 +43,8 @@ class ImportBoszAtm(Import):
             files = glob.glob(os.path.expandvars(self.args['path']))
             self.logger.info('Found {} files.'.format(len(files)))
 
-        grid.init_data()
-        grid.build_params_index()
+        grid.init_values()
+        grid.build_axis_indexes()
         grid.save(os.path.join(self.args['out'], 'atm.h5'), 'h5')
 
         if os.path.isdir(self.args['path']):

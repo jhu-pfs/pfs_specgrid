@@ -13,16 +13,16 @@ class ModelGrid(Grid):
         self.slice = None
 
     def add_args(self, parser):
-        for k in self.params:
+        for k in self.axes:
             parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit on ' + k)
 
     def init_from_args(self, args):
         # If a limit is specified on any of the parameters on the command-line,
         # try to slice the grid while loading from HDF5
         s = []
-        for k in self.params:
+        for k in self.axes:
             if args[k] is not None:
-                idx = np.digitize([args[k][0], args[k][1]], self.params[k].values)
+                idx = np.digitize([args[k][0], args[k][1]], self.axes[k].values)
                 s.append(slice(idx[0], idx[1] + 1, None))
             else:
                 s.append(slice(None))
@@ -31,32 +31,32 @@ class ModelGrid(Grid):
 
         # Override physical parameters grid ranges, if specified
         # TODO: extend this to sample physically meaningful models only
-        for k in self.params:
+        for k in self.axes:
             if args[k] is not None and len(args[k]) >= 2:
-                self.params[k].min = args[k][0]
-                self.params[k].max = args[k][1]
+                self.axes[k].min = args[k][0]
+                self.axes[k].max = args[k][1]
 
     def get_model_count(self, use_limits=False):
-        return self.get_valid_data_item_count('flux', use_limits=use_limits)
+        return self.get_valid_value_count('flux', use_limits=use_limits)
 
     def get_flux_shape(self):
         return self.get_shape() + self.wave.shape
 
-    def init_params(self):
-        self.init_param('Fe_H')
-        self.init_param('T_eff')
-        self.init_param('log_g')
+    def init_axes(self):
+        self.init_axis('Fe_H')
+        self.init_axis('T_eff')
+        self.init_axis('log_g')
 
-    def init_data(self):
-        self.init_data_item('flux')
-        self.init_data_item('cont')
+    def init_values(self):
+        self.init_value('flux')
+        self.init_value('cont')
 
-    def allocate_data(self):
-        self.allocate_data_item('flux', self.wave.shape)
-        self.allocate_data_item('cont', self.wave.shape)
+    def allocate_values(self):
+        self.allocate_value('flux', self.wave.shape)
+        self.allocate_value('cont', self.wave.shape)
 
-    def is_data_valid(self, name, data):
-        return np.logical_not(np.any(np.isnan(data), axis=-1)) & ((data.max(axis=-1) != 0) | (data.min(axis=-1) != 0))
+    def is_value_valid(self, name, value):
+        return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))
 
     def save_items(self):
         self.save_item('wave', self.wave)
@@ -68,7 +68,7 @@ class ModelGrid(Grid):
 
     def load_items(self, s=None):
         self.wave = self.load_item('wave', np.ndarray)
-        self.init_data()
+        self.init_values()
         super(ModelGrid, self).load_items(s=s)
 
     def get_chunks(self, name, shape, s=None):
@@ -79,10 +79,10 @@ class ModelGrid(Grid):
         #   in memory along the entire interpolation axis
 
         # The shape of the spectrum grid is (param1, param2, wave)
-        if name in self.data:
+        if name in self.values:
             newshape = []
             # Keep neighboring 3 models together in every direction
-            for i, k in enumerate(self.params.keys()):
+            for i, k in enumerate(self.axes.keys()):
                 if k in ['log_g', 'Fe_H', 'T_eff']:
                     newshape.append(min(shape[i], 3))
                 else:
@@ -101,14 +101,14 @@ class ModelGrid(Grid):
 
         Parameters must exactly match grid coordinates.
         """
-        self.set_data_item('flux', flux, **kwargs)
+        self.set_value('flux', flux, **kwargs)
         if cont is not None:
-            self.set_data_item('cont', cont, **kwargs)
+            self.set_value('cont', cont, **kwargs)
 
-    def set_flux_idx(self, index, flux, cont=None):
-        self.set_data_item_idx('flux', index, flux)
+    def set_flux_at(self, index, flux, cont=None):
+        self.set_value_at('flux', index, flux)
         if cont is not None:
-            self.set_data_item_idx('cont', index, cont)
+            self.set_value_at('cont', index, cont)
 
     def create_spectrum(self):
         raise NotImplementedError()
@@ -120,11 +120,11 @@ class ModelGrid(Grid):
         return spec
 
     def get_model(self, idx):
-        if self.is_data_item_idx('flux', idx):
+        if self.has_value_at('flux', idx):
             spec = self.get_parameterized_spectrum(idx)
-            spec.flux = np.array(self.get_data_item_idx('flux', idx), copy=True)
-            if self.is_data_item('cont'):
-                spec.cont = np.array(self.get_data_item_idx('cont', idx), copy=True)
+            spec.flux = np.array(self.get_value_at('flux', idx), copy=True)
+            if self.has_value('cont'):
+                spec.cont = np.array(self.get_value_at('cont', idx), copy=True)
 
             return spec
         else:
@@ -139,7 +139,7 @@ class ModelGrid(Grid):
         return spec
 
     def interpolate_model_linear(self, **kwargs):
-        r = self.interpolate_data_item_linear('flux', **kwargs)
+        r = self.interpolate_value_linear('flux', **kwargs)
         if r is None:
             return None
         flux, kwargs = r
@@ -147,14 +147,14 @@ class ModelGrid(Grid):
         if flux is not None:
             spec = self.get_parameterized_spectrum(**kwargs)
             spec.flux = flux
-            if self.is_data_item('cont'):
-                spec.cont = self.interpolate_data_item_linear('cont', **kwargs)
+            if self.has_value('cont'):
+                spec.cont = self.interpolate_value_linear('cont', **kwargs)
             return spec
         else:
             return None
 
     def interpolate_model_spline(self, free_param, **kwargs):
-        r = self.interpolate_data_item_spline('flux', free_param, **kwargs)
+        r = self.interpolate_value_spline('flux', free_param, **kwargs)
         if r is None:
             return None
         flux, bestargs = r
@@ -163,8 +163,8 @@ class ModelGrid(Grid):
             spec = self.get_parameterized_spectrum(**bestargs)
             spec.interp_param = free_param
             spec.flux = flux
-            if self.is_data_item('cont'):
-                spec.cont, _ = self.interpolate_data_item_spline('cont', free_param, **kwargs)
+            if self.has_value('cont'):
+                spec.cont, _ = self.interpolate_value_spline('cont', free_param, **kwargs)
             return spec
         else:
             return None

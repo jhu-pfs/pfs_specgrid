@@ -4,19 +4,19 @@ import numpy as np
 import h5py
 
 from pfsspec.data.grid import Grid
-from pfsspec.data.gridparam import GridParam
+from pfsspec.data.gridaxis import GridAxis
 
 class TestGrid(TestBase):
     def create_empty_grid(self, preload_arrays=True):
         grid = Grid()
         grid.preload_arrays = preload_arrays
 
-        grid.init_param('a', np.array([1., 2., 3., 4., 5.]))
-        grid.init_param('b', np.array([10., 20., 30.]))
-        grid.init_data_item('U', (10,))
-        grid.init_data_item('V', (100,))
+        grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))
+        grid.init_axis('b', np.array([10., 20., 30.]))
+        grid.init_value('U', (10,))
+        grid.init_value('V', (100,))
 
-        grid.build_params_index()
+        grid.build_axis_indexes()
 
         return grid
 
@@ -24,26 +24,26 @@ class TestGrid(TestBase):
         grid = Grid()
         grid.preload_arrays = preload_arrays
 
-        grid.init_param('a', np.array([1., 2., 3., 4., 5.]))
-        grid.init_param('b', np.array([10., 20., 30.]))
-        grid.init_data_item('U', (10,))
-        grid.init_data_item('V', (100,))
+        grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))
+        grid.init_axis('b', np.array([10., 20., 30.]))
+        grid.init_value('U', (10,))
+        grid.init_value('V', (100,))
 
-        grid.data['U'] = np.random.rand(*grid.data['U'].shape)
-        grid.data['V'] = np.random.rand(*grid.data['V'].shape)
+        grid.values['U'] = np.random.rand(*grid.values['U'].shape)
+        grid.values['V'] = np.random.rand(*grid.values['V'].shape)
 
-        grid.build_params_index()
-        grid.build_data_index(rebuild=True)
+        grid.build_axis_indexes()
+        grid.build_value_indexes(rebuild=True)
 
         return grid
 
     def create_jagged_grid(self, preload_arrays=True):
         grid = self.create_full_grid()
 
-        grid.data['U'][2:,2:,:] = np.nan
-        grid.data['V'][2:,2:,:] = np.nan
+        grid.values['U'][2:,2:,:] = np.nan
+        grid.values['V'][2:,2:,:] = np.nan
 
-        grid.build_data_index(rebuild=True)
+        grid.build_value_indexes(rebuild=True)
 
         return grid
 
@@ -51,34 +51,34 @@ class TestGrid(TestBase):
         grid = Grid()
         grid.preload_arrays = preload_arrays
 
-        grid.init_param('a', np.array([1., 2., 3., 4., 5.]))
-        grid.init_data_item('U', (10,))
-        grid.init_data_item('V', (100,))
+        grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))
+        grid.init_value('U', (10,))
+        grid.init_value('V', (100,))
 
-        grid.data['U'] = np.random.rand(*grid.data['U'].shape)
-        grid.data['V'] = np.random.rand(*grid.data['V'].shape)
+        grid.values['U'] = np.random.rand(*grid.values['U'].shape)
+        grid.values['V'] = np.random.rand(*grid.values['V'].shape)
 
-        grid.build_params_index()
-        grid.build_data_index(rebuild=True)
+        grid.build_axis_indexes()
+        grid.build_value_indexes(rebuild=True)
 
         return grid
 
-    def test_get_valid_data_item_count(self):
+    def test_get_valid_value_count(self):
         #    1 2 3 4 5
         # 10 * * * * *
         # 20 * * * * *
         # 30 * * * * *
         grid = self.create_full_grid()
-        count = grid.get_valid_data_item_count('U', use_limits=False)
+        count = grid.get_valid_value_count('U', use_limits=False)
         self.assertEqual(15, count)
 
         #    1 2 3 4 5
         # 10 o o o o o
         # 20 * * * * *
         # 30 * * * * *
-        grid.params['b'].min = 20
-        grid.params['b'].max = 30
-        count = grid.get_valid_data_item_count('U', use_limits=True)
+        grid.axes['b'].min = 20
+        grid.axes['b'].max = 30
+        count = grid.get_valid_value_count('U', use_limits=True)
         self.assertEqual(10, count)
 
         #    1 2 3 4 5
@@ -86,16 +86,16 @@ class TestGrid(TestBase):
         # 20 * * * * *
         # 30 * * o o o
         grid = self.create_jagged_grid()
-        count = grid.get_valid_data_item_count('U', use_limits=False)
+        count = grid.get_valid_value_count('U', use_limits=False)
         self.assertEqual(12, count)
 
         #    1 2 3 4 5
         # 10 o o o o o
         # 20 * * * * *
         # 30 * * o o o
-        grid.params['b'].min = 20
-        grid.params['b'].max = 30
-        count = grid.get_valid_data_item_count('U', use_limits=True)
+        grid.axes['b'].min = 20
+        grid.axes['b'].max = 30
+        count = grid.get_valid_value_count('U', use_limits=True)
         self.assertEqual(7, count)
 
     def test_get_index(self):
@@ -121,93 +121,93 @@ class TestGrid(TestBase):
         idx = grid.get_nearby_indexes(a=5.6, b=14)
         self.assertEqual(None, idx)
 
-    def test_is_data_item_idx(self):
+    def test_has_value_at(self):
         grid = self.create_full_grid()
 
-        self.assertTrue(grid.is_data_item_idx('U', (0, 0)))
-        self.assertTrue(grid.is_data_item_idx('U', (0, 1)))
+        self.assertTrue(grid.has_value_at('U', (0, 0)))
+        self.assertTrue(grid.has_value_at('U', (0, 1)))
 
-        grid.data['U'][0, 0, 7] = np.nan
-        grid.build_data_item_index('U', rebuild=True)
+        grid.values['U'][0, 0, 7] = np.nan
+        grid.build_value_index('U', rebuild=True)
 
-        self.assertFalse(grid.is_data_item_idx('U', (0, 0)))
-        self.assertTrue(grid.is_data_item_idx('U', (0, 1)))
+        self.assertFalse(grid.has_value_at('U', (0, 0)))
+        self.assertTrue(grid.has_value_at('U', (0, 1)))
 
-    def test_set_data(self):
+    def test_set_values(self):
         grid = self.create_empty_grid()
 
-        self.assertFalse(grid.is_data_item_idx('U', (1, 1)))
+        self.assertFalse(grid.has_value_at('U', (1, 1)))
 
-        grid.set_data({'U': np.random.rand(10)}, a=2, b=20)
+        grid.set_values({'U': np.random.rand(10)}, a=2, b=20)
 
-        self.assertTrue(grid.is_data_item_idx('U', (1, 1)))
+        self.assertTrue(grid.has_value_at('U', (1, 1)))
 
-    def test_get_data(self):
+    def test_get_value(self):
         grid = self.create_full_grid()
 
-        data = grid.get_data(a=1, b=20)
-        self.assertEquals(2, len(data))
-        self.assertEquals((10,), data['U'].shape)
-        self.assertEquals((100,), data['V'].shape)
+        values = grid.get_values(a=1, b=20)
+        self.assertEquals(2, len(values))
+        self.assertEquals((10,), values['U'].shape)
+        self.assertEquals((100,), values['V'].shape)
 
-    def test_get_nearest_data(self):
+    def test_get_nearest_values(self):
         grid = self.create_full_grid()
-        data = grid.get_nearest_data(a=1.1, b=27)
-        self.assertEquals(2, len(data))
-        self.assertEquals((10,), data['U'].shape)
-        self.assertEquals((100,), data['V'].shape)
+        values = grid.get_nearest_values(a=1.1, b=27)
+        self.assertEquals(2, len(values))
+        self.assertEquals((10,), values['U'].shape)
+        self.assertEquals((100,), values['V'].shape)
 
-    def test_get_data_idx(self):
+    def test_get_values_at(self):
         grid = self.create_full_grid()
-        data = grid.get_data_idx((1, 1))
-        self.assertEquals(2, len(data))
-        self.assertEquals((10,), data['U'].shape)
-        self.assertEquals((100,), data['V'].shape)
+        values = grid.get_values_at((1, 1))
+        self.assertEquals(2, len(values))
+        self.assertEquals((10,), values['U'].shape)
+        self.assertEquals((100,), values['V'].shape)
 
-    def test_get_data_item_whole(self):
+    def test_get_value_whole(self):
         grid = self.create_full_grid()
-        data = grid.get_data_item('U', a=1, b=20)
-        self.assertEquals((10,), data.shape)
+        value = grid.get_value('U', a=1, b=20)
+        self.assertEquals((10,), value.shape)
 
-    def test_get_data_item_slice(self):
+    def test_get_value_slice(self):
         grid = self.create_full_grid()
-        data = grid.get_data_item('U', slice(2, 5), a=1, b=20)
-        self.assertEquals((3,), data.shape)
+        value = grid.get_value('U', slice(2, 5), a=1, b=20)
+        self.assertEquals((3,), value.shape)
 
-    def test_get_nearest_data_item(self):
-        grid = self.create_full_grid()
-
-        data = grid.get_nearest_data_item('U', a=1.1, b=27)
-        self.assertEquals((10,), data.shape)
-
-        data = grid.get_nearest_data_item('U', slice(2, 5), a=1.1, b=27)
-        self.assertEquals((3,), data.shape)
-
-    def test_get_data_item_idx(self):
+    def test_get_nearest_value(self):
         grid = self.create_full_grid()
 
-        data = grid.get_data_item_idx('U', (1, 1))
-        self.assertEquals((10,), data.shape)
+        value = grid.get_nearest_value('U', a=1.1, b=27)
+        self.assertEquals((10,), value.shape)
 
-        data = grid.get_data_item_idx('U', ([1,1], [2,2]))
-        self.assertEquals((2, 10,), data.shape)
+        value = grid.get_nearest_value('U', slice(2, 5), a=1.1, b=27)
+        self.assertEquals((3,), value.shape)
 
-    def test_interpolate_data_item_linear_1D(self):
+    def test_get_value_at(self):
+        grid = self.create_full_grid()
+
+        value = grid.get_value_at('U', (1, 1))
+        self.assertEquals((10,), value.shape)
+
+        value = grid.get_value_at('U', ([1,1], [2,2]))
+        self.assertEquals((2, 10,), value.shape)
+
+    def test_interpolate_value_linear1d(self):
         grid = self.create_full_grid_1D()
-        data = grid.interpolate_data_item_linear('U', a=2.7)
-        self.assertIsNotNone(data)
-        data = grid.interpolate_data_item_linear('U', a=2.0)
-        self.assertIsNotNone(data)
+        value = grid.interpolate_value_linear1d('U', a=2.7)
+        self.assertIsNotNone(value)
+        value = grid.interpolate_value_linear1d('U', a=2.0)
+        self.assertIsNotNone(value)
 
-    def test_interpolate_data_item_linear_nD(self):
+    def test_interpolate_value_linearNd(self):
         grid = self.create_full_grid()
-        data = grid.interpolate_data_item_linear('U', a=2.7, b=18)
-        self.assertIsNotNone(data)
+        value = grid.interpolate_value_linearNd('U', a=2.7, b=18)
+        self.assertIsNotNone(value)
 
-    def test_interpolate_data_item_spline(self):
+    def test_interpolate_value_spline(self):
         grid = self.create_full_grid()
-        data, params = grid.interpolate_data_item_spline('U', 'a', a=2.7, b=18)
-        self.assertIsNotNone(data)
+        value, params = grid.interpolate_value_spline('U', 'a', a=2.7, b=18)
+        self.assertIsNotNone(value)
         self.assertEquals({'a': 2.7, 'b': 20.0}, params)
 
     def test_save(self):
@@ -217,16 +217,16 @@ class TestGrid(TestBase):
     def test_save_lazy_whole(self):
         grid = self.create_empty_grid(preload_arrays=False)
         grid.save(os.path.join(self.PFSSPEC_TEST_PATH, self.get_filename('.h5')), format='h5')
-        grid.set_data_item('U', np.random.rand(*grid.data_shape['U']), a=3, b=20)
-        grid.set_data_item('V', np.random.rand(*grid.data_shape['V']), a=3, b=20)
+        grid.set_value('U', np.random.rand(*grid.value_shapes['U']), a=3, b=20)
+        grid.set_value('V', np.random.rand(*grid.value_shapes['V']), a=3, b=20)
 
     def test_save_lazy_slice(self):
         grid = self.create_empty_grid(preload_arrays=False)
         grid.save(os.path.join(self.PFSSPEC_TEST_PATH, self.get_filename('.h5')), format='h5')
-        grid.set_data_item('U', np.random.rand(*grid.data_shape['U']), s=slice(None), a=3, b=20)
-        grid.set_data_item('V', np.random.rand(*grid.data_shape['V']), s=slice(None), a=3, b=20)
-        grid.set_data_item('U', np.random.rand(3), s=slice(4, 7), a=3, b=20)
-        grid.set_data_item('V', np.random.rand(2), s=slice(0, 2), a=3, b=20)
+        grid.set_value('U', np.random.rand(*grid.value_shapes['U']), s=slice(None), a=3, b=20)
+        grid.set_value('V', np.random.rand(*grid.value_shapes['V']), s=slice(None), a=3, b=20)
+        grid.set_value('U', np.random.rand(3), s=slice(4, 7), a=3, b=20)
+        grid.set_value('V', np.random.rand(2), s=slice(0, 2), a=3, b=20)
 
     def test_load(self):
         grid = self.create_full_grid()
@@ -242,14 +242,14 @@ class TestGrid(TestBase):
         grid = self.create_empty_grid(preload_arrays=False)
         grid.load(os.path.join(self.PFSSPEC_TEST_PATH, self.get_filename('.h5')), format='h5')
 
-        self.assertIsNone(grid.data['U'])
-        self.assertIsNone(grid.data['V'])
+        self.assertIsNone(grid.values['U'])
+        self.assertIsNone(grid.values['V'])
 
-        data = grid.get_data_item('U', a=2, b=20)
-        self.assertEquals((10,), data.shape)
+        value = grid.get_value('U', a=2, b=20)
+        self.assertEquals((10,), value.shape)
 
-        data = grid.get_data_item('U', slice(2, 5), a=2, b=20)
-        self.assertEquals((3,), data.shape)
+        value = grid.get_value('U', slice(2, 5), a=2, b=20)
+        self.assertEquals((3,), value.shape)
 
     def test_load_lazy_slice(self):
         grid = self.create_full_grid()
@@ -258,10 +258,10 @@ class TestGrid(TestBase):
         grid = self.create_empty_grid(preload_arrays=False)
         grid.load(os.path.join(self.PFSSPEC_TEST_PATH, self.get_filename('.h5')), format='h5')
 
-        self.assertIsNone(grid.data['U'])
-        self.assertIsNone(grid.data['V'])
+        self.assertIsNone(grid.values['U'])
+        self.assertIsNone(grid.values['V'])
 
-        data = grid.get_data_item('U', s=slice(None), a=2, b=20)
-        self.assertEquals((10,), data.shape)
-        data = grid.get_data_item('U', s=slice(2, 5), a=2, b=20)
-        self.assertEquals((3,), data.shape)
+        value = grid.get_value('U', s=slice(None), a=2, b=20)
+        self.assertEquals((10,), value.shape)
+        value = grid.get_value('U', s=slice(2, 5), a=2, b=20)
+        self.assertEquals((3,), value.shape)

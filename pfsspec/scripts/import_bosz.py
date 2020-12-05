@@ -74,8 +74,8 @@ class ImportBosz(Import):
         # Initialize the wavelength grid based on the first spectrum read
         if not self.resume:
             grid.wave = spec.wave
-            grid.allocate_data()
-            grid.build_params_index()
+            grid.allocate_values()
+            grid.build_axis_indexes()
             grid.save(filename, format='h5')
 
         if os.path.isdir(self.path):

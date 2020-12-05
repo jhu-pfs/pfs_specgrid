@@ -5,13 +5,13 @@ from pfsspec.parallel import SmartParallel
 from pfsspec.pfsobject import PfsObject
 
 class GridReader(PfsObject):
-    class EnumParamsGenerator():
+    class EnumAxesGenerator():
         def __init__(self, grid=None, max=None, resume=False):
             self.grid = grid
-            self.limits = [grid.params[p].values.shape[0] for p in grid.params]
+            self.limits = [grid.axes[p].values.shape[0] for p in grid.axes]
             self.i = 0
             self.max = max
-            self.current = [0 for p in grid.params]
+            self.current = [0 for p in grid.axes]
             self.stop = False
             self.resume = resume
 
@@ -23,8 +23,8 @@ class GridReader(PfsObject):
                 return self.max
             else:
                 s = 1
-                for p in self.grid.params:
-                    s *= self.grid.params[p].values.shape[0]
+                for p in self.grid.axes:
+                    s *= self.grid.axes[p].values.shape[0]
                 return s
 
         def __next__(self):
@@ -34,7 +34,7 @@ class GridReader(PfsObject):
                 # If in continue mode, we need to skip item that are already in the grid
                 while True:
                     ci = self.current.copy()
-                    cr = {p: self.grid.params[p].values[self.current[i]] for i, p in enumerate(self.grid.params)}
+                    cr = {p: self.grid.axes[p].values[self.current[i]] for i, p in enumerate(self.grid.axes)}
 
                     k = len(self.limits) - 1
                     while k >= 0:
@@ -54,8 +54,8 @@ class GridReader(PfsObject):
                     if self.resume:
                         # Test if item is already in the grid
                         mask = None
-                        for name in self.grid.data_index:
-                            m = self.grid.is_data_item_idx(name, ci)
+                        for name in self.grid.value_indexes:
+                            m = self.grid.has_value_at(name, ci)
                             if mask is None:
                                 mask = m
                             else:
@@ -80,15 +80,15 @@ class GridReader(PfsObject):
 
     def read_grid(self, resume=False):
         if not resume:
-            self.grid.init_data()
-            self.grid.allocate_data()
+            self.grid.init_values()
+            self.grid.allocate_values()
 
         # Iterate over the grid points and call a function for each
         self.logger.info("Reading grid {}.".format(type(self.grid).__name__))
         if self.max is not None:
             self.logger.info("Reading grid will stop after {} items.".format(self.max))
 
-        g = GridReader.EnumParamsGenerator(self.grid, max=self.max, resume=resume)
+        g = GridReader.EnumAxesGenerator(self.grid, max=self.max, resume=resume)
         with SmartParallel(verbose=True, parallel=self.parallel, threads=self.threads) as p:
             for res in p.map(self.process_item, g):
                 self.store_item(res)

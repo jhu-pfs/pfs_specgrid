@@ -12,7 +12,7 @@ class TestKuruczGridReader(TestBase):
         grid.preload_arrays = True
         reader = KuruczGridReader(grid, path)
         reader.read_grid()
-        self.assertEqual((2, 61, 11, 1221), grid.data['flux'].shape)
+        self.assertEqual((2, 61, 11, 1221), grid.values['flux'].shape)
 
     def test_get_filename(self):
         self.skipTest()

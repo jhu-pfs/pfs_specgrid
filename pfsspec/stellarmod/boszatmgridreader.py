@@ -31,16 +31,16 @@ class BoszAtmGridReader(AtmGridReader):
         if res is not None:
             index, params, atm = res
 
-            self.grid.set_data_item_idx('ABUNDANCE', index, atm.ABUNDANCE)
-            self.grid.set_data_item_idx('RHOX', index, atm.RHOX)
-            self.grid.set_data_item_idx('T', index, atm.T)
-            self.grid.set_data_item_idx('P', index, atm.P)
-            self.grid.set_data_item_idx('XNE', index, atm.XNE)
-            self.grid.set_data_item_idx('ABROSS', index, atm.ABROSS)
-            self.grid.set_data_item_idx('ACCRAD', index, atm.ACCRAD)
-            self.grid.set_data_item_idx('VTURB', index, atm.VTURB)
-            self.grid.set_data_item_idx('FLXCNV', index, atm.FLXCNV)
-            self.grid.set_data_item_idx('VCONV', index, atm.VCONV)
-            self.grid.set_data_item_idx('VELSND', index, atm.VELSND)
+            self.grid.set_value_at('ABUNDANCE', index, atm.ABUNDANCE)
+            self.grid.set_value_at('RHOX', index, atm.RHOX)
+            self.grid.set_value_at('T', index, atm.T)
+            self.grid.set_value_at('P', index, atm.P)
+            self.grid.set_value_at('XNE', index, atm.XNE)
+            self.grid.set_value_at('ABROSS', index, atm.ABROSS)
+            self.grid.set_value_at('ACCRAD', index, atm.ACCRAD)
+            self.grid.set_value_at('VTURB', index, atm.VTURB)
+            self.grid.set_value_at('FLXCNV', index, atm.FLXCNV)
+            self.grid.set_value_at('VCONV', index, atm.VCONV)
+            self.grid.set_value_at('VELSND', index, atm.VELSND)
 
         

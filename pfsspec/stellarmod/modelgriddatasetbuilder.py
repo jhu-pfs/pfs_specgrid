@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import logging
 
-from pfsspec.data.gridparam import GridParam
+from pfsspec.data.gridaxis import GridAxis
 from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modeldataset import ModelDataset
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
@@ -50,7 +50,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.moon_target_angle = None
             self.moon_phase = None
 
-        self.params = {
+        self.axes = {
             'redshift': None,
             'mag' : None
         }
@@ -113,9 +113,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         # Observational parameter grid
         # TODO: add more grid parameters here
         if self.z_dist == 'grid':
-            self.params['redshift'] = GridParam('redshift', np.linspace(*self.z))
+            self.axes['redshift'] = GridAxis('redshift', np.linspace(*self.z))
         if self.mag_dist == 'grid':
-            self.params['mag'] = GridParam('mag', np.linspace(*self.mag))
+            self.axes['mag'] = GridAxis('mag', np.linspace(*self.mag))
 
     def load_grid(self, filename, args):
         self.grid.use_cont = self.use_cont
@@ -124,11 +124,11 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def create_dataset(self, preload_arrays=False):
         return ModelDataset(preload_arrays=preload_arrays)
 
-    def get_grid_param_count(self):
+    def get_grid_axis_count(self):
         count = 1
-        for p in self.params:
-            if self.params[p] is not None:
-                count *= self.params[p].values.size
+        for p in self.axes:
+            if self.axes[p] is not None:
+                count *= self.axes[p].values.size
         return count
 
     def get_spectrum_count(self):
@@ -138,7 +138,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             # Pysical parameter grid of the models
             count = self.grid.get_model_count(use_limits=True)
             # Observational parameters grid
-            count *= self.get_grid_param_count()
+            count *= self.get_grid_axis_count()
             return count
         elif self.sample_mode == 'random':
             return self.sample_count
@@ -154,15 +154,15 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         spec = None
         while spec is None:
             if self.sample_mode == 'grid':
-                spec, params = self.get_gridpoint_model(i)
+                spec, axes = self.get_gridpoint_model(i)
             elif self.match_params is not None or self.sample_mode == 'random':
-                spec, params = self.get_interpolated_model(i)
+                spec, axes = self.get_interpolated_model(i)
             else:
                 raise NotImplementedError()
 
             try:
                 spec.id = i
-                self.pipeline.run(spec, **params)
+                self.pipeline.run(spec, **axes)
                 return spec
             except Exception as e:
                 self.logger.exception(e)
@@ -203,17 +203,17 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
         # Draw model physical parameters
         params = {}
-        for p in self.grid.params:
+        for p in self.grid.axes:
             if self.sample_dist == 'uniform':
                 r = self.random_state.uniform(0, 1)
             elif self.sample_dist == 'beta':
                 r = self.random_state.beta(0.7, 0.7)    # Add a bit more weight to the tails
             else:
                 raise NotImplementedError()
-            params[p] = self.grid.params[p].min + r * (self.grid.params[p].max - self.grid.params[p].min)
+            params[p] = self.grid.axes[p].min + r * (self.grid.axes[p].max - self.grid.axes[p].min)
 
         if self.interp_param == 'random':
-            choices = [k for k in self.grid.params.keys() if self.grid.params[k].min != self.grid.params[k].max]
+            choices = [k for k in self.grid.axes.keys() if self.grid.axes[k].min != self.grid.axes[k].max]
             free_param = self.random_state.choice(choices)
         else:
             free_param = self.interp_param
@@ -264,9 +264,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         # Append grid params
         i = i // self.grid_index.shape[1]
         j = 0
-        for p in self.params:
-            if self.params[p] is not None:
-                params[p] = self.params[p].values[self.param_index[j, i]]
+        for p in self.axes:
+            if self.axes[p] is not None:
+                params[p] = self.axes[p].values[self.param_index[j, i]]
                 j += 1
 
         return spec, params
@@ -274,20 +274,20 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def build(self):
         # If the parameter range is limited to a subset of the grid, we generate
         # a limited cube of the index array.
-        if not self.grid.preload_arrays and self.grid.is_data_index('flux'):
+        if not self.grid.preload_arrays and self.grid.has_value_index('flux'):
             # rows: parameters, columns: models
-            index = self.grid.get_limited_data_index('flux')
+            index = self.grid.get_limited_value_index('flux')
             self.grid_index = np.array(np.where(index))
 
         # TODO: review this but this has something to do with parameter ranges
         count = 0
         size = 1
         shape = ()
-        for p in self.params:
-            if self.params[p] is not None:
+        for p in self.axes:
+            if self.axes[p] is not None:
                 count += 1
-                size *= self.params[p].values.size
-                shape = shape + (self.params[p].values.size,)
+                size *= self.axes[p].values.size
+                shape = shape + (self.axes[p].values.size,)
         self.param_index = np.indices(shape).reshape(count, size)
 
         super(ModelGridDatasetBuilder, self).build()

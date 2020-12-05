@@ -12,8 +12,8 @@ class KuruczGridReader(ModelGridReader):
         super(KuruczGridReader, self).__init__(grid)
 
     def read_grid(self, path):
-        self.grid.build_params_index()
-        for m_h in self.grid.params['Fe_H'].values:
+        self.grid.build_axis_indexes()
+        for m_h in self.grid.axes['Fe_H'].values:
             fn = KuruczGridReader.get_filename(m_h, 2.0, False, False, False)
             fn = os.path.join(self.path, fn)
             with open(fn) as f:
@@ -22,13 +22,13 @@ class KuruczGridReader(ModelGridReader):
                 for spec in specs:
                     if self.grid.wave is None:
                         self.grid.wave = spec.wave
-                        self.grid.init_data()
-                        self.grid.allocate_data()
+                        self.grid.init_values()
+                        self.grid.allocate_values()
                     self.grid.set_flux(spec.flux, Fe_H=spec.Fe_H, T_eff=spec.T_eff, log_g=spec.log_g)
         
-        self.grid.build_data_index(rebuild=True)
+        self.grid.build_value_indexes(rebuild=True)
 
-        self.logger.info("Grid loaded with flux shape {}".format(self.grid.get_data_item_shape('flux')))
+        self.logger.info("Grid loaded with flux shape {}".format(self.grid.get_value_shape('flux')))
 
     @staticmethod
     def get_filename(Fe_H, v_turb, alpha=False, nover=False, odfnew=False):
