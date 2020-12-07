@@ -8,14 +8,14 @@ class KuruczGridReader(ModelGridReader):
     # Implements a grid reader that reads Kurucz model spectra from files
     # where, for each metallicity, all spectra are stored in a single file
 
-    def __init__(self, grid):
-        super(KuruczGridReader, self).__init__(grid)
+    def __init__(self, grid, parallel=True, threads=None, max=None):
+        super(KuruczGridReader, self).__init__(grid, parallel=parallel, threads=threads, max=max)
 
     def read_grid(self, path):
         self.grid.build_axis_indexes()
         for m_h in self.grid.axes['Fe_H'].values:
             fn = KuruczGridReader.get_filename(m_h, 2.0, False, False, False)
-            fn = os.path.join(self.path, fn)
+            fn = os.path.join(path, fn)
             with open(fn) as f:
                 r = KuruczSpectrumReader(f)
                 specs = r.read_all()

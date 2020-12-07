@@ -33,7 +33,7 @@ class KuruczSpectrumReader(SpectrumReader):
             return None
         # read absorbtion spectrum, ergs/cm**2/s/hz/ster
         spec.flux = self.read_fluxes(KuruczSpectrumReader.WAVELENGTHS)
-        # skip continuum
+        # skip continuum, it's all zero
         self.read_fluxes(KuruczSpectrumReader.WAVELENGTHS)
         # convert from model surface intensity in erg/s/cm^2/sterad to erg/s/cm^2/A
         spec.flux = Physics.fnu_to_flam(spec.wave, spec.flux) * 4 * np.pi

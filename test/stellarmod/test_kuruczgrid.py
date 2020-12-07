@@ -42,8 +42,8 @@ class TestKuruczGrid(TestBase):
         if not os.path.exists(file):
             grid = KuruczGrid('kurucz')
             grid.preload_arrays = True
-            reader = KuruczGridReader(grid, path)
-            reader.read_grid()
+            gr = KuruczGridReader(grid)
+            gr.read_grid(path)
             self.assertEqual((18, 61, 11, 1221), grid.values['flux'].shape)
 
             grid.save(file, 'h5')
