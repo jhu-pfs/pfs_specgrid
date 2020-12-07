@@ -5,6 +5,7 @@ from random import choice
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
 
 from pfsspec.data.grid import Grid
+from pfsspec.data.gridaxis import GridAxis
 
 class ModelGrid(Grid):
     def __init__(self):
@@ -169,3 +170,23 @@ class ModelGrid(Grid):
         else:
             return None
 
+    def get_slice_rbf(self, s=None, extrapolation='xyz', **kwargs):
+        # Interpolate the continuum and flux in a wavelength slice `s` and parameter
+        # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
+        # values to make the interpolation smooth
+
+        flux, axes = self.get_value_padded('flux', s=s, extrapolation=extrapolation, **kwargs)
+        cont, axes = self.get_value_padded('cont', s=s, extrapolation=extrapolation, **kwargs)
+
+        # Max nans and where the continuum is zero
+        mask = ~np.isnan(cont) & (cont != 0)
+        if mask.ndim > len(axes):
+            mask = np.all(mask, axis=-(mask.ndim - len(axes)))
+
+        # Rbf must be generated on a uniform grid
+        aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
+
+        rbf_flux = self.interpolate_value_rbf(flux, aa, mask=mask)
+        rbf_cont = self.interpolate_value_rbf(cont, aa, mask=mask)
+
+        return rbf_flux, rbf_cont, axes

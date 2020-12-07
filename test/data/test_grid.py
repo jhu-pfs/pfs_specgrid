@@ -1,6 +1,7 @@
 from test.test_base import TestBase
 import os
 import numpy as np
+from numpy.testing import assert_array_equal
 import h5py
 
 from pfsspec.data.grid import Grid
@@ -103,6 +104,12 @@ class TestGrid(TestBase):
         idx = grid.get_index(a=1, b=30)
         self.assertEqual((0, 2), idx)
 
+        idx = grid.get_index(a=1)
+        self.assertEqual((0, slice(None)), idx)
+
+        idx = grid.get_index(b=30)
+        self.assertEqual((slice(None), 2), idx)
+
     def test_get_nearest_index(self):
         grid = self.create_full_grid()
 
@@ -111,6 +118,12 @@ class TestGrid(TestBase):
 
         idx = grid.get_nearest_index(a=5.6, b=14)
         self.assertEqual((4, 0), idx)
+
+        idx = grid.get_nearest_index(a=5.6)
+        self.assertEqual((4, slice(None)), idx)
+
+        idx = grid.get_nearest_index(b=14)
+        self.assertEqual((slice(None), 0), idx)
 
     def test_get_nearby_indexes(self):
         grid = self.create_full_grid()
@@ -149,6 +162,16 @@ class TestGrid(TestBase):
         self.assertEquals(2, len(values))
         self.assertEquals((10,), values['U'].shape)
         self.assertEquals((100,), values['V'].shape)
+
+        values = grid.get_values(a=1)
+        self.assertEquals(2, len(values))
+        self.assertEquals((3, 10), values['U'].shape)
+        self.assertEquals((3, 100), values['V'].shape)
+
+        values = grid.get_values(b=20)
+        self.assertEquals(2, len(values))
+        self.assertEquals((5, 10), values['U'].shape)
+        self.assertEquals((5, 100), values['V'].shape)
 
     def test_get_nearest_values(self):
         grid = self.create_full_grid()
@@ -265,3 +288,48 @@ class TestGrid(TestBase):
         self.assertEquals((10,), value.shape)
         value = grid.get_value('U', s=slice(2, 5), a=2, b=20)
         self.assertEquals((3,), value.shape)
+
+    def test_get_value_padded(self):
+        grid = self.create_full_grid()
+
+        padded, paxes = grid.get_value_padded('U', extrapolation='ijk')
+        self.assertEqual((7, 5, 10), padded.shape)
+        self.assertEqual(2, len(paxes))
+        assert_array_equal(np.array([-1.,  0.,  1.,  2.,  3.,  4.,  5.]), paxes[0])
+        assert_array_equal(np.array([-1.,  0.,  1.,  2.,  3.]), paxes[1])
+
+        padded, paxes = grid.get_value_padded('U', extrapolation='xyz')
+        self.assertEqual((7, 5, 10), padded.shape)
+        self.assertEqual(2, len(paxes))
+        assert_array_equal(np.array([0., 1., 2., 3., 4., 5., 6.]), paxes[0])
+        assert_array_equal(np.array([ 0., 10., 20., 30., 40.]), paxes[1])
+
+        padded, paxes = grid.get_value_padded('U', extrapolation='ijk', a=2)
+        self.assertEqual((5, 10), padded.shape)
+        self.assertEqual(1, len(paxes))
+        assert_array_equal(np.array([-1.,  0.,  1.,  2.,  3.]), paxes[0])
+
+        padded, paxes = grid.get_value_padded('U', extrapolation='ijk', b=20)
+        self.assertEqual((7, 10), padded.shape)
+        self.assertEqual(1, len(paxes))
+        assert_array_equal(np.array([-1.,  0.,  1.,  2.,  3.,  4.,  5.]), paxes[0])
+
+    def test_interpolate_value_rbf(self):
+        grid = self.create_full_grid()
+
+        rbf, paxes = grid.interpolate_value_rbf('U')
+        self.assertEqual((2, 35), rbf.xi.shape)
+        self.assertEqual((35, 10), rbf.nodes.shape)
+
+        rbf, paxes = grid.interpolate_value_rbf('U', padding_mode=None)
+        self.assertEqual((2, 15), rbf.xi.shape)
+        self.assertEqual((15, 10), rbf.nodes.shape)
+
+        rbf, paxes = grid.interpolate_value_rbf('U', a=2)
+        self.assertEqual((1, 5), rbf.xi.shape)
+        self.assertEqual((5, 10), rbf.nodes.shape)
+
+        rbf, paxes = grid.interpolate_value_rbf('U', s=np.s_[1:3], padding_mode='xyz', a=2)
+        self.assertEqual((1, 5), rbf.xi.shape)
+        self.assertEqual((5, 2), rbf.nodes.shape)
+

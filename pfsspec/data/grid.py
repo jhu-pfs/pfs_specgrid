@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 from collections import Iterable
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
+from scipy.interpolate import Rbf, interp1d, interpn
 
 from pfsspec.pfsobject import PfsObject
 from pfsspec.data.gridaxis import GridAxis
@@ -133,14 +134,36 @@ class Grid(PfsObject):
             return np.sum(self.value_indexes[name])
 
     def get_index(self, **kwargs):
-        idx = tuple(self.axes[p].index[kwargs[p]] for p in self.axes)
+        """Returns the indexes along all axes corresponding to the values specified.
+
+        If an axis name is missing, a whole slice is returned.
+
+        Returns:
+            [type]: [description]
+        """
+        idx = ()
+        for p in self.axes:
+            if p in kwargs:
+                idx += (self.axes[p].index[kwargs[p]],)
+            else:
+                idx += (slice(None),)
         return idx
 
     def get_nearest_index(self, **kwargs):
-        idx = tuple(self.axes[p].get_nearest_index(kwargs[p]) for p in self.axes)
+        idx = ()
+        for p in self.axes:
+            if p in kwargs:
+                idx += (self.axes[p].get_nearest_index(kwargs[p]),)
+            else:
+                idx += (slice(None),)
         return idx
 
     def get_nearby_indexes(self, **kwargs):
+        """Returns the indices bracketing the values specified. Used for linear interpolation.
+
+        Returns:
+            [type]: [description]
+        """
         idx1 = list(self.get_nearest_index(**kwargs))
         idx2 = list((0, ) * len(idx1))
 
@@ -171,11 +194,16 @@ class Grid(PfsObject):
             return name in self.values and self.has_item(name) and \
                    name in self.value_indexes and self.value_indexes[name] is not None
 
-    def has_value_at(self, name, idx):
+    def has_value_at(self, name, idx, mode='any'):
         # Returns true if the specified grid point or points are filled, i.e. the
         # corresponding index values are all set to True
         if self.has_value_index(name):
-            return np.all(self.value_indexes[name][tuple(idx)])
+            if mode == 'any':
+                return np.any(self.value_indexes[name][tuple(idx)])
+            elif mode == 'all':
+                return np.all(self.value_indexes[name][tuple(idx)])
+            else:
+                raise NotImplementedError()
         else:
             return True
 
@@ -226,6 +254,7 @@ class Grid(PfsObject):
         return self.get_value_at(name, idx, s)
 
     def get_value_at(self, name, idx, s=None):
+        # TODO: consider adding a squeeze=False option to keep exactly indexed dimensions
         idx = Grid.rectify_index(idx)
         if self.has_value_at(name, idx):
             idx = Grid.rectify_index(idx, s)
@@ -397,10 +426,108 @@ class Grid(PfsObject):
             value = self.load_item(name, np.ndarray, idx)
             value = value[valid_value]
 
-        self.logger.debug('Interpolating valuees to {} using cubic splines along {}.'.format(kwargs, free_param))
+        self.logger.debug('Interpolating values to {} using cubic splines along {}.'.format(kwargs, free_param))
 
         # Do as many parallel cubic spline interpolations as many wavelength bins we have
         x, y = pars, value
         fn = CubicSpline(x, y)
 
         return fn(kwargs[free_param]), kwargs
+
+    def get_value_padded(self, name, s=None, extrapolation='ijk', **kwargs):
+        """Returns a slice of the grid and pads with a single item in every direction using linearNd extrapolation.
+
+        Extrapolation is done either in grid coordinates or in axis coordinates
+
+        Args:
+            name (str): Name of value array
+            s (slice, optional): Slice to apply to value array. Defaults to None.
+            extrapolation: Whether to extrapolate based on array indices ('ijk', default)
+                or axis coordinates ('xyz').
+            **kwargs: Values of axis coordinates. Only exact values are supported. For
+                missing direction, full, padded slices will be returned.
+        """
+
+        # Slice before padding. This array is squeezed in the directions specified
+        # in kwargs. All other directions are full slices.
+        orig = self.get_value(name, s=s, **kwargs)
+
+        # Create the mesh grid of the original slice. Do it only in the directions
+        # not specified in kwargs because those directions are squeezed.
+        oaxes = {}
+        paxes = {}
+        for p in self.axes.keys():
+            if p not in kwargs:
+                if extrapolation == 'ijk':
+                    oaxes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
+                    paxes[p] = GridAxis(p, np.arange(-1, self.axes[p].values.shape[0] + 1, dtype=np.float64))
+                elif extrapolation == 'xyz':
+                    axis = self.axes[p].values
+                    paxis = np.empty(axis.shape[0] + 2)
+                    paxis[1:-1] = axis
+                    paxis[0] = paxis[1] - (paxis[2] - paxis[1])
+                    paxis[-1] = paxis[-2] + (paxis[-2] - paxis[-3])
+
+                    oaxes[p] = GridAxis(p, axis)
+                    paxes[p] = GridAxis(p, paxis)
+                else:
+                    raise NotImplementedError()
+
+        pijk = np.meshgrid(*[paxes[p].values for p in paxes], indexing='ij')
+        pijk = np.stack(pijk, axis=-1)
+
+        # Pad original slice with phantom cells
+        # We a do a bit of extra work here because we interpolated the entire new slice, not just
+        # the edges. The advantage is that we can fill in some of the holes this way.
+        padded = interpn([oaxes[p].values for p in oaxes], orig, pijk, method='linear', bounds_error=False, fill_value=None)
+
+        return padded, paxes
+
+    def interpolate_value_rbf(self, value, axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0):
+        """Returns the Radial Base Function interpolation of a grid slice.
+
+        Args:
+            value
+            axes
+            mask (array): Mask, must be the same shape as the grid.
+            function (str): Basis function, see RBF documentation.
+            epsilon (number): See RBF documentation.
+            smooth (number): See RBF documentation.
+        """
+
+        # Since we must have the same number of grid points, we need to contract the
+        # mask along all value array dimensions that are not along the axes. Since `value`
+        # is already squeezed, only use axes that do not match axes in kwargs.
+        m = ~np.isnan(value)
+        if len(m.shape) > len(axes):
+            m = np.all(m, axis=-(len(m.shape) - len(axes)))
+
+        # We assume that the provided mask has the same shape
+        if mask is not None:
+            m &= mask
+            
+        m = m.flatten()
+
+        # Flatten slice along axis dimensions
+        sh = 1
+        for i in range(len(axes)):
+            sh *= value.shape[i]
+        value = value.reshape((sh,) + value.shape[len(axes):])
+        value = value[m]
+
+        points = np.meshgrid(*[axes[p].values for p in axes], indexing='ij')
+        points = [p.flatten() for p in points]
+        points = [p[m] for p in points]
+
+        if len(value.shape) == 1:
+            mode = '1-D'
+        else:
+            mode = 'N-D'
+
+        rbf = Rbf(*points, value, function=function, epsilon=epsilon, smooth=smooth, mode=mode)
+
+        # Azt kellene valahogyan kitalálni, hogy hogyan lehetne a maszkot különböző hívások
+        # között megtartani, mert a kontinuum alapján kell maszkolni a fluxust is
+
+        return rbf
+
