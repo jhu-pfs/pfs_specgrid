@@ -526,8 +526,5 @@ class Grid(PfsObject):
 
         rbf = Rbf(*points, value, function=function, epsilon=epsilon, smooth=smooth, mode=mode)
 
-        # Azt kellene valahogyan kitalálni, hogy hogyan lehetne a maszkot különböző hívások
-        # között megtartani, mert a kontinuum alapján kell maszkolni a fluxust is
-
         return rbf
 

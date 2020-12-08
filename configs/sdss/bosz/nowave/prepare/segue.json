@@ -1,6 +1,7 @@
 {
     "config": [
-        "./configs/sdss/prepare/sdss.json"
+        "./configs/sdss/bosz/nowave/prepare/common.json",
+        "./configs/sdss/bosz/nowave/inst_sdss.json"
     ],
 
     "source": "survey",
@@ -8,8 +9,9 @@
     "pipeline": "basic",
 
     "in": "${PFSSPEC_DATA}/import/stellar/survey/sdss_nice_4",
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/segue/nowave/test",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/segue/nowave",
     "sample_mode": "survey",
+    "chunk_size": 0,
 
     "redden": false,
     "calib_bias": null

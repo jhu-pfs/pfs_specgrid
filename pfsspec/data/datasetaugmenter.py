@@ -92,7 +92,8 @@ class DatasetAugmenter(KerasDataAugmenter):
 
         parser.add_argument('--aug-offset', type=float, default=None, help='Augment by adding a random offset.\n')
         parser.add_argument('--aug-scale', type=float, default=None, help='Augment by multiplying with a random number.\n')
-        parser.add_argument('--mask-data', action='store_true', help='Use mask from dataset.\n')
+        parser.add_argument('--mask-data', action='store_true', dest='mask_data', help='Use mask from dataset.\n')
+        parser.add_argument('--no-mask-data', action='store_false', dest='mask_data', help='Use mask from dataset.\n')
         parser.add_argument('--mask-random', type=float, nargs="*", help='Add random mask.\n')
         parser.add_argument('--mask-value', type=float, nargs="*", default=[0], help='Use mask value.\n')
         parser.add_argument('--lowsnr', type=float, help='Pixels that are considered low SNR.\n')
@@ -226,7 +227,6 @@ class DatasetAugmenter(KerasDataAugmenter):
     def init_output_labels(self, labels, postfixes):
         # Override this if new labels need to be created for prediction
         pass
-
 
 
 
