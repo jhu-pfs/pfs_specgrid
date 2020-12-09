@@ -434,7 +434,7 @@ class Grid(PfsObject):
 
         return fn(kwargs[free_param]), kwargs
 
-    def get_value_padded(self, name, s=None, extrapolation='ijk', **kwargs):
+    def get_value_padded(self, name, s=None, interpolation='ijk', **kwargs):
         """Returns a slice of the grid and pads with a single item in every direction using linearNd extrapolation.
 
         Extrapolation is done either in grid coordinates or in axis coordinates
@@ -442,7 +442,7 @@ class Grid(PfsObject):
         Args:
             name (str): Name of value array
             s (slice, optional): Slice to apply to value array. Defaults to None.
-            extrapolation: Whether to extrapolate based on array indices ('ijk', default)
+            interpolation: Whether to extrapolate based on array indices ('ijk', default)
                 or axis coordinates ('xyz').
             **kwargs: Values of axis coordinates. Only exact values are supported. For
                 missing direction, full, padded slices will be returned.
@@ -458,10 +458,10 @@ class Grid(PfsObject):
         paxes = {}
         for p in self.axes.keys():
             if p not in kwargs:
-                if extrapolation == 'ijk':
+                if interpolation == 'ijk':
                     oaxes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
                     paxes[p] = GridAxis(p, np.arange(-1, self.axes[p].values.shape[0] + 1, dtype=np.float64))
-                elif extrapolation == 'xyz':
+                elif interpolation == 'xyz':
                     axis = self.axes[p].values
                     paxis = np.empty(axis.shape[0] + 2)
                     paxis[1:-1] = axis

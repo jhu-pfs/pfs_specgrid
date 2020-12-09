@@ -46,3 +46,20 @@ class Physics():
         fnu = Physics.flam_to_fnu(wave, flam)
         mags = Physics.fnu_to_abmag(fnu)
         return mags
+
+    @staticmethod
+    def air_to_vac(wave):
+        """
+        Implements the air to vacuum wavelength conversion described in eqn 65 of
+        Griesen 2006
+        """
+        wlum = wave * 1e5
+        return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wave
+
+    @staticmethod
+    def air_to_vac_deriv(wave):
+        """
+        Eqn 66
+        """
+        wlum = wave * 1e5
+        return (1+1e-6*(287.6155 - 1.62877/wlum**2 - 0.04080/wlum**4))

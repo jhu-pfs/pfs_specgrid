@@ -28,3 +28,11 @@ class TestBoszGrid(TestBase):
         self.assertEqual((8752, 152), flux.nodes.shape)
 
         pass
+
+    def test_get_slice_rbn_nopadding(self):
+        grid = self.get_grid()
+
+        wl_idx = np.digitize([6565], grid.wave)
+        flux, cont, axes = grid.get_slice_rbf(padding=False, s=wl_idx, O_M=0, C_M=0)
+        self.assertEqual((3, 6336), flux.xi.shape)
+        self.assertEqual((6336,), flux.nodes.shape)

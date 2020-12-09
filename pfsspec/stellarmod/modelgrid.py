@@ -170,13 +170,25 @@ class ModelGrid(Grid):
         else:
             return None
 
-    def get_slice_rbf(self, s=None, extrapolation='xyz', **kwargs):
+    def get_slice_rbf(self, s=None, interpolation='xyz', padding=True, **kwargs):
         # Interpolate the continuum and flux in a wavelength slice `s` and parameter
         # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
         # values to make the interpolation smooth
 
-        flux, axes = self.get_value_padded('flux', s=s, extrapolation=extrapolation, **kwargs)
-        cont, axes = self.get_value_padded('cont', s=s, extrapolation=extrapolation, **kwargs)
+        if padding:
+            flux, axes = self.get_value_padded('flux', s=s, interpolation=interpolation, **kwargs)
+            cont, axes = self.get_value_padded('cont', s=s, interpolation=interpolation, **kwargs)
+        else:
+            flux = self.get_value('flux', s=s, **kwargs)
+            cont = self.get_value('cont', s=s, **kwargs)
+
+            axes = {}
+            for p in self.axes.keys():
+                if p not in kwargs:            
+                    if interpolation == 'ijk':
+                        axes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
+                    elif interpolation == 'xyz':
+                        axes[p] = self.axes[p]
 
         # Max nans and where the continuum is zero
         mask = ~np.isnan(cont) & (cont != 0)
@@ -184,7 +196,10 @@ class ModelGrid(Grid):
             mask = np.all(mask, axis=-(mask.ndim - len(axes)))
 
         # Rbf must be generated on a uniform grid
-        aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
+        if padding:
+            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
+        else:
+            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0])) for p in axes}
 
         rbf_flux = self.interpolate_value_rbf(flux, aa, mask=mask)
         rbf_cont = self.interpolate_value_rbf(cont, aa, mask=mask)
