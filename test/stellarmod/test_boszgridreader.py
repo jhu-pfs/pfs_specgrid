@@ -3,7 +3,7 @@ import os
 
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 from pfsspec.stellarmod.boszgridreader import BoszGridReader
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 
 class TestBoszGridReader(TestBase):
     def test_read_grid_bosz(self):
@@ -14,7 +14,7 @@ class TestBoszGridReader(TestBase):
         fn = os.path.join(path, fn)
         spec = reader.read(fn)
 
-        grid = BoszGrid()
+        grid = BoszModelGrid()
         grid.preload_arrays = True
         grid.wave = spec.wave
         grid.init_values()

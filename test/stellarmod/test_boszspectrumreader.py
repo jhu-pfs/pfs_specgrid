@@ -1,7 +1,7 @@
 from test.test_base import TestBase
 import os
 
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 
 class TestBoszSpectrumReader(TestBase):
@@ -18,7 +18,7 @@ class TestBoszSpectrumReader(TestBase):
 
     def test_read_grid(self):
         path = os.path.join(self.PFSSPEC_DATA_PATH, 'stellar/bosz')
-        grid = BoszGrid()
+        grid = BoszModelGrid()
         r = BoszSpectrumReader(grid, wave_lim=(3600, 12560))
         r.read_grid(path)
         self.assertEqual((14, 7, 6, 6, 4, 12496), grid.flux.shape)
@@ -36,7 +36,7 @@ class TestBoszSpectrumReader(TestBase):
         self.assertEqual(2.5, p['log_g'])
 
     def test_enum_axes(self):
-        grid = BoszGrid()
+        grid = BoszModelGrid()
         r = BoszSpectrumReader(grid)
 
         g = BoszSpectrumReader.EnumAxesGenerator(grid)

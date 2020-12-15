@@ -9,7 +9,7 @@ import time
 
 from pfsspec.data.spectrumreader import SpectrumReader
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 
 class BoszSpectrumReader(SpectrumReader):
     MAP_FE_H = {

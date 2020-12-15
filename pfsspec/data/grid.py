@@ -43,7 +43,7 @@ class Grid(PfsObject):
 
     def ensure_lazy_load(self):
         # This works with HDF5 format only!
-        if self.fileformat != 'h5':
+        if not self.preload_arrays and self.fileformat != 'h5':
             raise NotImplementedError()
 
     def init_axes(self):
@@ -82,8 +82,10 @@ class Grid(PfsObject):
 
             self.value_indexes[name] = np.full(gridshape, False, dtype=np.bool)
 
-    def allocate_value(self, name, shape):
-        self.init_value(name, shape)
+    def allocate_value(self, name, shape=None):
+        if shape is not None:
+            self.value_shapes[name] = shape
+        self.init_value(name, self.value_shapes[name])
 
     def build_axis_indexes(self):
         for p in self.axes:
@@ -276,15 +278,16 @@ class Grid(PfsObject):
 
     def save_values(self):
         for name in self.values:
-            if self.preload_arrays:
-                self.logger.info('Saving grid "{}" of size {}'.format(name, self.values[name].shape))
-                self.save_item(name, self.values[name])
-                self.logger.info('Saved grid "{}" of size {}'.format(name, self.values[name].shape))
-            else:
-                shape = self.get_value_shape(name)
-                self.logger.info('Allocating grid "{}" with size {}...'.format(name, shape))
-                self.allocate_item(name, shape, np.float)
-                self.logger.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
+            if self.values[name] is not None:
+                if self.preload_arrays:
+                    self.logger.info('Saving grid "{}" of size {}'.format(name, self.values[name].shape))
+                    self.save_item(name, self.values[name])
+                    self.logger.info('Saved grid "{}" of size {}'.format(name, self.values[name].shape))
+                else:
+                    shape = self.get_value_shape(name)
+                    self.logger.info('Allocating grid "{}" with size {}...'.format(name, shape))
+                    self.allocate_item(name, shape, np.float)
+                    self.logger.info('Allocated grid "{}" with size {}. Will write directly to storage.'.format(name, shape))
 
     def load_values(self, s=None):
         gridshape = self.get_shape()
@@ -302,7 +305,12 @@ class Grid(PfsObject):
                 self.value_shapes[name] = self.values[name].shape[len(gridshape):]
             else:
                 # When lazy-loading, we simply ignore the slice
-                self.value_shapes[name] = self.get_item_shape(name)[len(gridshape):]
+                shape = self.get_item_shape(name)
+                if shape is not None:
+                    self.value_shapes[name] = shape[len(gridshape):]
+                else:
+                    self.value_shapes[name] = None
+                
                 self.logger.info('Skipped loading grid "{}". Will read directly from storage.'.format(name))
 
     def save_value_indexes(self):

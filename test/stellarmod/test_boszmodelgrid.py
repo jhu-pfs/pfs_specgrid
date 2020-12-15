@@ -2,13 +2,13 @@ import os
 import numpy as np
 
 from test.test_base import TestBase
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 
-class TestBoszGrid(TestBase):
+class TestBoszModelGrid(TestBase):
     def get_grid(self):
         fn = os.path.join(self.PFSSPEC_DATA_PATH, 'import/stellar/grid/bosz_50000/spectra.h5')
 
-        grid = BoszGrid()
+        grid = BoszModelGrid()
         grid.preload_arrays = False
         grid.load(fn, format='h5')
 

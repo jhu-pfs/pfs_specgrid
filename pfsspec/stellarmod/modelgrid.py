@@ -8,10 +8,15 @@ from pfsspec.data.grid import Grid
 from pfsspec.data.gridaxis import GridAxis
 
 class ModelGrid(Grid):
-    def __init__(self):
-        super(ModelGrid, self).__init__()
-        self.wave = None
-        self.slice = None
+    def __init__(self, orig=None):
+        super(ModelGrid, self).__init__(orig=orig)
+
+        if isinstance(orig, ModelGrid):
+            self.wave = orig.wave
+            self.slice = orig.slice
+        else:
+            self.wave = None
+            self.slice = None
 
     def add_args(self, parser):
         for k in self.axes:
@@ -51,10 +56,12 @@ class ModelGrid(Grid):
     def init_values(self):
         self.init_value('flux')
         self.init_value('cont')
+        self.init_value('params')
 
     def allocate_values(self):
         self.allocate_value('flux', self.wave.shape)
         self.allocate_value('cont', self.wave.shape)
+        self.allocate_value('params')
 
     def is_value_valid(self, name, value):
         return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))
@@ -110,9 +117,6 @@ class ModelGrid(Grid):
         self.set_value_at('flux', index, flux)
         if cont is not None:
             self.set_value_at('cont', index, cont)
-
-    def create_spectrum(self):
-        raise NotImplementedError()
 
     def get_parameterized_spectrum(self, idx=None, s=None, **kwargs):
         spec = self.create_spectrum()

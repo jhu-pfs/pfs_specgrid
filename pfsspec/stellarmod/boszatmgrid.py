@@ -3,6 +3,8 @@ import numpy as np
 from pfsspec.stellarmod.kuruczatmgrid import KuruczAtmGrid
 
 class BoszAtmGrid(KuruczAtmGrid):
+
+    # TODO: merge this into bosz.py
     def init_axes(self):
         self.init_axis('Fe_H', np.array([-5.0, -4.5, -4.0, -3.5, -3.0, -2.75, -2.5 , -2.25, -2.,
                                           -1.75, -1.5 , -1.25, -1.  , -0.75, -0.5 ,

@@ -2,38 +2,60 @@ import os
 import logging
 import numpy as np
 
-from pfsspec.scripts.convert import Convert
+from pfsspec.scripts.configurations import PCA_CONFIGURATIONS
+from pfsspec.scripts.script import Script
 
-class Pca(Convert):
+class PCA(Script):
     def __init__(self):
-        super(Pca, self).__init__()
+        super(PCA, self).__init__()
 
-        self.truncate = None
+        self.pca = None
+
+    def add_subparsers(self, parser):
+        sps = parser.add_subparsers(dest='source')
+        for src in PCA_CONFIGURATIONS:
+            ps = sps.add_parser(src)
+            spp = ps.add_subparsers(dest='pca')
+            for pca in PCA_CONFIGURATIONS[src]:
+                pp = spp.add_parser(pca)
+                
+                self.add_args(pp)
+                p = PCA_CONFIGURATIONS[src][pca]()
+                p.add_args(pp)
 
     def add_args(self, parser):
-        super(Pca, self).add_args(parser)
-        parser.add_argument('--truncate', type=int, default=None, help="Data set directory\n")
+        super(PCA, self).add_args(parser)
+
+        parser.add_argument('--in', type=str, help="Input data path.\n")
+        parser.add_argument('--out', type=str, help='Output data path.\n')
+
+    def create_pca(self):
+        self.pca = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]()
+        self.pca.parse_args(self.args) 
+
+    def open_data(self):
+        self.pca.open_data(self.args['in'], self.outdir)
+
+    def save_data(self):
+        self.pca.save_data(self.outdir)
+
+    def prepare(self):
+        super(PCA, self).prepare()
+
+        self.outdir = self.args['out']
+        self.create_output_dir(self.outdir, resume=False)
+        self.save_command_line(os.path.join(self.outdir, 'command.sh'))
+
+        self.create_pca()
+        self.open_data()
 
     def run(self):
-        super(Convert, self).run()
+        self.pca.run()
 
-        self.dsbuilder.build()
-        self.dsbuilder.dataset.run_pca(self.args['truncate'])
-        self.dsbuilder.dataset.save(os.path.join(self.args['out'], 'dataset.h5'), 'h5')
-        self.dsbuilder.dataset.save_pca(os.path.join(self.args['out'], 'pca.h5'), 'h5')
-
-        self.logger.info(self.dsbuilder.dataset.params.head())
-        self.logger.info('Results are written to {}'.format(self.args['out']))
-
-    def execute_notebooks(self):
-        super(Convert, self).execute_notebooks()
-
-        self.execute_notebook('eval_pca', parameters={
-                                  'DATASET_PATH': self.args['out']
-                              })
+        self.save_data()
 
 def main():
-    script = Pca()
+    script = PCA()
     script.execute()
 
 if __name__ == "__main__":

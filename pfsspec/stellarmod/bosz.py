@@ -1,12 +1,13 @@
 import numpy as np
 
-from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.data.gridaxis import GridAxis
-from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
+from pfsspec.stellarmod.boszspectrum import BoszSpectrum
 
-class BoszGrid(ModelGrid):
-    def __init__(self):
-        super(BoszGrid, self).__init__()
+class Bosz():
+    # Mixin for BOSZ grid
+
+    def __init__(self, orig=None):
+        pass
 
     def init_axes(self):
         self.init_axis('Fe_H', np.arange(-2.5, 1.0, 0.25))
@@ -17,6 +18,9 @@ class BoszGrid(ModelGrid):
         self.init_axis('C_M', np.arange(-0.75, 0.75, 0.25))
         self.init_axis('O_M', np.arange(-0.25, 0.75, 0.25))
 
+    def init_values(self):
+        pass
+
     def create_spectrum(self):
-        spec = KuruczSpectrum()
+        spec = BoszSpectrum()
         return spec

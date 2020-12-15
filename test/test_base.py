@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from pfsspec.data.dataset import Dataset
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 from pfsspec.obsmod.filter import Filter
 
 class TestBase(TestCase):
@@ -36,7 +36,7 @@ class TestBase(TestCase):
     def get_bosz_grid(self):
         if self.bosz_grid is None:
             file = os.path.join(self.PFSSPEC_DATA_PATH, 'import/stellar/grid/bosz_5000/spectra.h5')
-            self.bosz_grid = BoszGrid()
+            self.bosz_grid = BoszModelGrid()
             self.bosz_grid.load(file, s=None, format='h5')
 
         return self.bosz_grid

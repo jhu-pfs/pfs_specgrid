@@ -2,11 +2,14 @@ from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
 from pfsspec.surveys.survey import Survey
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
+from pfsspec.stellarmod.boszgridcontinuumfit import BoszGridContinuumFit
+from pfsspec.stellarmod.boszpcagridbuilder import BoszPCAGridBuilder
+from pfsspec.stellarmod.simplecontinuummodel import SimpleContinuumModel
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {
@@ -39,8 +42,25 @@ PREPARE_CONFIGURATIONS = {
         },
         'bosz': {
             'builder': ModelGridDatasetBuilder,
-            'grid': BoszGrid,
+            'grid': BoszModelGrid,
             'pipelines': MODEL_PIPELINE_TYPES
         }
+    }
+}
+
+FIT_CONFIGURATIONS = {
+    'grid': {
+        'bosz': {
+            'grid': BoszGridContinuumFit,
+            'models': {
+                'simple': SimpleContinuumModel
+            }
+        }
+    }
+}
+
+PCA_CONFIGURATIONS = {
+    'grid': {
+        'bosz': BoszPCAGridBuilder,
     }
 }

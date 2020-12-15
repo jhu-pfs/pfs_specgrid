@@ -7,7 +7,7 @@ import logging
 from pfsspec.scripts.import_ import Import
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 from pfsspec.stellarmod.boszgridreader import BoszGridReader
-from pfsspec.stellarmod.boszgrid import BoszGrid
+from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
 
 class ImportBosz(Import):
     # TODO: Consider rewriting import logic in the same way as prepare logic works,
@@ -42,7 +42,7 @@ class ImportBosz(Import):
 
         filename =os.path.join(self.args['out'], 'spectra.h5')
 
-        grid = BoszGrid()
+        grid = BoszModelGrid()
         grid.preload_arrays = self.preload_arrays
         if self.resume:
             if grid.preload_arrays:
