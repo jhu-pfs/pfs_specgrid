@@ -8,8 +8,12 @@ class ModelPCAGrid(PCAGrid):
 
         if isinstance(orig, ModelPCAGrid):
             self.wave = orig.wave
+            self.params_rbf = orig.params_rbf
+            self.coeffs_rbf = orig.coeffs_rbf
         else:
             self.wave = None
+            self.params_rbf = None
+            self.coeffs_rbf = None
     
     def init_axes(self):
         super(ModelPCAGrid, self).init_axes()
@@ -20,19 +24,23 @@ class ModelPCAGrid(PCAGrid):
     def init_values(self):
         super(ModelPCAGrid, self).init_values()
         self.init_value('params')
-        self.init_value('rbf')
 
     def allocate_values(self):
         super(ModelPCAGrid, self).allocate_values()
         self.allocate_value('params')
-        self.allocate_value('rbf')
 
     def save_items(self):
         self.save_item('wave', self.wave)
+        self.save_item('params_rbf', self.params_rbf)
+        self.save_item('coeffs_rbf', self.coeffs_rbf)
 
         super(ModelPCAGrid, self).save_items()
 
     def load_items(self, s=None):
-        self.wave = self.load_item('wave', np.ndarray)
-
         super(ModelPCAGrid, self).load_items(s=s)
+        
+        self.wave = self.load_item('wave', np.ndarray)
+        self.params_rbf = self.load_item('params_rbf', np.ndarray)
+        self.coeffs_rbf = self.load_item('coeffs_rbf', np.ndarray)
+
+        

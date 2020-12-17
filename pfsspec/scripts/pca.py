@@ -31,7 +31,8 @@ class PCA(Script):
 
     def create_pca(self):
         self.pca = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]()
-        self.pca.parse_args(self.args) 
+        self.pca.args = self.args
+        self.pca.parse_args() 
 
     def open_data(self):
         self.pca.open_data(self.args['in'], self.outdir)

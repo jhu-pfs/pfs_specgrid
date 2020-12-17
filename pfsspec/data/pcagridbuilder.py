@@ -15,34 +15,33 @@ class PCAGridBuilder(PfsObject):
         if isinstance(orig, PCAGridBuilder):
             self.input_grid = input_grid if input_grid is not None else orig.input_grid
             self.output_grid = output_grid if output_grid is not None else orig.output_grid
-            self.grid_index = None
+            self.input_grid_index = None
+            self.output_grid_index = None
+            self.grid_shape = None
 
             self.top = orig.top
             self.svd_method = orig.svd_method
-            self.truncate = orig.truncate
+            self.svd_truncate = orig.truncate
         else:
             self.input_grid = input_grid
             self.output_grid = output_grid
-            self.grid_index = None
+            self.input_grid_index = None
+            self.output_grid_index = None
+            self.grid_shape = None
 
             self.top = None
             self.svd_method = 'svd'
-            self.truncate = None
+            self.svd_truncate = None
 
     def add_args(self, parser):
         parser.add_argument('--top', type=int, default=None, help='Limit number of results')
         parser.add_argument('--svd-method', type=str, default='svd', choices=['svd', 'trsvd'], help='Truncate PCA')
-        parser.add_argument('--truncate', type=int, default=None, help='Truncate PCA')
+        parser.add_argument('--svd-truncate', type=int, default=None, help='Truncate SVD')
 
-    def parse_args(self, args):
-        if 'top' in args and args['top'] is not None:
-            self.top = args['top']
-
-        if 'svd_method' in args and args['svd_method'] is not None:
-            self.svd_method = args['svd_method']
-
-        if 'truncate' in args and args['truncate'] is not None:
-            self.truncate = args['truncate']
+    def parse_args(self):
+        self.top = self.get_arg('top', self.top)
+        self.svd_method = self.get_arg('svd_method', self.svd_method)
+        self.svd_truncate = self.get_arg('svd_truncate', self.svd_truncate)
 
     def create_grid(self):
         raise NotImplementedError()
@@ -58,7 +57,7 @@ class PCAGridBuilder(PfsObject):
 
     def get_vector_count(self):
         # Return the number of data vectors
-        return self.grid_index.shape[1]
+        return self.input_grid_index.shape[1]
 
     def get_vector_shape(self):
         # Return the shape of data vectors, a one element tuple
@@ -92,11 +91,11 @@ class PCAGridBuilder(PfsObject):
         # Compute the SVD of the covariance matrix
         start = time.time()
 
-        if self.svd_method == 'svd' or self.truncate is None:
+        if self.svd_method == 'svd' or self.svd_truncate is None:
             _, S, V = np.linalg.svd(C, full_matrices=False)
             V = V.transpose()
         elif self.svd_method == 'trsvd':
-            svd = TruncatedSVD(n_components=self.truncate)
+            svd = TruncatedSVD(n_components=self.svd_truncate)
             svd.fit(C)
             S = svd.singular_values_            # shape: (truncate,)
             V = svd.components_.transpose()     # shape: (dim, truncate)
@@ -105,26 +104,28 @@ class PCAGridBuilder(PfsObject):
         elapsed = end - start
 
         # Calculate principal components
-        if self.truncate is None:
-            PC = V * X.transpose()
+        if self.svd_truncate is None:
+            PC = np.dot(X, V)
         else:
-            PC = np.dot(X, V[:, :self.truncate])       # shape: (items, truncate)
+            PC = np.dot(X, V[:, :self.svd_truncate])       # shape: (items, truncate)
 
-        self.output_grid.truncate = self.truncate
+        self.output_grid.svd_truncate = self.svd_truncate
         self.output_grid.value_shapes['params'] = self.input_grid.value_shapes['params']
         self.output_grid.value_shapes['coeffs'] = (PC.shape[1],)
         #self.output_grid.value_shapes['rbf'] = self.input_grid.wave
         self.output_grid.allocate_values()
 
         # These are not grid value, set them separately
-        self.output_grid.eigs = S[:self.truncate]
-        self.output_grid.eigv = V[:, :self.truncate]
+        self.output_grid.eigs = S[:self.svd_truncate]
+        self.output_grid.eigv = V[:, :self.svd_truncate]
+        
         # These are grid values, use setter functions
-        self.output_grid.set_value('params', self.input_grid.get_value('params'))
+        self.output_grid.set_value('params', self.input_grid.get_sliced_value('params'))
 
         # Save principal components to the grid
         coeffs = np.full(self.output_grid.get_shape() + (PC.shape[1],), np.nan)
+        # TODO: different index for input and output
         for i in range(vector_count):
-            idx = tuple(self.grid_index[:, i])
+            idx = tuple(self.output_grid_index[:, i])
             coeffs[idx] = PC[i, :]
         self.output_grid.set_value('coeffs', coeffs)

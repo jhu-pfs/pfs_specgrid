@@ -38,6 +38,8 @@ class Grid(PfsObject):
     def get_value_shape(self, name):
         # Gets the full shape of the grid. It assumes different last
         # dimensions for each data array.
+        raise NotImplementedError()
+        # TODO: slice
         shape = self.get_shape() + self.value_shapes[name]
         return shape
 
@@ -118,23 +120,9 @@ class Grid(PfsObject):
 
         return tuple(idx)
 
-    def get_limited_value_index(self, name):
-        # TODO: test this with lazy-loading, we might just skip this entirely in that case
-        idx = ()
-        for p in self.axes:
-            start = np.where(self.axes[p].values >= self.axes[p].min)[0][0]
-            stop = np.where(self.axes[p].values <= self.axes[p].max)[0][-1]
-            idx = idx + (slice(start, stop + 1), )
-        value_indexes = np.full(self.value_indexes[name].shape, False)
-        value_indexes[idx] = self.value_indexes[name][idx]
-        return value_indexes
-
-    def get_valid_value_count(self, name, use_limits=False):
-        if use_limits:
-            return np.sum(self.get_limited_value_index(name))
-        else:
-            return np.sum(self.value_indexes[name])
-
+    def get_valid_value_count(self, name):
+        return np.sum(self.value_indexes[name])
+           
     def get_index(self, **kwargs):
         """Returns the indexes along all axes corresponding to the values specified.
 
@@ -187,6 +175,12 @@ class Grid(PfsObject):
 
     def has_value_index(self, name):
         return self.value_indexes is not None and name in self.value_indexes and self.value_indexes[name] is not None
+
+    def get_value_index(self, name):
+        if self.has_value_index(name):
+            return self.value_indexes[name]
+        else:
+            return None
 
     def has_value(self, name):
         if self.preload_arrays:
@@ -273,8 +267,15 @@ class Grid(PfsObject):
             self.save_item(p, self.axes[p].values)
 
     def load_axes(self):
+        # TODO: This might not be the best solution
+        # Throw away axes that are not in the data grid, a reason might be
+        # that the grid was squeezed during transformation
+        axes = {}
         for p in self.axes:
-            self.axes[p].values = self.load_item(p, np.ndarray)
+            if self.has_item(p):
+                self.axes[p].values = self.load_item(p, np.ndarray)
+                axes[p] = self.axes[p]
+        self.axes = axes
 
     def save_values(self):
         for name in self.values:

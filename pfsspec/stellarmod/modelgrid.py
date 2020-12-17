@@ -23,27 +23,83 @@ class ModelGrid(Grid):
             parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit on ' + k)
 
     def init_from_args(self, args):
-        # If a limit is specified on any of the parameters on the command-line,
-        # try to slice the grid while loading from HDF5
-        s = []
-        for k in self.axes:
-            if args[k] is not None:
-                idx = np.digitize([args[k][0], args[k][1]], self.axes[k].values)
-                s.append(slice(idx[0], idx[1] + 1, None))
-            else:
-                s.append(slice(None))
-        s.append(slice(None))  # wave axis
-        self.slice = tuple(s)
+        self.slice = self.get_slice_from_args(args)
 
         # Override physical parameters grid ranges, if specified
         # TODO: extend this to sample physically meaningful models only
         for k in self.axes:
-            if args[k] is not None and len(args[k]) >= 2:
-                self.axes[k].min = args[k][0]
-                self.axes[k].max = args[k][1]
+            if k in args and args[k] is not None:
+                if len(args[k]) >= 2:
+                    self.axes[k].min = args[k][0]
+                    self.axes[k].max = args[k][1]
+                else:
+                    self.axes[k].min = args[k][0]
+                    self.axes[k].max = args[k][0]
+
+    def get_slice_from_args(self, args):
+        # If a limit is specified on any of the parameters on the command-line,
+        # try to slice the grid while loading from HDF5
+        s = []
+        for k in self.axes:
+            if k in args and args[k] is not None:
+                if len(args[k]) >= 2:
+                    idx = np.digitize([args[k][0], args[k][1]], self.axes[k].values)
+                    s.append(slice(max(0, idx[0] - 1), idx[1], None))
+                else:
+                    idx = np.digitize([args[k][0]], self.axes[k].values)
+                    s.append(max(0, idx[0] - 1))
+            else:
+                s.append(slice(None))
+        s.append(slice(None))  # wave axis
+        return tuple(s)
+
+    def get_axes(self):
+        # Return axes that are limited by the slices
+        if self.slice is not None:
+            axes = {}
+            for i, k in enumerate(self.axes):
+                if type(self.slice[i]) is slice:
+                    axes[k] = GridAxis(k, self.axes[k].values[self.slice[i]])
+            return axes
+        else:
+            return self.axes
+
+    def get_shape(self):
+        if self.slice is not None:
+            ss = []
+            for i, k in enumerate(self.axes):
+                if type(self.slice[i]) is slice:
+                    s = self.axes[k].values[self.slice[i]].shape[0]
+                    ss.append(s)
+            return tuple(ss)
+        else:
+            return super(ModelGrid, self).get_shape()
+
+    def get_sliced_value(self, name):
+        if self.slice is not None:
+            return self.get_value_at(name, idx=self.slice[:-1])
+        else:
+            return self.get_value_at(name, idx=None)
+
+    def get_sliced_value_index(self, name):
+        # Return a boolean index that is limited by the axis bound overrides.
+        # The shape will be the same as the original array. Use this index to
+        # load a limited subset of the data directly from the disk.
+        if self.slice is not None:
+            index = np.full(self.value_indexes[name].shape, False)
+            index[self.slice[:-1]] = self.value_indexes[name][self.slice[:-1]]
+            return index
+        else:
+            return self.value_indexes[name]
+
+    def get_valid_value_count(self, name):
+        if self.slice is not None:
+            return np.sum(self.get_sliced_value_index(name))
+        else:
+            return super(ModelGrid, self).get_valid_value_count(name)
 
     def get_model_count(self, use_limits=False):
-        return self.get_valid_value_count('flux', use_limits=use_limits)
+        return self.get_valid_value_count('flux')
 
     def get_flux_shape(self):
         return self.get_shape() + self.wave.shape
@@ -62,6 +118,16 @@ class ModelGrid(Grid):
         self.allocate_value('flux', self.wave.shape)
         self.allocate_value('cont', self.wave.shape)
         self.allocate_value('params')
+
+    def get_value_index(self, name):
+        if self.has_value_index(name):
+            index = self.value_indexes[name]
+            if self.slice is not None:
+                return index[self.slice[:-1]]
+            else:
+                return index
+        else:
+            return None
 
     def is_value_valid(self, name, value):
         return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))

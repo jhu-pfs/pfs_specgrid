@@ -99,6 +99,8 @@ class ModelGridFit(PfsObject):
             data_count = min(self.top, data_count)
         t = tqdm(total=data_count)
 
+        # Fit every model
+
         with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
             for idx, spec, params in p.map(self.process_item, range(data_count)):
                 if not output_initialized:
