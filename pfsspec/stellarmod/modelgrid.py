@@ -19,6 +19,7 @@ class ModelGrid(Grid):
             self.slice = None
 
     def add_args(self, parser):
+        parser.add_argument('--lambda', type=float, nargs='*', default=None, help='Limit on lambda.')
         for k in self.axes:
             parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit on ' + k)
 
@@ -42,15 +43,30 @@ class ModelGrid(Grid):
         s = []
         for k in self.axes:
             if k in args and args[k] is not None:
-                if len(args[k]) >= 2:
+                if len(args[k]) == 2:
                     idx = np.digitize([args[k][0], args[k][1]], self.axes[k].values)
                     s.append(slice(max(0, idx[0] - 1), idx[1], None))
-                else:
+                elif len(args[k]) == 1:
                     idx = np.digitize([args[k][0]], self.axes[k].values)
                     s.append(max(0, idx[0] - 1))
+                else:
+                    raise Exception('Only two or one values are allowed for parameter {}'.format(k))
             else:
                 s.append(slice(None))
-        s.append(slice(None))  # wave axis
+
+        # Wave axis
+        if 'lambda' in args and args['lambda'] is not None:
+            if len(args['lambda']) == 2:
+                idx = np.digitize([args['lambda'][0], args['lambda'][1]], self.wave)
+                s.append(slice(max(0, idx[0] - 1), idx[1], None))
+            elif len(args['lambda']) == 1:
+                idx = np.digitize([args['lambda'][0]], self.wave)
+                s.append(max(0, idx[0] - 1))
+            else:
+                raise Exception('Only two or one values are allowed for parameter lambda.')
+        else:
+            s.append(slice(None))
+
         return tuple(s)
 
     def get_axes(self):
@@ -77,7 +93,12 @@ class ModelGrid(Grid):
 
     def get_sliced_value(self, name):
         if self.slice is not None:
-            return self.get_value_at(name, idx=self.slice[:-1])
+            if name in ['flux', 'cont']:
+                # Slice in the wavelength direction as well
+                return self.get_value_at(name, idx=self.slice[:-1], s=self.slice[-1])
+            else:
+                # Slice only in the stellar parameter directions
+                return self.get_value_at(name, idx=self.slice[:-1])
         else:
             return self.get_value_at(name, idx=None)
 
@@ -191,12 +212,13 @@ class ModelGrid(Grid):
         return spec
 
     def get_model(self, idx):
+        # Slice along lambda if requested
+        s = self.slice[-1] if self.slice is not None else None
         if self.has_value_at('flux', idx):
-            spec = self.get_parameterized_spectrum(idx)
-            spec.flux = np.array(self.get_value_at('flux', idx), copy=True)
+            spec = self.get_parameterized_spectrum(idx, s=s)
+            spec.flux = np.array(self.get_value_at('flux', idx, s=s), copy=True)
             if self.has_value('cont'):
-                spec.cont = np.array(self.get_value_at('cont', idx), copy=True)
-
+                spec.cont = np.array(self.get_value_at('cont', idx, s=s), copy=True)
             return spec
         else:
             return None
@@ -271,7 +293,7 @@ class ModelGrid(Grid):
         else:
             aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0])) for p in axes}
 
-        rbf_flux = self.interpolate_value_rbf(flux, aa, mask=mask)
-        rbf_cont = self.interpolate_value_rbf(cont, aa, mask=mask)
+        rbf_flux = self.fit_rbf(flux, aa, mask=mask)
+        rbf_cont = self.fit_rbf(cont, aa, mask=mask)
 
         return rbf_flux, rbf_cont, axes

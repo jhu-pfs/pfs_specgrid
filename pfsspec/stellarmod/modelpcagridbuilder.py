@@ -56,27 +56,38 @@ class ModelPCAGridBuilder(PCAGridBuilder):
     def save_data(self, output_path):
         self.output_grid.save(self.output_grid.filename, format=self.output_grid.fileformat)
 
+    def get_wave(self):
+        if self.input_grid.slice is not None:
+            return self.input_grid.wave[self.input_grid.slice[-1]]
+        else:
+            return self.input_grid.wave
+
     def get_vector_shape(self):
-        return self.input_grid.wave.shape
+        return self.get_wave().shape
 
     def get_vector(self, i):
+        # When fitting, the output fluxes will be already normalized, so
+        # here we return the flux field only
         idx = tuple(self.input_grid_index[:, i])
         spec = self.input_grid.get_model(idx)
-        return spec.flux - spec.cont
+        return spec.flux
 
     def run(self):
         super(ModelPCAGridBuilder, self).run()
 
-        self.output_grid.wave = self.input_grid.wave
+        self.output_grid.wave = self.get_wave()
 
-        # # Build RBF for model parameters
-        # pad_params, pad_axes = self.output_grid.get_value_padded('params', extrapolation='ijk')
-        # rbf = self.output_grid.interpolate_value_rbf(pad_params, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
-        # self.output_grid.params_rbf = rbf.nodes     # shape: (nodes, params)
+        # TODO: what if taking a sub-cube of the input? Then pad?
 
-        # # Build RBF on principal components
-        # pad_coeffs, pad_axes = self.output_grid.get_value_padded('coeffs', extrapolation='ijk')
-        # rbf = self.output_grid.interpolate_value_rbf(pad_coeffs, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
-        # self.output_grid.coeffs_rbf = rbf.nodes     # shape: (nodes, coeffs)
+        # Build RBF for model parameters
+        # Masks are automatically generated for nan values inside RBF function
+        pad_params, pad_axes = self.output_grid.get_value_padded('params', extrapolation='ijk')
+        rbf = self.output_grid.fit_rbf(pad_params, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
+        self.output_grid.params_rbf = rbf     # rbf.nodes.shape: (nodes, params)
+
+        # Build RBF on principal components
+        pad_coeffs, pad_axes = self.output_grid.get_value_padded('coeffs', extrapolation='ijk')
+        rbf = self.output_grid.fit_rbf(pad_coeffs, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
+        self.output_grid.coeffs_rbf = rbf     # rbf.nodes.shape: (nodes, coeffs)
         
     

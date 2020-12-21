@@ -9,7 +9,7 @@ from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
 from pfsspec.stellarmod.boszgridcontinuumfit import BoszGridContinuumFit
 from pfsspec.stellarmod.boszpcagridbuilder import BoszPCAGridBuilder
-from pfsspec.stellarmod.simplecontinuummodel import SimpleContinuumModel
+from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {
@@ -50,12 +50,7 @@ PREPARE_CONFIGURATIONS = {
 
 FIT_CONFIGURATIONS = {
     'grid': {
-        'bosz': {
-            'grid': BoszGridContinuumFit,
-            'models': {
-                'simple': SimpleContinuumModel
-            }
-        }
+        'bosz': BoszGridContinuumFit
     }
 }
 

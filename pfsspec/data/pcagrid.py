@@ -1,10 +1,10 @@
 import logging
 import numpy as np
 
-from pfsspec.data.grid import Grid
 from pfsspec.data.gridaxis import GridAxis
 
-class PCAGrid(Grid):
+# TODO: this should be independent of the Grid class, not using anything from there
+class PCAGrid(PfsObject):
     # Implements a grid that supports interpolation based on continuum fits
     # and eigenvalues
 

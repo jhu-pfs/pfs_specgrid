@@ -2,6 +2,7 @@ import numpy as np
 
 from pfsspec.data.gridaxis import GridAxis
 from pfsspec.stellarmod.boszspectrum import BoszSpectrum
+from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
 
 class Bosz():
     # Mixin for BOSZ grid
@@ -24,3 +25,7 @@ class Bosz():
     def create_spectrum(self):
         spec = BoszSpectrum()
         return spec
+
+    def create_continuum_model(self):
+        model = LogChebyshevContinuumModel()
+        return model

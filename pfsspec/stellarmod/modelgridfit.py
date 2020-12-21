@@ -7,7 +7,7 @@ from pfsspec.parallel import SmartParallel
 from pfsspec.pfsobject import PfsObject
 
 class ModelGridFit(PfsObject):
-    def __init__(self, grid=None, model=None, orig=None):
+    def __init__(self, grid=None, orig=None):
         super(ModelGridFit, self).__init__(orig=orig)
 
         if isinstance(orig, ModelGridFit):
@@ -20,7 +20,7 @@ class ModelGridFit(PfsObject):
             self.output_grid = orig.output_grid
             self.grid_index = None
 
-            self.model = model if model is not None else orig.model
+            self.continuum_model = orig.continuum_model
         else:
             self.parallel = True
             self.threads = multiprocessing.cpu_count() // 2
@@ -31,14 +31,16 @@ class ModelGridFit(PfsObject):
             self.output_grid = None
             self.grid_index = None
 
-            self.model = model
+            self.continuum_model = self.create_continuum_model()
 
     def add_args(self, parser):
         parser.add_argument('--top', type=int, default=None, help='Limit number of results')
+        self.continuum_model.add_args(parser)
 
     def parse_args(self, args):
         if 'top' in args and args['top'] is not None:
             self.top = args['top']
+        self.continuum_model.parse_args(args)
 
     def create_grid(self):
         raise NotImplementedError()
@@ -79,9 +81,7 @@ class ModelGridFit(PfsObject):
 
     def process_item(self, i):
         idx, spec = self.get_gridpoint_model(i)
-        params = self.model.fit(spec)
-        self.model.eval(spec, params)
-
+        params = self.continuum_model.normalize(spec)
         return idx, spec, params
 
     def store_item(self, idx, spec, params):
@@ -90,9 +90,6 @@ class ModelGridFit(PfsObject):
         self.output_grid.set_value_at('params', idx, params)
 
     def run(self):
-        if self.model is None:
-            self.model = self.create_model()
-
         output_initialized = False
         data_count = self.get_data_count()
         if self.top is not None:

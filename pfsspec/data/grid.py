@@ -3,8 +3,9 @@ import numpy as np
 import itertools
 from collections import Iterable
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
-from scipy.interpolate import Rbf, interp1d, interpn
+from scipy.interpolate import interp1d, interpn
 
+from pfsspec.rbf import Rbf
 from pfsspec.pfsobject import PfsObject
 from pfsspec.data.gridaxis import GridAxis
 
@@ -492,7 +493,7 @@ class Grid(PfsObject):
 
         return padded, paxes
 
-    def interpolate_value_rbf(self, value, axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0):
+    def fit_rbf(self, value, axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0):
         """Returns the Radial Base Function interpolation of a grid slice.
 
         Args:
@@ -533,7 +534,12 @@ class Grid(PfsObject):
         else:
             mode = 'N-D'
 
-        rbf = Rbf(*points, value, function=function, epsilon=epsilon, smooth=smooth, mode=mode)
+        rbf = Rbf()
+        rbf.fit(*points, value, function=function, epsilon=epsilon, smooth=smooth, mode=mode)
 
         return rbf
 
+    def load_rbf(self, xi, nodes, function='multiquadric', epsilon=None, smooth=0.0):
+        rbf = Rbf()
+        rbf.load(nodes, xi, mode='N-D')
+        return rbf

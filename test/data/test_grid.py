@@ -314,22 +314,22 @@ class TestGrid(TestBase):
         self.assertEqual(1, len(paxes))
         assert_array_equal(np.array([-1.,  0.,  1.,  2.,  3.,  4.,  5.]), paxes[0])
 
-    def test_interpolate_value_rbf(self):
+    def test_fit_rbf(self):
         grid = self.create_full_grid()
 
-        rbf, paxes = grid.interpolate_value_rbf('U')
+        rbf, paxes = grid.fit_rbf('U')
         self.assertEqual((2, 35), rbf.xi.shape)
         self.assertEqual((35, 10), rbf.nodes.shape)
 
-        rbf, paxes = grid.interpolate_value_rbf('U', padding_mode=None)
+        rbf, paxes = grid.fit_rbf('U', padding_mode=None)
         self.assertEqual((2, 15), rbf.xi.shape)
         self.assertEqual((15, 10), rbf.nodes.shape)
 
-        rbf, paxes = grid.interpolate_value_rbf('U', a=2)
+        rbf, paxes = grid.fit_rbf('U', a=2)
         self.assertEqual((1, 5), rbf.xi.shape)
         self.assertEqual((5, 10), rbf.nodes.shape)
 
-        rbf, paxes = grid.interpolate_value_rbf('U', s=np.s_[1:3], padding_mode='xyz', a=2)
+        rbf, paxes = grid.fit_rbf('U', s=np.s_[1:3], padding_mode='xyz', a=2)
         self.assertEqual((1, 5), rbf.xi.shape)
         self.assertEqual((5, 2), rbf.nodes.shape)
 

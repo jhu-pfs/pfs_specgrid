@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 class GridAxis():
     def __init__(self, name, values=None):
@@ -7,12 +8,16 @@ class GridAxis():
         self.index = None
         self.min = None
         self.max = None
+        self.ip_to_index = None
+        self.ip_to_value = None
 
     def build_index(self):
         # NOTE: assume one dimension here
         self.index = {v: i[0] for i, v in np.ndenumerate(self.values)}
         self.min = np.min(self.values)
         self.max = np.max(self.values)
+        self.ip_to_index = interp1d(self.values, np.arange(self.values.shape[0]), fill_value='extrapolate')
+        self.ip_to_value = interp1d(np.arange(self.values.shape[0]), self.values, fill_value='extrapolate')
 
     def get_index(self, value):
         return self.index[value]
