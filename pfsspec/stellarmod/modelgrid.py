@@ -158,6 +158,9 @@ class ModelGrid(ArrayGrid):
         self.init_axis('T_eff')
         self.init_axis('log_g')
 
+    def init_constants(self):
+        self.init_constant('constants')
+
     def init_values(self):
         self.init_value('flux')
         self.init_value('cont')

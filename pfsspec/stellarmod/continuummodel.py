@@ -13,11 +13,11 @@ class ContinuumModel(PfsObject):
     def fit(self, wave, flux):
         raise NotImplementedError()
 
-    def eval(self, wave, params):
+    def eval(self, wave, constants, params):
         raise NotImplementedError()
 
-    def normalize(self, spec, params):
+    def normalize(self, spec, constants, params):
         raise NotImplementedError()
 
-    def denormalize(self, spec, params):
+    def denormalize(self, spec, constants, params):
         raise NotImplementedError()

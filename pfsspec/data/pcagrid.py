@@ -47,6 +47,12 @@ class PcaGrid(PfsObject):
     def load_axes(self):
         self.grid.load_axes()
 
+    def get_constant(self, name):
+        return self.grid.get_constant(name)
+
+    def set_constant(self, name, value):
+        self.grid.set_constant(name, value)
+
     def init_values(self):
         raise NotImplementedError()
 

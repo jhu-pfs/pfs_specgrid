@@ -12,11 +12,14 @@ class Grid(PfsObject):
         if isinstance(orig, Grid):
             self.preload_arrays = orig.preload_arrays
             self.axes = orig.axes
+            self.constants = orig.constants
         else:
             self.preload_arrays = False
             self.axes = {}
+            self.constants = {}
 
             self.init_axes()
+            self.init_constants()
 
     def get_shape(self):
         shape = tuple(self.axes[p].values.shape[0] for p in self.axes)
@@ -33,15 +36,38 @@ class Grid(PfsObject):
     def init_axis(self, name, values=None):
         self.axes[name] = GridAxis(name, values)
 
+    def build_axis_indexes(self):
+        for p in self.axes:
+            self.axes[p].build_index()
+
     def set_axes(self, axes):
         self.axes = axes
 
     def get_axes(self):
         return self.axes
 
-    def build_axis_indexes(self):
-        for p in self.axes:
-            self.axes[p].build_index()
+    def init_constants(self):
+        pass
+
+    def init_constant(self, name):
+        self.constants[name] = None
+
+    def get_constant(self, name):
+        return self.constants[name]
+
+    def set_constant(self, name, value):
+        self.constants[name] = value
+
+    def save_constants(self):
+        for p in self.constants:
+            self.save_item(p, self.constants[p])
+
+    def load_constants(self):
+        constants = {}
+        for p in self.constants:
+            if self.has_item(p):
+                constants[p] = self.load_item(p, np.ndarray)
+        self.constants = constants
 
     def init_values(self):
         pass
@@ -76,6 +102,7 @@ class Grid(PfsObject):
 
     def save_items(self):
         self.save_axes()
+        self.save_constants()
 
     def load(self, filename, s=None, format=None):
         super(Grid, self).load(filename, s=s, format=format)
@@ -83,3 +110,4 @@ class Grid(PfsObject):
 
     def load_items(self, s=None):
         self.load_axes()
+        self.load_constants()

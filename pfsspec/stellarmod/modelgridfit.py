@@ -94,10 +94,9 @@ class ModelGridFit(PfsObject):
         data_count = self.get_data_count()
         if self.top is not None:
             data_count = min(self.top, data_count)
-        t = tqdm(total=data_count)
 
         # Fit every model
-
+        t = tqdm(total=data_count)
         with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
             for idx, spec, params in p.map(self.process_item, range(data_count)):
                 if not output_initialized:
@@ -109,3 +108,5 @@ class ModelGridFit(PfsObject):
                     output_initialized = True
                 self.store_item(idx, spec, params)
                 t.update(1)
+
+        self.output_grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)

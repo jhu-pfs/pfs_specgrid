@@ -9,7 +9,6 @@ from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
 from pfsspec.stellarmod.boszgridcontinuumfit import BoszGridContinuumFit
 from pfsspec.stellarmod.boszpcagridbuilder import BoszPCAGridBuilder
-from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {

@@ -77,6 +77,7 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         params = self.input_grid.get_value_sliced('params')
         self.output_grid.allocate_value('params', shape=(params.shape[-1],))
         self.output_grid.set_value('params', params)
+        self.output_grid.set_constant('constants', self.input_grid.get_constant('constants'))
 
         # Save principal components to a grid
         coeffs = np.full(self.input_grid.get_shape() + (self.PC.shape[1],), np.nan)
