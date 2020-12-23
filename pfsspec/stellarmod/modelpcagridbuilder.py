@@ -4,21 +4,21 @@ import time
 from tqdm import tqdm
 
 from pfsspec.physics import Physics
-from pfsspec.data.pcagridbuilder import PCAGridBuilder
+from pfsspec.data.pcagridbuilder import PcaGridBuilder
 
-class ModelPCAGridBuilder(PCAGridBuilder):
+class ModelPcaGridBuilder(PcaGridBuilder):
     def __init__(self, grid=None, orig=None):
-        super(ModelPCAGridBuilder, self).__init__(orig=orig)
+        super(ModelPcaGridBuilder, self).__init__(orig=orig)
     
     def add_args(self, parser):
-        super(ModelPCAGridBuilder, self).add_args(parser)
+        super(ModelPcaGridBuilder, self).add_args(parser)
 
         # Axes of input grid can be used as parameters to filter the range
         grid = self.create_grid()
         grid.add_args(parser)
 
     def parse_args(self):
-        super(ModelPCAGridBuilder, self).parse_args()
+        super(ModelPcaGridBuilder, self).parse_args()
 
     def open_data(self, input_path, output_path):
         # Open input
@@ -43,11 +43,11 @@ class ModelPCAGridBuilder(PCAGridBuilder):
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_pca_grid()
         # TODO: copy axes
-        self.output_grid.axes = self.input_grid.get_axes()
-        self.output_grid.build_axis_indexes()
+        self.output_grid.set_axes(self.input_grid.get_axes())
 
         # DEBUG
         self.output_grid.preload_arrays = True
+        self.output_grid.grid.preload_arrays = True
         # END DEBUG
 
         self.output_grid.filename = fn
@@ -56,14 +56,8 @@ class ModelPCAGridBuilder(PCAGridBuilder):
     def save_data(self, output_path):
         self.output_grid.save(self.output_grid.filename, format=self.output_grid.fileformat)
 
-    def get_wave(self):
-        if self.input_grid.slice is not None:
-            return self.input_grid.wave[self.input_grid.slice[-1]]
-        else:
-            return self.input_grid.wave
-
     def get_vector_shape(self):
-        return self.get_wave().shape
+        return self.input_grid.get_wave().shape
 
     def get_vector(self, i):
         # When fitting, the output fluxes will be already normalized, so
@@ -73,21 +67,32 @@ class ModelPCAGridBuilder(PCAGridBuilder):
         return spec.flux
 
     def run(self):
-        super(ModelPCAGridBuilder, self).run()
+        super(ModelPcaGridBuilder, self).run()
 
-        self.output_grid.wave = self.get_wave()
+        # Copy data from the input grid
+        self.output_grid.set_axes(self.input_grid.get_axes())
+        self.output_grid.wave = self.input_grid.get_wave()
 
-        # TODO: what if taking a sub-cube of the input? Then pad?
+        # Copy continuum fit parameters
+        params = self.input_grid.get_value_sliced('params')
+        self.output_grid.allocate_value('params', shape=(params.shape[-1],))
+        self.output_grid.set_value('params', params)
 
-        # Build RBF for model parameters
-        # Masks are automatically generated for nan values inside RBF function
-        pad_params, pad_axes = self.output_grid.get_value_padded('params', extrapolation='ijk')
-        rbf = self.output_grid.fit_rbf(pad_params, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
-        self.output_grid.params_rbf = rbf     # rbf.nodes.shape: (nodes, params)
+        # Save principal components to a grid
+        coeffs = np.full(self.input_grid.get_shape() + (self.PC.shape[1],), np.nan)
+        vector_count = self.get_vector_count()
+        for i in range(vector_count):
+            idx = tuple(self.output_grid_index[:, i])
+            coeffs[idx] = self.PC[i, :]
 
-        # Build RBF on principal components
-        pad_coeffs, pad_axes = self.output_grid.get_value_padded('coeffs', extrapolation='ijk')
-        rbf = self.output_grid.fit_rbf(pad_coeffs, pad_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
-        self.output_grid.coeffs_rbf = rbf     # rbf.nodes.shape: (nodes, coeffs)
+        self.output_grid.allocate_value('flux', shape=self.V.shape, pca=True)
+        self.output_grid.set_value('flux', (coeffs, self.S, self.V), pca=True)
+
+        """
+        # Pad the array of continuum fit parameters, fit with RBF and save intou output array
+        padded_params, padded_axes = self.input_grid.get_value_padded('params', interpolation='ijk')
+        rbf = self.output_grid.fit_rbf(padded_params, padded_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
+        self.output_grid.set_value('params', rbf)
+        """
         
     

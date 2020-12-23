@@ -4,12 +4,12 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import h5py
 
-from pfsspec.data.grid import Grid
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.gridaxis import GridAxis
 
-class TestGrid(TestBase):
+class TestArrayGrid(TestBase):
     def create_empty_grid(self, preload_arrays=True):
-        grid = Grid()
+        grid = ArrayGrid()
         grid.preload_arrays = preload_arrays
 
         grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))
@@ -22,7 +22,7 @@ class TestGrid(TestBase):
         return grid
 
     def create_full_grid(self, preload_arrays=True):
-        grid = Grid()
+        grid = ArrayGrid()
         grid.preload_arrays = preload_arrays
 
         grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))
@@ -49,7 +49,7 @@ class TestGrid(TestBase):
         return grid
 
     def create_full_grid_1D(self, preload_arrays=True):
-        grid = Grid()
+        grid = ArrayGrid()
         grid.preload_arrays = preload_arrays
 
         grid.init_axis('a', np.array([1., 2., 3., 4., 5.]))

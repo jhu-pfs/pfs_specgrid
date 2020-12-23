@@ -23,8 +23,8 @@ class LogChebyshevContinuumModel(ContinuumModel):
     def add_args(self, parser):
         super(LogChebyshevContinuumModel, self).add_args(parser)
 
-    def init_from_args(self, args):
-        super(LogChebyshevContinuumModel, self).init_from_args(args)
+    def parse_args(self, args):
+        super(LogChebyshevContinuumModel, self).parse_args(args)
 
     def find_masks_between_limits(self, wave, dlambda):
         wave_min = wave.min()

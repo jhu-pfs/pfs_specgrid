@@ -6,13 +6,13 @@ from tqdm import tqdm
 
 from pfsspec.pfsobject import PfsObject
 from pfsspec.physics import Physics
-from pfsspec.data.pcagrid import PCAGrid
+from pfsspec.data.pcagrid import PcaGrid
 
-class PCAGridBuilder(PfsObject):
+class PcaGridBuilder(PfsObject):
     def __init__(self, input_grid=None, output_grid=None, orig=None):
-        super(PCAGridBuilder, self).__init__()
+        super(PcaGridBuilder, self).__init__()
 
-        if isinstance(orig, PCAGridBuilder):
+        if isinstance(orig, PcaGridBuilder):
             self.input_grid = input_grid if input_grid is not None else orig.input_grid
             self.output_grid = output_grid if output_grid is not None else orig.output_grid
             self.input_grid_index = None
@@ -21,7 +21,13 @@ class PCAGridBuilder(PfsObject):
 
             self.top = orig.top
             self.svd_method = orig.svd_method
-            self.svd_truncate = orig.truncate
+            self.svd_truncate = orig.svd_truncate
+
+            self.X = orig.X
+            self.C = orig.C
+            self.S = orig.S
+            self.V = orig.V
+            self.PC = orig.PC
         else:
             self.input_grid = input_grid
             self.output_grid = output_grid
@@ -32,6 +38,12 @@ class PCAGridBuilder(PfsObject):
             self.top = None
             self.svd_method = 'svd'
             self.svd_truncate = None
+
+            self.X = None
+            self.C = None
+            self.S = None
+            self.V = None
+            self.PC = None
 
     def add_args(self, parser):
         parser.add_argument('--top', type=int, default=None, help='Limit number of results')
@@ -57,7 +69,10 @@ class PCAGridBuilder(PfsObject):
 
     def get_vector_count(self):
         # Return the number of data vectors
-        return self.input_grid_index.shape[1]
+        vector_count = self.input_grid_index.shape[1]
+        if self.top is not None:
+            vector_count = min(self.top, vector_count)
+        return vector_count
 
     def get_vector_shape(self):
         # Return the shape of data vectors, a one element tuple
@@ -75,57 +90,35 @@ class PCAGridBuilder(PfsObject):
 
         # Copy all data vectors into a single matrix
         vector_count = self.get_vector_count()
-        if self.top is not None:
-            vector_count = min(self.top, vector_count)
-
         vector_shape = self.get_vector_shape()
         data_shape = (vector_count,) + vector_shape
 
         # Build the data matrix and calculate the covariance
-        X = np.empty(data_shape)
+        self.X = np.empty(data_shape)
         for i in tqdm(range(vector_count)):
             v = self.get_vector(i)
-            X[i, :] = v
-        C = np.matmul(X.transpose(), X)
+            self.X[i, :] = v
+        self.C = np.matmul(self.X.transpose(), self.X)
 
         # Compute the SVD of the covariance matrix
         start = time.time()
 
         if self.svd_method == 'svd' or self.svd_truncate is None:
-            _, S, V = np.linalg.svd(C, full_matrices=False)
-            V = V.transpose()
+            _, self.S, self.V = np.linalg.svd(self.C, full_matrices=False)
+            self.V = self.V.transpose()
         elif self.svd_method == 'trsvd':
             svd = TruncatedSVD(n_components=self.svd_truncate)
-            svd.fit(C)
-            S = svd.singular_values_            # shape: (truncate,)
-            V = svd.components_.transpose()     # shape: (dim, truncate)
+            svd.fit(self.C)
+            self.S = svd.singular_values_            # shape: (truncate,)
+            self.V = svd.components_.transpose()     # shape: (dim, truncate)
 
         end = time.time()
         elapsed = end - start
 
         # Calculate principal components
         if self.svd_truncate is None:
-            PC = np.dot(X, V)
+            self.PC = np.dot(self.X, self.V)
         else:
-            PC = np.dot(X, V[:, :self.svd_truncate])       # shape: (items, truncate)
+            self.PC = np.dot(self.X, self.V[:, :self.svd_truncate])       # shape: (items, truncate)
 
         self.output_grid.svd_truncate = self.svd_truncate
-        self.output_grid.value_shapes['params'] = self.input_grid.value_shapes['params']
-        self.output_grid.value_shapes['coeffs'] = (PC.shape[1],)
-        #self.output_grid.value_shapes['rbf'] = self.input_grid.wave
-        self.output_grid.allocate_values()
-
-        # These are not grid value, set them separately
-        self.output_grid.eigs = S[:self.svd_truncate]
-        self.output_grid.eigv = V[:, :self.svd_truncate]
-        
-        # These are grid values, use setter functions
-        self.output_grid.set_value('params', self.input_grid.get_sliced_value('params'))
-
-        # Save principal components to the grid
-        coeffs = np.full(self.output_grid.get_shape() + (PC.shape[1],), np.nan)
-        # TODO: different index for input and output
-        for i in range(vector_count):
-            idx = tuple(self.output_grid_index[:, i])
-            coeffs[idx] = PC[i, :]
-        self.output_grid.set_value('coeffs', coeffs)

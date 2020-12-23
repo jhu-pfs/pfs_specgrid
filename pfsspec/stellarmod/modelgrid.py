@@ -3,11 +3,12 @@ import itertools
 import numpy as np
 from random import choice
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
+from scipy.interpolate import interp1d, interpn
 
-from pfsspec.data.grid import Grid
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.gridaxis import GridAxis
 
-class ModelGrid(Grid):
+class ModelGrid(ArrayGrid):
     def __init__(self, orig=None):
         super(ModelGrid, self).__init__(orig=orig)
 
@@ -91,7 +92,7 @@ class ModelGrid(Grid):
         else:
             return super(ModelGrid, self).get_shape()
 
-    def get_sliced_value(self, name):
+    def get_value_sliced(self, name):
         if self.slice is not None:
             if name in ['flux', 'cont']:
                 # Slice in the wavelength direction as well
@@ -102,6 +103,27 @@ class ModelGrid(Grid):
         else:
             return self.get_value_at(name, idx=None)
 
+    def get_value_padded(self, name, interpolation='ijk'):
+        """Returns a slice of the grid and pads with a single item in every direction using linearNd extrapolation.
+
+        Extrapolation is done either in grid coordinates or in axis coordinates
+
+        Args:
+            name (str): Name of value array
+            s (slice, optional): Slice to apply to value array. Defaults to None.
+            interpolation: Whether to extrapolate based on array indices ('ijk', default)
+                or axis coordinates ('xyz').
+            **kwargs: Values of axis coordinates. Only exact values are supported. For
+                missing direction, full, padded slices will be returned.
+        """
+
+        # If slicing is turned on, these functions will automatically return the sliced
+        # value array and the sliced (and squeezed) axes.
+        orig_axes = self.get_axes()
+        orig_value = self.get_value_sliced(name)
+
+        return ArrayGrid.pad_array(orig_axes, orig_value)
+        
     def get_sliced_value_index(self, name):
         # Return a boolean index that is limited by the axis bound overrides.
         # The shape will be the same as the original array. Use this index to
@@ -121,6 +143,12 @@ class ModelGrid(Grid):
 
     def get_model_count(self, use_limits=False):
         return self.get_valid_value_count('flux')
+
+    def get_wave(self):
+        if self.slice is not None:
+            return self.wave[self.slice[-1]]
+        else:
+            return self.wave
 
     def get_flux_shape(self):
         return self.get_shape() + self.wave.shape
@@ -262,6 +290,8 @@ class ModelGrid(Grid):
         else:
             return None
 
+#region RBF interpolation
+
     def get_slice_rbf(self, s=None, interpolation='xyz', padding=True, **kwargs):
         # Interpolate the continuum and flux in a wavelength slice `s` and parameter
         # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
@@ -297,3 +327,5 @@ class ModelGrid(Grid):
         rbf_cont = self.fit_rbf(cont, aa, mask=mask)
 
         return rbf_flux, rbf_cont, axes
+
+#endregion

@@ -1,24 +1,22 @@
 import numpy as np
 
-from pfsspec.data.pcagrid import PCAGrid
+from pfsspec.data.arraygrid import ArrayGrid
+from pfsspec.data.rbfgrid import RbfGrid
+from pfsspec.data.pcagrid import PcaGrid
+from pfsspec.stellarmod.modelgrid import ModelGrid
 
-class ModelPCAGrid(PCAGrid):
+class ModelPcaGrid(PcaGrid):
     def __init__(self, orig=None):
-        super(ModelPCAGrid, self).__init__(orig=orig)
-
-        if isinstance(orig, ModelPCAGrid):
-            self.wave = orig.wave
-            self.params_rbf = orig.params_rbf
-            self.coeffs_rbf = orig.coeffs_rbf
+        if isinstance(orig, ModelPcaGrid):
+            self.grid = orig.grid
             self.continuum_model = orig.continuum_model
+            self.wave = orig.wave
         else:
-            self.wave = None
-            self.params_rbf = None
-            self.coeffs_rbf = None
+            self.grid = self.create_pca_grid()
             self.continuum_model = self.create_continuum_model()
-
-    # TODO: figure out how to make slicing common to this grid
-    #       and the "standard" ModelGrid implementation.
+            self.wave = None
+            
+        super(ModelPcaGrid, self).__init__(self.grid, orig=orig)
 
     def add_args(self, parser):
         self.continuum_model.add_args(parser)
@@ -27,40 +25,26 @@ class ModelPCAGrid(PCAGrid):
         self.continuum_model.init_from_args(args)
     
     def init_axes(self):
-        super(ModelPCAGrid, self).init_axes()
+        super(ModelPcaGrid, self).init_axes()
         self.init_axis('Fe_H')
         self.init_axis('T_eff')
         self.init_axis('log_g')
 
     def init_values(self):
-        super(ModelPCAGrid, self).init_values()
-        self.init_value('params')
+        self.init_value('params')           # Continuum fit parameters
+        self.init_value('flux', pca=True)   # Normalized flux
 
     def allocate_values(self):
-        super(ModelPCAGrid, self).allocate_values()
+        super(ModelPcaGrid, self).allocate_values()
         self.allocate_value('params')
 
     def save_items(self):
+        super(ModelPcaGrid, self).save_items()
         self.save_item('wave', self.wave)
-        self.save_item('params_rbf_xi', self.params_rbf.xi)
-        self.save_item('params_rbf_nodes', self.params_rbf.nodes)
-        self.save_item('coeffs_rbf_xi', self.coeffs_rbf.xi)
-        self.save_item('coeffs_rbf_nodes', self.coeffs_rbf.nodes)
-
-        super(ModelPCAGrid, self).save_items()
-
+       
     def load_items(self, s=None):
-        super(ModelPCAGrid, self).load_items(s=s)
-        
+        super(ModelPcaGrid, self).load_items(s=s)
         self.wave = self.load_item('wave', np.ndarray)
-
-        # Now this is trickier, we need the list of points
-        self.params_rbf = self.load_rbf(
-            self.load_item('params_rbf_xi', np.ndarray),
-            self.load_item('params_rbf_nodes', np.ndarray))
-        self.coeffs_rbf = self.load_rbf(
-            self.load_item('coeffs_rbf_xi', np.ndarray),
-            self.load_item('coeffs_rbf_nodes', np.ndarray))
 
     def get_parameterized_spectrum(self, s=None, **kwargs):
         spec = self.create_spectrum()
@@ -68,15 +52,9 @@ class ModelPCAGrid(PCAGrid):
         spec.wave = self.wave[s or slice(None)]
         return spec
 
-    def ip_to_index(self, **kwargs):
-        xi = []
-        for k in self.axes:
-            if k not in kwargs:
-                raise Exception('Interpolation requires all parameters specificed. Missing: {}'.format(k))
-            xi.append(self.axes[k].ip_to_index(kwargs[k]))
-        return xi
-
     def interpolate_model_rbf(self, **kwargs):
+        # TODO: sort this out with existing but different function names
+
         xi = self.ip_to_index(**kwargs)
         params = self.params_rbf(*xi)
         coeffs = self.coeffs_rbf(*xi)
@@ -90,3 +68,6 @@ class ModelPCAGrid(PCAGrid):
         self.continuum_model.denormalize(spec, params)
 
         return spec
+
+    def fit_rbf(self, value, axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0):
+        return self.grid.fit_rbf(value, axes, mask=mask, function=function, epsilon=epsilon, smooth=smooth)

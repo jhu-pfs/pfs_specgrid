@@ -1,9 +1,9 @@
 from test.test_base import TestBase
-from pfsspec.stellarmod.boszpcagrid import BoszPCAGrid
+from pfsspec.stellarmod.boszpcagrid import BoszPcaGrid
 
 class TestModelPCAGrid(TestBase):
     def get_test_grid(self, args):
-        grid = BoszPCAGrid()
+        grid = BoszPcaGrid()
         grid.load('/scratch/ceph/dobos/temp/test041/spectra.h5')
         grid.init_from_args(args)
         return grid

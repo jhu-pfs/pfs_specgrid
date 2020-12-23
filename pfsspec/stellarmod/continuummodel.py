@@ -4,10 +4,10 @@ class ContinuumModel(PfsObject):
     def __init__(self, orig=None):
         super(ContinuumModel, self).__init__()
 
-    def init_from_args(self, parser):
+    def add_args(self, parser):
         pass
 
-    def parse_args(self, args):
+    def parse_args(self, parser):
         pass
 
     def fit(self, wave, flux):

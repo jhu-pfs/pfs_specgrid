@@ -1,10 +1,10 @@
 import numpy as np
 
-from pfsspec.data.grid import Grid
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.gridaxis import GridAxis
 from pfsspec.stellarmod.kuruczatm import KuruczAtm
 
-class KuruczAtmGrid(Grid):
+class KuruczAtmGrid(ArrayGrid):
     def __init__(self):
         super(KuruczAtmGrid, self).__init__()
 
