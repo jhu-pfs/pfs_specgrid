@@ -28,7 +28,7 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Pool
 import logging
 import multiprocessing
-from multiprocessing.queues import Queue
+from multiprocessing import Manager, Pool, Queue
 import numpy as np
 from tqdm import tqdm
 
@@ -120,10 +120,9 @@ class SmartParallel():
             self.cpus = multiprocessing.cpu_count() // 2
         
         self.logger = logging.getLogger()
-        
-        self.processes = []
-        self.queue_in = None
-        self.queue_out = None
+        self.manager = None
+        self.pool = None
+        self.pool_results = None
         self.initializer = initializer
         self.verbose = verbose
         self.parallel = parallel
@@ -131,6 +130,8 @@ class SmartParallel():
     def __enter__(self):
         if self.parallel:
             self.logger.debug("Starting parallel execution on {} CPUs.".format(self.cpus))
+            self.manager = Manager()            
+            self.pool = Pool(processes=self.cpus)
         else:
             self.logger.debug("Starting serial execution.")
         return self
@@ -138,8 +139,13 @@ class SmartParallel():
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.parallel:
             self.logger.debug("Joining worker processes.")
-            for p in self.processes:
-                p.join()
+            if self.pool_results is not None:
+                for r in self.pool_results:
+                    r.get()
+                self.pool_results = None
+            self.pool.close()
+            self.pool.join()
+            self.manager.shutdown()
             self.logger.debug("Finished parallel execution.")
         else:
             self.logger.debug("Finished serial execution.")
@@ -165,26 +171,18 @@ class SmartParallel():
 
     def map(self, worker, items):
         if self.parallel:
-            self.queue_in = multiprocessing.Queue()
-            self.queue_out = multiprocessing.Queue()
-
-            pool_size = self.cpus
-
-            for i in range(pool_size):
-                target = SmartParallel.pool_worker
-                args = (self.initializer, worker, self.queue_in, self.queue_out)
-                p = multiprocessing.Process(target=target, args=args)
-                p.daemon = True
-                p.start()
-                self.processes.append(p)
+            queue_in = self.manager.Queue()
+            queue_out = self.manager.Queue(1024)
 
             for i in items:
-                self.queue_in.put(i)
+                queue_in.put(i)
 
-            for i in range(len(self.processes)):
-                self.queue_in.put(StopIteration())
+            for i in range(self.cpus):
+                queue_in.put(StopIteration())
 
-            m = IterableQueue(self.queue_out, len(items))
+            self.pool_results = [self.pool.apply_async(SmartParallel.pool_worker, args=(self.initializer, worker, queue_in, queue_out)) for i in range(self.cpus)]
+
+            m = IterableQueue(queue_out, len(items))
         else:
             if self.initializer is not None:
                 self.initializer()
