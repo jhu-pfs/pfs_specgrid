@@ -8,7 +8,7 @@ from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
-from pfsspec.stellarmod.boszgridcontinuumfit import BoszGridContinuumFit
+from pfsspec.stellarmod.modelgridfit import ModelGridFit
 from pfsspec.stellarmod.boszpcagridbuilder import BoszPcaGridBuilder
 
 IMPORT_CONFIGURATIONS = {
@@ -16,6 +16,27 @@ IMPORT_CONFIGURATIONS = {
         'bosz': BoszGridReader
     }
 }
+
+FIT_CONFIGURATIONS = {
+    'grid': {
+        'bosz': {
+            'class': ModelGridFit,
+            'config': Bosz()
+        }
+    }
+}
+
+PCA_CONFIGURATIONS = {
+    'grid': {
+        'bosz': BoszPcaGridBuilder,
+    }
+}
+
+# RBF_CONFIGURATIONS = {
+#     'grid': {
+#         'bosz': BoszRbfGridBuilder,
+#     }
+# }
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {
@@ -55,21 +76,3 @@ PREPARE_CONFIGURATIONS = {
         }
     }
 }
-
-FIT_CONFIGURATIONS = {
-    'grid': {
-        'bosz': BoszGridContinuumFit
-    }
-}
-
-PCA_CONFIGURATIONS = {
-    'grid': {
-        'bosz': BoszPcaGridBuilder,
-    }
-}
-
-# RBF_CONFIGURATIONS = {
-#     'grid': {
-#         'bosz': BoszRbfGridBuilder,
-#     }
-# }

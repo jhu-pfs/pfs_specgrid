@@ -192,6 +192,8 @@ class ArrayGrid(Grid):
         self.set_value_at(name, idx, value, s)
 
     def set_value_at(self, name, idx, value, s=None):
+        self.ensure_lazy_load()
+        
         idx = Grid.rectify_index(idx)
         if self.has_value_index(name):
             valid = self.is_value_valid(name, value)
@@ -204,7 +206,6 @@ class ArrayGrid(Grid):
         if self.preload_arrays:
             self.values[name][idx] = value
         else:
-            self.ensure_lazy_load()
             self.save_item(name, value, idx)
 
     def get_values(self, s=None, **kwargs):

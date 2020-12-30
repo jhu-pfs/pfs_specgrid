@@ -50,7 +50,7 @@ class ModelGrid():
         self.grid.init_from_args(args)
         
     def get_wave(self):
-        self.grid.get_wave()
+        return self.grid.get_wave()
 
     def set_wave(self, wave):
         self.grid.set_wave(wave)
@@ -62,7 +62,7 @@ class ModelGrid():
         self.grid.set_flux_at(index, flux, cont=cont)
 
     def is_value_valid(self, name, value):
-        self.grid.is_value_valid(name, value)
+        return self.grid.is_value_valid(name, value)
 
     def load(self, filename, s=None, format=None):
         self.grid.load(filename, s=s, format=format)
@@ -76,6 +76,6 @@ class ModelGrid():
     def interpolate_model(self, interpolation=None, **kwargs):
         raise NotImplementedError()
 
-    def get_model(self, idx):
-        return self.grid.get_model()
+    def get_model_at(self, idx):
+        return self.grid.get_model_at(idx)
    

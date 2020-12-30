@@ -255,7 +255,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def get_gridpoint_model(self, i):
         # Get grid model
         idx = tuple(self.grid_index[:, i % self.grid_index.shape[1]])
-        spec = self.grid.get_model(idx)
+        spec = self.grid.get_model_at(idx)
 
         # TODO: fix this call, must pass i as parameter?
         raise NotImplementedError()

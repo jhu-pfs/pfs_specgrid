@@ -244,7 +244,7 @@ class ModelArrayGrid(ArrayGrid):
         spec.wave = self.wave[s or slice(None)]
         return spec
 
-    def get_model(self, idx):
+    def get_model_at(self, idx):
         # Slice along lambda if requested
         s = self.slice[-1] if self.slice is not None else None
         if self.has_value_at('flux', idx):
@@ -261,7 +261,7 @@ class ModelArrayGrid(ArrayGrid):
         Finds grid point closest to the parameters specified
         """
         idx = self.get_nearest_index(**kwargs)
-        spec = self.get_model(idx)
+        spec = self.get_model_at(idx)
         return spec
 
     def interpolate_model_linear(self, **kwargs):

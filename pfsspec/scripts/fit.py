@@ -1,6 +1,5 @@
 import os
 import logging
-import numpy as np
 
 from pfsspec.scripts.configurations import FIT_CONFIGURATIONS
 from pfsspec.scripts.script import Script
@@ -9,7 +8,7 @@ class Fit(Script):
     def __init__(self):
         super(Fit, self).__init__()
 
-        self.pca = None
+        self.fit = None
 
     def add_subparsers(self, parser):
         tps = parser.add_subparsers(dest='type')
@@ -19,7 +18,8 @@ class Fit(Script):
             for s in FIT_CONFIGURATIONS[t]:
                 sp = sps.add_parser(s)
                 self.add_args(sp)
-                gg = FIT_CONFIGURATIONS[t][s]()
+                cc = FIT_CONFIGURATIONS[t][s]['config']
+                gg = FIT_CONFIGURATIONS[t][s]['class'](cc)
                 gg.add_args(sp)
 
     def add_args(self, parser):
@@ -29,7 +29,8 @@ class Fit(Script):
         parser.add_argument('--out', type=str, help='Output data path.\n')
 
     def create_fit(self):
-        self.fit = FIT_CONFIGURATIONS[self.args['type']][self.args['source']]()
+        config = FIT_CONFIGURATIONS[self.args['type']][self.args['source']]['config']
+        self.fit = FIT_CONFIGURATIONS[self.args['type']][self.args['source']]['class'](config)
         self.fit.parallel = self.threads != 1
         self.fit.threads = self.threads
         self.fit.parse_args(self.args)
@@ -48,6 +49,7 @@ class Fit(Script):
         self.open_data()
 
     def run(self):
+        self.init_logging(self.outdir)
         self.fit.run()
         self.fit.save_data()
 
