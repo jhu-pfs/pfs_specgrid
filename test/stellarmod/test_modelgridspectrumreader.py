@@ -1,11 +1,11 @@
 import numpy as np
 from test.test_base import TestBase
 
-from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.stellarmod.modelarraygrid import ModelGModelArrayGridrid
 from pfsspec.data.gridaxis import GridAxis
 from pfsspec.stellarmod.modelgridspectrumreader import ModelGridSpectrumReader
 
-class TestGrid(ModelGrid):
+class TestGrid(ModelArrayGrid):
     def __init__(self):
         super(TestGrid, self).__init__(use_cont=True)
 
