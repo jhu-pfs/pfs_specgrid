@@ -58,12 +58,17 @@ class ArrayGrid(Grid):
             if self.preload_arrays:
                 self.logger.info('Initializing memory for grid "{}" of size {}...'.format(name, valueshape))
                 self.values[name] = np.full(valueshape, np.nan)
+                self.value_indexes[name] = np.full(gridshape, False, dtype=np.bool)
                 self.logger.info('Initialized memory for grid "{}" of size {}.'.format(name, valueshape))
             else:
                 self.values[name] = None
+                self.logger.info('Initializing data file for grid "{}" of size {}...'.format(name, valueshape))
+                if not self.has_item(name):
+                    self.allocate_item(name, valueshape, dtype=np.float)
+                    self.allocate_item(name + '_idx', gridshape, dtype=np.bool)
                 self.logger.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
 
-            self.value_indexes[name] = np.full(gridshape, False, dtype=np.bool)
+            self.value_indexes[name] = None
 
     def allocate_value(self, name, shape=None):
         if shape is not None:
@@ -141,7 +146,11 @@ class ArrayGrid(Grid):
         return tuple(idx1), tuple(idx2)
 
     def has_value_index(self, name):
-        return self.value_indexes is not None and name in self.value_indexes and self.value_indexes[name] is not None
+        if self.preload_arrays:
+            return self.value_indexes is not None and \
+                   name in self.value_indexes and self.value_indexes[name] is not None
+        else:
+            return name in self.value_indexes and self.has_item(name + '_idx')
 
     def get_value_index(self, name):
         if self.has_value_index(name):
@@ -186,8 +195,9 @@ class ArrayGrid(Grid):
         idx = Grid.rectify_index(idx)
         if self.has_value_index(name):
             valid = self.is_value_valid(name, value)
-            self.value_indexes[name][idx] = valid
-            if not self.preload_arrays:
+            if self.preload_arrays:
+                self.value_indexes[name][idx] = valid
+            else:
                 self.save_item(name + '_idx', np.array(valid), s=idx)
 
         idx = Grid.rectify_index(idx, s)
