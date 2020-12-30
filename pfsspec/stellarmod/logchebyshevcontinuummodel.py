@@ -13,16 +13,19 @@ class LogChebyshevContinuumModel(ContinuumModel):
 
             self.fit_masks = orig.fit_masks
             self.fit_limits = orig.fit_limits
-            self.cont_masks = orig.cont_masks
+            self.eval_masks = orig.eval_masks
+            self.eval_limits = orig.eval_limits
         else:
-            self.photo_limits = Physics.air_to_vac(Physics.HYDROGEN_LIMITS)
+            limits = [2530,] + Physics.HYDROGEN_LIMITS + [17500,]
+            self.photo_limits = Physics.air_to_vac(np.array(limits))
 
             self.chebyshev_degrees = 6
             self.limits_dlambda = 1
 
             self.fit_masks = None
             self.fit_limits = None
-            self.cont_masks = None
+            self.eval_masks = None
+            self.eval_limits = None
 
     def add_args(self, parser):
         super(LogChebyshevContinuumModel, self).add_args(parser)
@@ -55,13 +58,8 @@ class LogChebyshevContinuumModel(ContinuumModel):
         masks = []
         limits = []
 
-        for i in range(len(self.photo_limits) + 1):
-            if i == 0:
-                mask = wave < self.photo_limits[i] - dlambda
-            elif i == len(self.photo_limits):
-                mask = wave >= self.photo_limits[-1] + dlambda
-            else:
-                mask = (wave >= self.photo_limits[i - 1] + dlambda) & (wave < self.photo_limits[i] - dlambda)
+        for i in range(len(self.photo_limits) - 1):
+            mask = (wave >= self.photo_limits[i] + dlambda) & (wave < self.photo_limits[i + 1] - dlambda)
 
             masks.append(mask)
             wm = wave[mask]
@@ -77,8 +75,14 @@ class LogChebyshevContinuumModel(ContinuumModel):
         if self.fit_masks is None:
             self.fit_masks, self.fit_limits = self.find_masks_between_limits(wave, dlambda=dlambda)
         
-        if self.cont_masks is None:
-            self.cont_masks, self.cont_limits = self.find_masks_between_limits(wave, dlambda=0)
+        if self.eval_masks is None:
+            self.eval_masks, self.eval_limits = self.find_masks_between_limits(wave, dlambda=0)
+            
+            # Extrapolate continuum to the edges
+            # Equality must be allowed here because eval_limits are calculated by taking
+            # wave[mask].min/max which are the actual wavelength grid values
+            self.eval_masks[0] = (wave <= self.eval_limits[0][1])
+            self.eval_masks[-1] = (wave >= self.eval_limits[-1][0])
 
     def fit_between_limits(self, wave, flux):
         self.find_limits(wave, self.limits_dlambda)
@@ -101,9 +105,9 @@ class LogChebyshevContinuumModel(ContinuumModel):
 
         flux = np.full(wave.shape, np.nan)
 
-        for i in range(len(self.cont_masks)):
-            mask = self.cont_masks[i]
-            wave_min, wave_max = self.cont_limits[i]
+        for i in range(len(self.eval_masks)):
+            mask = self.eval_masks[i]
+            wave_min, wave_max = self.eval_limits[i]
 
             if wave_min is not None and wave_max is not None:
                 flux[mask] = np.polynomial.chebyshev.chebval(
