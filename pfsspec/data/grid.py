@@ -75,15 +75,21 @@ class Grid(PfsObject):
     def allocate_values(self):
         raise NotImplementedError()
 
-    @staticmethod
-    def rectify_index(idx, s=None):
-        idx = tuple(idx)
-        if isinstance(s, Iterable):
-            idx = idx + tuple(s)
-        elif s is not None:
-            idx = idx + (s,)
+    def add_args(self, parser):
+        for k in self.axes:
+            parser.add_argument('--' + k, type=float, nargs='*', default=None, help='Limit on ' + k)
 
-        return tuple(idx)
+    def init_from_args(self, args):
+        # Override physical parameters grid ranges, if specified
+        # TODO: extend this to sample physically meaningful models only
+        for k in self.axes:
+            if k in args and args[k] is not None:
+                if len(args[k]) >= 2:
+                    self.axes[k].min = args[k][0]
+                    self.axes[k].max = args[k][1]
+                else:
+                    self.axes[k].min = args[k][0]
+                    self.axes[k].max = args[k][0]
 
     def save_axes(self):
         for p in self.axes:
@@ -111,3 +117,17 @@ class Grid(PfsObject):
     def load_items(self, s=None):
         self.load_axes()
         self.load_constants()
+
+#region Indexing utility functions
+
+    @staticmethod
+    def rectify_index(idx, s=None):
+        idx = tuple(idx)
+        if isinstance(s, Iterable):
+            idx = idx + tuple(s)
+        elif s is not None:
+            idx = idx + (s,)
+
+        return tuple(idx)
+
+#endregion

@@ -28,12 +28,63 @@ class ArrayGrid(Grid):
             self.values = orig.values
             self.value_shapes = orig.value_shapes
             self.value_indexes = orig.value_indexes
+            self.slice = orig.slice
         else:
             self.values = {}
             self.value_shapes = {}
             self.value_indexes = {}
+            self.slice = None
 
             self.init_values()
+
+#region Support slicing via command-line arguments
+
+    def init_from_args(self, args):
+        super(ArrayGrid, self).init_from_args(args)
+        self.slice = self.get_slice_from_args(args)
+
+    def get_slice_from_args(self, args):
+        # If a limit is specified on any of the parameters on the command-line,
+        # try to slice the grid while loading from HDF5
+        s = []
+        for k in self.axes:
+            if k in args and args[k] is not None:
+                if len(args[k]) == 2:
+                    idx = np.digitize([args[k][0], args[k][1]], self.axes[k].values)
+                    s.append(slice(max(0, idx[0] - 1), idx[1], None))
+                elif len(args[k]) == 1:
+                    idx = np.digitize([args[k][0]], self.axes[k].values)
+                    s.append(max(0, idx[0] - 1))
+                else:
+                    raise Exception('Only two or one values are allowed for parameter {}'.format(k))
+            else:
+                s.append(slice(None))
+
+        return tuple(s)
+
+    def get_axes(self):
+        # Return axes that are limited by the slices
+        if self.slice is not None:
+            axes = {}
+            for i, k in enumerate(self.axes):
+                if type(self.slice[i]) is slice:
+                    axes[k] = GridAxis(k, self.axes[k].values[self.slice[i]])
+            return axes
+        else:
+            return super(ArrayGrid, self).get_axes()
+
+    def get_shape(self):
+        if self.slice is not None:
+            ss = []
+            for i, k in enumerate(self.axes):
+                if type(self.slice[i]) is slice:
+                    s = self.axes[k].values[self.slice[i]].shape[0]
+                    ss.append(s)
+            return tuple(ss)
+        else:
+            return super(ArrayGrid, self).get_shape()
+
+#endregion
 
     def get_value_shape(self, name):
         # Gets the full shape of the grid. It assumes different last
@@ -62,13 +113,12 @@ class ArrayGrid(Grid):
                 self.logger.info('Initialized memory for grid "{}" of size {}.'.format(name, valueshape))
             else:
                 self.values[name] = None
+                self.value_indexes[name] = None
                 self.logger.info('Initializing data file for grid "{}" of size {}...'.format(name, valueshape))
                 if not self.has_item(name):
                     self.allocate_item(name, valueshape, dtype=np.float)
                     self.allocate_item(name + '_idx', gridshape, dtype=np.bool)
                 self.logger.info('Skipped memory initialization for grid "{}". Will read random slices from storage.'.format(name))
-
-            self.value_indexes[name] = None
 
     def allocate_value(self, name, shape=None):
         if shape is not None:
@@ -93,7 +143,7 @@ class ArrayGrid(Grid):
         self.logger.debug('{} valid vectors in grid "{}" found'.format(np.sum(self.value_indexes[name]), name))
 
     def get_valid_value_count(self, name):
-        return np.sum(self.value_indexes[name])
+        return np.sum(self.get_value_index(name))
            
     def get_index(self, **kwargs):
         """Returns the indexes along all axes corresponding to the values specified.
@@ -104,11 +154,14 @@ class ArrayGrid(Grid):
             [type]: [description]
         """
         idx = ()
-        for p in self.axes:
+        for i, p in enumerate(self.axes):
             if p in kwargs:
                 idx += (self.axes[p].index[kwargs[p]],)
             else:
-                idx += (slice(None),)
+                if self.slice is None:
+                    idx += (slice(None),)
+                else:
+                    idx += (self.slice[i],)
         return idx
 
     def get_nearest_index(self, **kwargs):
@@ -154,9 +207,24 @@ class ArrayGrid(Grid):
 
     def get_value_index(self, name):
         if self.has_value_index(name):
-            return self.value_indexes[name]
+            index = self.value_indexes[name]
+            if self.slice is not None:
+                return index[self.slice]
+            else:
+                return index
         else:
             return None
+
+    def get_value_index_unsliced(self, name):
+        # Return a boolean index that is limited by the axis bound overrides.
+        # The shape will be the same as the original array. Use this index to
+        # load a limited subset of the data directly from the disk.
+        if self.slice is not None:
+            index = np.full(self.value_indexes[name].shape, False)
+            index[self.slice] = self.value_indexes[name][self.slice]
+            return index
+        else:
+            return self.value_indexes[name]
 
     def has_value(self, name):
         if self.preload_arrays:
@@ -239,6 +307,10 @@ class ArrayGrid(Grid):
                 return self.load_item(name, np.ndarray, idx)
         else:
             return None
+
+    def load(self, filename, s=None, format=None):
+        s = s or self.slice
+        super(ArrayGrid, self).load(filename, s=s, format=format)
 
     def save_values(self):
         for name in self.values:
@@ -402,8 +474,29 @@ class ArrayGrid(Grid):
 
         return fn(kwargs[free_param]), kwargs
 
+    def get_value_padded(self, name, interpolation='ijk', s=None):
+        """Returns a slice of the grid and pads with a single item in every direction using linearNd extrapolation.
+
+        Extrapolation is done either in grid coordinates or in axis coordinates
+
+        Args:
+            name (str): Name of value array
+            s (slice, optional): Slice to apply to value array. Defaults to None.
+            interpolation: Whether to extrapolate based on array indices ('ijk', default)
+                or axis coordinates ('xyz').
+            **kwargs: Values of axis coordinates. Only exact values are supported. For
+                missing direction, full, padded slices will be returned.
+        """
+
+        # If slicing is turned on, these functions will automatically return the sliced
+        # value array and the sliced (and squeezed) axes.
+        orig_axes = self.get_axes()
+        orig_value = self.get_value(name, s=s)
+
+        return ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
+
     @staticmethod
-    def pad_array(orig_axes, orig_value):
+    def pad_array(orig_axes, orig_value, interpolation='ijk'):
         # Depending on the interpolation method, the original axes are converted from
         # actual values to index values. The padded axes will have the original values
         # extrapolated linearly.
@@ -435,3 +528,44 @@ class ArrayGrid(Grid):
         padded_value = interpn(oijk, orig_value, pijk, method='linear', bounds_error=False, fill_value=None)
 
         return padded_value, padded_axes
+
+#region RBF interpolation
+
+    # TODO: is it used for anything?
+    def get_slice_rbf(self, s=None, interpolation='xyz', padding=True, **kwargs):
+        # Interpolate the continuum and flux in a wavelength slice `s` and parameter
+        # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
+        # values to make the interpolation smooth
+
+        if padding:
+            flux, axes = self.get_value_padded('flux', s=s, interpolation=interpolation, **kwargs)
+            cont, axes = self.get_value_padded('cont', s=s, interpolation=interpolation, **kwargs)
+        else:
+            flux = self.get_value('flux', s=s, **kwargs)
+            cont = self.get_value('cont', s=s, **kwargs)
+
+            axes = {}
+            for p in self.axes.keys():
+                if p not in kwargs:            
+                    if interpolation == 'ijk':
+                        axes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
+                    elif interpolation == 'xyz':
+                        axes[p] = self.axes[p]
+
+        # Max nans and where the continuum is zero
+        mask = ~np.isnan(cont) & (cont != 0)
+        if mask.ndim > len(axes):
+            mask = np.all(mask, axis=-(mask.ndim - len(axes)))
+
+        # Rbf must be generated on a uniform grid
+        if padding:
+            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
+        else:
+            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0])) for p in axes}
+
+        rbf_flux = self.fit_rbf(flux, aa, mask=mask)
+        rbf_cont = self.fit_rbf(cont, aa, mask=mask)
+
+        return rbf_flux, rbf_cont, axes
+
+#endregion
