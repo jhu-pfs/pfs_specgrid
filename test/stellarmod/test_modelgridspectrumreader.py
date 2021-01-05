@@ -5,6 +5,9 @@ from pfsspec.stellarmod.modelarraygrid import ModelGModelArrayGridrid
 from pfsspec.data.gridaxis import GridAxis
 from pfsspec.stellarmod.modelgridspectrumreader import ModelGridSpectrumReader
 
+# TODO: rewrite this to use customized configuration instead of an overloaded
+#       grid class.
+
 class TestGrid(ModelArrayGrid):
     def __init__(self):
         super(TestGrid, self).__init__(use_cont=True)

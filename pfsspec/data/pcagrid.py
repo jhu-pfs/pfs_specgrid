@@ -34,6 +34,12 @@ class PcaGrid(PfsObject):
     def get_shape(self):
         return self.grid.get_shape()
 
+    def get_constants(self):
+        return self.grid.get_constants()
+
+    def set_constants(self, constants):
+        self.grid.set_constants(constants)
+
     def init_axes(self):
         raise NotImplementedError()
 

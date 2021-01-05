@@ -488,12 +488,22 @@ class ArrayGrid(Grid):
         return ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
 
     @staticmethod
-    def pad_array(orig_axes, orig_value, interpolation='ijk'):
-        # Depending on the interpolation method, the original axes are converted from
-        # actual values to index values. The padded axes will have the original values
-        # extrapolated linearly.
-        orig_xi = {}
-        padded_xi = {}
+    def get_grid_points(axes, padding=False, interpolation='ijk'):
+        xi = {}
+        for p in axes:
+            if interpolation == 'ijk':
+                if not padding:
+                    xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64)
+                else:
+                    xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64) - 1.0
+            elif interpolation == 'xyz':
+                xi[p] = axes[p].values
+            else:
+                raise NotImplementedError()
+        return xi
+
+    @staticmethod
+    def pad_axes(orig_axes):
         padded_axes = {}
         for p in orig_axes:
             # Padded axis with linear extrapolation from the original edge values
@@ -502,15 +512,30 @@ class ArrayGrid(Grid):
             paxis[0] = paxis[1] - (paxis[2] - paxis[1])
             paxis[-1] = paxis[-2] + (paxis[-2] - paxis[-3])
             padded_axes[p] = GridAxis(p, paxis)
+        return padded_axes
 
-            if interpolation == 'ijk':
-                orig_xi[p] = np.arange(orig_axes[p].values.shape[0], dtype=np.float64)
-                padded_xi[p] = np.arange(-1, orig_axes[p].values.shape[0] + 1, dtype=np.float64)
-            elif interpolation == 'xyz':
-                orig_xi[p] = orig_axes[p].values
-                padded_xi[p] = padded_axes[p].values
-            else:
-                raise NotImplementedError()
+    @staticmethod
+    def pad_array(orig_axes, orig_value, interpolation='ijk'):
+        # Depending on the interpolation method, the original axes are converted from
+        # actual values to index values. The padded axes will have the original values
+        # extrapolated linearly.
+
+        padded_axes = ArrayGrid.pad_axes(orig_axes)
+
+        orig_xi = ArrayGrid.get_grid_points(orig_axes, padding=False, interpolation=interpolation)
+        padded_xi = ArrayGrid.get_grid_points(padded_axes, padding=True, interpolation=interpolation)
+
+        # orig_xi = {}
+        # padded_xi = {}
+        # for p in orig_axes:
+        #     if interpolation == 'ijk':
+        #         orig_xi[p] = np.arange(orig_axes[p].values.shape[0], dtype=np.float64)
+        #         padded_xi[p] = np.arange(-1, orig_axes[p].values.shape[0] + 1, dtype=np.float64)
+        #     elif interpolation == 'xyz':
+        #         orig_xi[p] = orig_axes[p].values
+        #         padded_xi[p] = padded_axes[p].values
+        #     else:
+        #         raise NotImplementedError()
 
         # Pad original slice with phantom cells
         # We a do a bit of extra work here because we interpolated the entire new slice, not just
@@ -520,44 +545,3 @@ class ArrayGrid(Grid):
         padded_value = interpn(oijk, orig_value, pijk, method='linear', bounds_error=False, fill_value=None)
 
         return padded_value, padded_axes
-
-#region RBF interpolation
-
-    # TODO: is it used for anything?
-    def get_slice_rbf(self, s=None, interpolation='xyz', padding=True, **kwargs):
-        # Interpolate the continuum and flux in a wavelength slice `s` and parameter
-        # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
-        # values to make the interpolation smooth
-
-        if padding:
-            flux, axes = self.get_value_padded('flux', s=s, interpolation=interpolation, **kwargs)
-            cont, axes = self.get_value_padded('cont', s=s, interpolation=interpolation, **kwargs)
-        else:
-            flux = self.get_value('flux', s=s, **kwargs)
-            cont = self.get_value('cont', s=s, **kwargs)
-
-            axes = {}
-            for p in self.axes.keys():
-                if p not in kwargs:            
-                    if interpolation == 'ijk':
-                        axes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
-                    elif interpolation == 'xyz':
-                        axes[p] = self.axes[p]
-
-        # Max nans and where the continuum is zero
-        mask = ~np.isnan(cont) & (cont != 0)
-        if mask.ndim > len(axes):
-            mask = np.all(mask, axis=-(mask.ndim - len(axes)))
-
-        # Rbf must be generated on a uniform grid
-        if padding:
-            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
-        else:
-            aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0])) for p in axes}
-
-        rbf_flux = self.fit_rbf(flux, aa, mask=mask)
-        rbf_cont = self.fit_rbf(cont, aa, mask=mask)
-
-        return rbf_flux, rbf_cont, axes
-
-#endregion

@@ -82,6 +82,12 @@ class ModelGrid(PfsObject):
 
         return s
 
+    def get_constants(self):
+        return self.grid.get_constants()
+
+    def set_constants(self, constants):
+        self.grid.set_constants(constants)
+
     def get_axes(self):
         return self.grid.get_axes()
 
@@ -101,11 +107,11 @@ class ModelGrid(PfsObject):
         super(ModelGrid, self).load(filename=filename, s=s, format=format)
         self.grid.load(filename, s=s, format=format)
 
-    def save(self, filename=None, format=None):
-        self.grid.save(filename=filename, format=format)
-        super(ModelGrid, self).save(filename=filename, format=format)
-
     def save_items(self):
+        self.grid.filename = self.filename
+        self.grid.fileformat = self.fileformat
+        self.grid.save_items()
+
         self.save_item('wave', self.wave)
 
     def load_items(self, s=None):

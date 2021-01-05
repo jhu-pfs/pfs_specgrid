@@ -58,7 +58,6 @@ class ModelPcaGridBuilder(PcaGridBuilder):
     def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_pca_grid()
-        # TODO: copy axes
         self.output_grid.set_axes(self.input_grid.get_axes())
 
         # DEBUG

@@ -22,9 +22,36 @@ class RbfGrid(Grid):
 
             self.init_values()
 
-    def init_value(self, name, shape=None):
-        self.values[name] = None
-        self.value_shapes[name] = shape
+    def init_value(self, name, shape=None, **kwargs):
+        if shape is None:
+            self.values[name] = None
+            self.value_shapes[name] = shape
+        else:
+            if len(shape) != 1:
+                raise NotImplementedError()
+
+            self.value_shapes[name] = shape
+
+            valueshape = self.xi.shape[:1] + tuple(shape)
+
+            if self.preload_arrays:
+                self.logger.info('Initializing memory for RBF "{}" of size {}...'.format(name, valueshape))
+                self.values[name] = np.full(valueshape, np.nan)
+                self.logger.info('Initialized memory for RBF "{}" of size {}.'.format(name, valueshape))
+            else:
+                self.values[name] = None
+                self.logger.info('Initializing data file for RBF "{}" of size {}...'.format(name, valueshape))
+                if not self.has_item(name):
+                    self.allocate_item(name, valueshape, dtype=np.float)
+                self.logger.info('Skipped memory initialization for RBF "{}". Will read random slices from storage.'.format(name))
+
+    def allocate_value(self, name, shape=None):
+        if shape is not None:
+            self.value_shapes[name] = shape
+        self.init_value(name, self.value_shapes[name])
+
+    def get_nearest_index(self, **kwargs):
+        return self.get_index(**kwargs)
 
     def get_index(self, **kwargs):
         # Convert values to axis index, the input to RBF
@@ -45,6 +72,16 @@ class RbfGrid(Grid):
             else:
                 params[k] = None
         return params
+
+    def has_value(self, name):
+        if self.preload_arrays:
+            return name in self.values and self.values[name] is not None
+        else:
+            return name in self.values and self.has_item(name)
+
+    def set_values(self, values, s=None, **kwargs):
+        for k in values:
+            self.set_value(k, values[k], s=s, **kwargs)
 
     def set_value(self, name, value, s=None, **kwargs):
         if s is not None or len(kwargs) > 0:
@@ -78,12 +115,15 @@ class RbfGrid(Grid):
 
     def save_values(self):
         # TODO: implement chunking along the value dimensions if necessary
+        # TODO: this is a little bit redundant here because we store the xi values
+        #       for each RBF. The coordinates are supposed to be the same for
+        #       all data values.
         for name in self.values:
             if self.values[name] is not None:
-                self.logger.info('Saving RBF "{}" of size {}'.format(name, self.values.nodes.shape))
+                self.logger.info('Saving RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
                 self.save_item('{}_rbf_xi'.format(name), self.values[name].xi)
                 self.save_item('{}_rbf_nodes'.format(name), self.values[name].nodes)
-                self.logger.info('Saved RBF "{}" of size {}'.format(name, self.values[name].shape))
+                self.logger.info('Saved RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
 
     def load_items(self, s=None):
         super(RbfGrid, self).load_items(s=s)
@@ -117,50 +157,5 @@ class RbfGrid(Grid):
                 setattr(obj, p, float(kwargs[p]))
 
     def interpolate_value_rbf(self, name, **kwargs):
-        return self.get_values(s=None, **kwargs)
+        return self.get_value(name, s=None, **kwargs)
     
-    def fit_rbf(self, value, axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0):
-        """Returns the Radial Base Function interpolation of a grid slice.
-
-        Args:
-            value
-            axes
-            mask (array): Mask, must be the same shape as the grid.
-            function (str): Basis function, see RBF documentation.
-            epsilon (number): See RBF documentation.
-            smooth (number): See RBF documentation.
-        """
-
-        # Since we must have the same number of grid points, we need to contract the
-        # mask along all value array dimensions that are not along the axes. Since `value`
-        # is already squeezed, only use axes that do not match axes in kwargs.
-        m = ~np.isnan(value)
-        if len(m.shape) > len(axes):
-            m = np.all(m, axis=-(len(m.shape) - len(axes)))
-
-        # We assume that the provided mask has the same shape
-        if mask is not None:
-            m &= mask
-            
-        m = m.flatten()
-
-        # Flatten slice along axis dimensions
-        sh = 1
-        for i in range(len(axes)):
-            sh *= value.shape[i]
-        value = value.reshape((sh,) + value.shape[len(axes):])
-        value = value[m]
-
-        points = np.meshgrid(*[axes[p].values for p in axes], indexing='ij')
-        points = [p.flatten() for p in points]
-        points = [p[m] for p in points]
-
-        if len(value.shape) == 1:
-            mode = '1-D'
-        else:
-            mode = 'N-D'
-
-        rbf = Rbf()
-        rbf.fit(*points, value, function=function, epsilon=epsilon, smooth=smooth, mode=mode)
-
-        return rbf

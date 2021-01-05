@@ -53,7 +53,6 @@ class Pca(Script):
 
     def run(self):
         self.pca.run()
-
         self.save_data()
 
 def main():

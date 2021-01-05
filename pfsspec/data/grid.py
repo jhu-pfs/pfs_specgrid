@@ -30,6 +30,12 @@ class Grid(PfsObject):
         if not self.preload_arrays and self.fileformat != 'h5':
             raise NotImplementedError()
 
+    def get_constants(self):
+        return self.constants
+
+    def set_constants(self, constants):
+        self.constants = constants
+
     def init_axes(self):
         pass
 

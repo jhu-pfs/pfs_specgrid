@@ -11,6 +11,7 @@ from pfsspec.obsmod.simpleobservation import SimpleObservation
 
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
 from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
+from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
 
 IMPORT_CONFIGURATIONS = {
     'grid': {
@@ -29,17 +30,20 @@ FIT_CONFIGURATIONS = {
 PCA_CONFIGURATIONS = {
     'grid': {
         'bosz': {
-                'class': ModelPcaGridBuilder,
-                'config': Bosz()
+            'class': ModelPcaGridBuilder,
+            'config': Bosz()
         }
     }
 }
 
-# RBF_CONFIGURATIONS = {
-#     'grid': {
-#         'bosz': BoszRbfGridBuilder,
-#     }
-# }
+RBF_CONFIGURATIONS = {
+    'grid': {
+        'bosz': {
+            'class': ModelRbfGridBuilder,
+            'config': Bosz()
+        }
+    }
+}
 
 MODEL_PIPELINE_TYPES = {
     'pfs': {
