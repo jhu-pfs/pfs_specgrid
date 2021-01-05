@@ -17,6 +17,7 @@ class ModelGrid(PfsObject):
     def __init__(self, config, grid_type, orig=None):
         super(ModelGrid, self).__init__(orig=orig)
 
+    def __init__(self, config, grid_type, orig=None):
         if isinstance(orig, ModelGrid):
             self.config = config if config is not None else orig.config
             self.grid = self.create_grid(grid_type) if grid_type is not None else orig.grid
