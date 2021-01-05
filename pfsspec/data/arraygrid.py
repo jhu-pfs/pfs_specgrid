@@ -92,7 +92,7 @@ class ArrayGrid(Grid):
         shape = self.get_shape() + self.value_shapes[name]
         return shape
 
-    def init_value(self, name, shape=None):
+    def init_value(self, name, shape=None, **kwargs):
         if shape is None:
             self.values[name] = None
             self.value_shapes[name] = None
@@ -295,7 +295,7 @@ class ArrayGrid(Grid):
         idx = self.get_nearest_index(**kwargs)
         return self.get_value_at(name, idx, s)
 
-    def get_value_at(self, name, idx, s=None):
+    def get_value_at(self, name, idx, s=None, raw=None):
         # TODO: consider adding a squeeze=False option to keep exactly indexed dimensions
         idx = Grid.rectify_index(idx)
         if self.has_value_at(name, idx):
@@ -366,14 +366,6 @@ class ArrayGrid(Grid):
         super(ArrayGrid, self).load_items(s=s)
         self.load_value_indexes()
         self.load_values(s)
-
-    def set_object_params(self, obj, idx=None, **kwargs):
-        if idx is not None:
-            for i, p in enumerate(self.axes):
-                setattr(obj, p, float(self.axes[p].values[idx[i]]))
-        if kwargs is not None:
-            for p in kwargs:
-                setattr(obj, p, float(kwargs[p]))
 
     def interpolate_value_linear(self, name, **kwargs):
         if len(self.axes) == 1:

@@ -3,8 +3,9 @@ from unittest import TestCase
 import matplotlib.pyplot as plt
 
 from pfsspec.data.dataset import Dataset
-from pfsspec.stellarmod.kuruczgrid import KuruczGrid
-from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
+from pfsspec.data.arraygrid import ArrayGrid
+from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.stellarmod.bosz import Bosz
 from pfsspec.obsmod.filter import Filter
 
 class TestBase(TestCase):
@@ -35,8 +36,8 @@ class TestBase(TestCase):
 
     def get_bosz_grid(self):
         if self.bosz_grid is None:
-            file = os.path.join(self.PFSSPEC_DATA_PATH, 'import/stellar/grid/bosz_5000/spectra.h5')
-            self.bosz_grid = BoszModelGrid()
+            file = os.path.join(self.PFSSPEC_DATA_PATH, 'import/stellar/grid/bosz_5000_4/spectra.h5')
+            self.bosz_grid = ModelGrid(Bosz(), ArrayGrid)
             self.bosz_grid.load(file, s=None, format='h5')
 
         return self.bosz_grid

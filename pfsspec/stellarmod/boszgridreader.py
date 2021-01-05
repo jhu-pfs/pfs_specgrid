@@ -4,10 +4,10 @@ import logging
 import multiprocessing
 import time
 
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.stellarmod.modelgridreader import ModelGridReader
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 from pfsspec.stellarmod.modelgrid import ModelGrid
-from pfsspec.stellarmod.modelarraygrid import ModelArrayGrid
 from pfsspec.stellarmod.bosz import Bosz
 
 class BoszGridReader(ModelGridReader):
@@ -64,7 +64,7 @@ class BoszGridReader(ModelGridReader):
             self.grid.set_flux_at(index, spec.flux, spec.cont)
 
     def create_grid(self):
-        grid = ModelGrid(Bosz(), ModelArrayGrid)
+        grid = ModelGrid(Bosz(), ArrayGrid)
         grid.preload_arrays = self.preload_arrays
         return grid
 
@@ -100,6 +100,7 @@ class BoszGridReader(ModelGridReader):
 
         if self.grid is None:
             self.grid = self.create_grid()
+
         if self.resume:
             if self.grid.preload_arrays:
                 raise NotImplementedError("Can only resume import when preload_arrays is False.")
@@ -113,7 +114,7 @@ class BoszGridReader(ModelGridReader):
             self.grid.save(fn, format='h5')
 
     def save_data(self):
-        self.grid.save()
+        self.grid.save(self.grid.filename, self.grid.fileformat)
 
     def run(self):
         if os.path.isdir(self.path):

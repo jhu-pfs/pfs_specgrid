@@ -5,8 +5,8 @@ import multiprocessing
 
 from pfsspec.parallel import SmartParallel
 from pfsspec.pfsobject import PfsObject
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.stellarmod.modelgrid import ModelGrid
-from pfsspec.stellarmod.modelarraygrid import ModelArrayGrid
 
 class ModelGridFit(PfsObject):
     def __init__(self, config, grid=None, orig=None):
@@ -44,10 +44,10 @@ class ModelGridFit(PfsObject):
     def parse_args(self, args):
         if 'top' in args and args['top'] is not None:
             self.top = args['top']
-        self.continuum_model.parse_args(args)
+        self.continuum_model.init_from_args(args)
 
     def create_grid(self):
-        return ModelGrid(self.config, ModelArrayGrid)
+        return ModelGrid(self.config, ArrayGrid)
         
     def open_data(self, input_path, output_path):
         # Open input
@@ -115,4 +115,4 @@ class ModelGridFit(PfsObject):
                 self.store_item(idx, spec, params)
                 t.update(1)
 
-        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.grid.wave)
+        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)

@@ -7,7 +7,7 @@ class ContinuumModel(PfsObject):
     def add_args(self, parser):
         pass
 
-    def parse_args(self, parser):
+    def init_from_args(self, parser):
         pass
 
     def fit(self, wave, flux):

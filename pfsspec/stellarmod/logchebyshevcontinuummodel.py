@@ -30,8 +30,8 @@ class LogChebyshevContinuumModel(ContinuumModel):
     def add_args(self, parser):
         super(LogChebyshevContinuumModel, self).add_args(parser)
 
-    def parse_args(self, args):
-        super(LogChebyshevContinuumModel, self).parse_args(args)
+    def init_from_args(self, args):
+        super(LogChebyshevContinuumModel, self).init_from_args(args)
 
     def get_constants(self, wave):
         self.find_limits(wave, self.limits_dlambda)
@@ -65,9 +65,9 @@ class LogChebyshevContinuumModel(ContinuumModel):
             wm = wave[mask]
             
             if wm.size > 0:
-                limits.append((wave[mask].min(), wave[mask].max()))
+                limits.append([wave[mask].min(), wave[mask].max()])
             else:
-                limits.append((np.nan, np.nan))
+                limits.append([np.nan, np.nan])
 
         return masks, limits
 

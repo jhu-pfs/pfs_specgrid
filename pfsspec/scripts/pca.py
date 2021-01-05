@@ -5,9 +5,9 @@ import numpy as np
 from pfsspec.scripts.configurations import PCA_CONFIGURATIONS
 from pfsspec.scripts.script import Script
 
-class PCA(Script):
+class Pca(Script):
     def __init__(self):
-        super(PCA, self).__init__()
+        super(Pca, self).__init__()
 
         self.pca = None
 
@@ -18,19 +18,20 @@ class PCA(Script):
             spp = ps.add_subparsers(dest='pca')
             for pca in PCA_CONFIGURATIONS[src]:
                 pp = spp.add_parser(pca)
-                
                 self.add_args(pp)
-                p = PCA_CONFIGURATIONS[src][pca]()
+                c = PCA_CONFIGURATIONS[src][pca]['config']
+                p = PCA_CONFIGURATIONS[src][pca]['class'](c)
                 p.add_args(pp)
 
     def add_args(self, parser):
-        super(PCA, self).add_args(parser)
+        super(Pca, self).add_args(parser)
 
         parser.add_argument('--in', type=str, help="Input data path.\n")
         parser.add_argument('--out', type=str, help='Output data path.\n')
 
     def create_pca(self):
-        self.pca = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]()
+        config = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]['config']
+        self.pca = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]['class'](config)
         self.pca.args = self.args
         self.pca.parse_args() 
 
@@ -41,7 +42,7 @@ class PCA(Script):
         self.pca.save_data(self.outdir)
 
     def prepare(self):
-        super(PCA, self).prepare()
+        super(Pca, self).prepare()
 
         self.outdir = self.args['out']
         self.create_output_dir(self.outdir, resume=False)
@@ -56,7 +57,7 @@ class PCA(Script):
         self.save_data()
 
 def main():
-    script = PCA()
+    script = Pca()
     script.execute()
 
 if __name__ == "__main__":

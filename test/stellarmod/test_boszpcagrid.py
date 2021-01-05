@@ -4,7 +4,7 @@ import numpy as np
 from test.test_base import TestBase
 from pfsspec.stellarmod.boszpcagrid import BoszPcaGrid
 
-class TestBoszPCAGrid(TestBase):
+class TestBoszPcaGrid(TestBase):
     def test_load(self):
         fn = '/scratch/ceph/dobos/temp/test024/spectra.h5'
         pca = BoszPcaGrid()

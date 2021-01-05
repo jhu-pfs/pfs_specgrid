@@ -5,7 +5,7 @@ class Physics():
     c = 299792458  # m/s
     k_B = 1.380649e-23  # J/K
 
-    HYDROGEN_LIMITS = np.array([3646.0, 8203.6, 14584])         # all numbers in air
+    HYDROGEN_LIMITS = [3646.0, 8203.6, 14584]                   # all numbers in air
 
     @staticmethod
     def planck(wave, T):

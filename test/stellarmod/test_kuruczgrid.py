@@ -90,8 +90,8 @@ class TestKuruczGrid(TestBase):
         grid = self.load_kurucz_helper(preload_arrays=preload_arrays)
 
         idx1, idx2 = grid.get_nearby_indexes(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
-        a = grid.get_model(idx1)
-        b = grid.get_model(idx2)
+        a = grid.get_model_at(idx1)
+        b = grid.get_model_at(idx2)
         a.plot()
         b.plot()
         spec = grid.interpolate_model_linear(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
@@ -120,8 +120,8 @@ class TestKuruczGrid(TestBase):
         grid = self.load_kurucz_helper(preload_arrays=preload_arrays)
 
         idx1, idx2 = grid.get_nearby_indexes(Fe_H=Fe_H, T_eff=T_eff, log_g=log_g)
-        a = grid.get_model(idx1)
-        b = grid.get_model(idx2)
+        a = grid.get_model_at(idx1)
+        b = grid.get_model_at(idx2)
         a.plot()
         b.plot()
 

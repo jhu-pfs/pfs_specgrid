@@ -2,7 +2,6 @@ import logging
 import numpy as np
 
 from pfsspec.pfsobject import PfsObject
-from pfsspec.data.gridaxis import GridAxis
 
 class PcaGrid(PfsObject):
     # Wraps an ArrayGrid or an RbfGrid and adds PCA decompression support
@@ -21,7 +20,16 @@ class PcaGrid(PfsObject):
             self.eigs = {}
             self.eigv = {}
 
-            self.init_values()
+    @property
+    def preload_arrays(self):
+        return self.grid.preload_arrays
+
+    @preload_arrays.setter
+    def preload_arrays(self, value):
+        self.grid.preload_arrays = value
+
+    def init_from_args(self, args):
+        self.grid.init_from_args(args)
 
     def get_shape(self):
         return self.grid.get_shape()
@@ -41,11 +49,8 @@ class PcaGrid(PfsObject):
     def build_axis_indexes(self):
         self.grid.build_axis_indexes()
 
-    def save_axes(self):
-        self.grid.save_axes()
-
-    def load_axes(self):
-        self.grid.load_axes()
+    def init_constant(self, name):
+        self.grid.init_constant(name)
 
     def get_constant(self, name):
         return self.grid.get_constant(name)
@@ -53,10 +58,7 @@ class PcaGrid(PfsObject):
     def set_constant(self, name, value):
         self.grid.set_constant(name, value)
 
-    def init_values(self):
-        raise NotImplementedError()
-
-    def init_value(self, name, shape=None, pca=False):
+    def init_value(self, name, shape=None, pca=False, **kwargs):
         if pca:
             if shape is not None:
                 # Last dimension is number of coefficients
@@ -89,8 +91,17 @@ class PcaGrid(PfsObject):
     def get_index(self, **kwargs):
         return self.grid.get_index(**kwargs)
 
-    def get_params(self, idx):
-        return self.grid.get_params(idx)
+    def get_nearest_index(self, **kwargs):
+        return self.grid.get_nearest_index(**kwargs)
+
+    def get_valid_value_count(self, name):
+        return self.grid.get_valid_value_count(name)
+
+    def has_value(self, name):
+        return self.grid.has_value(name)
+
+    def has_value_at(self, name, idx, mode='any'):
+        return self.grid.has_value_at(name, idx, mode=mode)
 
     def set_value(self, name, value, s=None, pca=False, **kwargs):
         if not pca:
@@ -101,11 +112,13 @@ class PcaGrid(PfsObject):
             self.eigs[name] = value[1]
             self.eigv[name] = value[2]
 
-    def get_value_at(self, name, idx, s=None):
-        if name in self.eigs:
-            raise NotImplementedError()
+    def get_value_at(self, name, idx, s=None, raw=False):
+        if not raw and name in self.eigs:
+            pc = self.grid.get_value_at(name, idx)
+            v = np.dot(self.eigv[name], pc)
+            return v[s or slice(None)]
         else:
-            return self.grid.get_value_at(name, idx, s=s)
+            return self.grid.get_value_at(name, idx, s=s, raw=True)
 
     def get_value(self, name, s=None, **kwargs):
         idx = self.get_index(**kwargs)

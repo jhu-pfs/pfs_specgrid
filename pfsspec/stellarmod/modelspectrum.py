@@ -4,7 +4,8 @@ from pfsspec.obsmod.stellarspectrum import StellarSpectrum
 
 class ModelSpectrum(StellarSpectrum):
     def __init__(self, orig=None):
-        super(ModelSpectrum, self).__init__()
+        super(ModelSpectrum, self).__init__(orig=orig)
+        
         if isinstance(orig, ModelSpectrum):
             self.N_He = orig.N_He
             self.v_turb = orig.v_turb

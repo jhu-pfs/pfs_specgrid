@@ -5,8 +5,8 @@ from pfsspec.stellarmod.boszspectrum import BoszSpectrum
 from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
 
 class Bosz(ModelGridConfig):
-    def __init__(self, orig=None):
-        super(Bosz, self).__init__(orig=orig)
+    def __init__(self, orig=None, pca=None):
+        super(Bosz, self).__init__(orig=orig, pca=pca)
 
         if isinstance(orig, Bosz):
             pass

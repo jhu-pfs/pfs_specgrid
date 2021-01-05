@@ -9,7 +9,7 @@ from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
-from pfsspec.stellarmod.boszpcagridbuilder import BoszPcaGridBuilder
+from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 
 IMPORT_CONFIGURATIONS = {
     'grid': {
@@ -28,7 +28,10 @@ FIT_CONFIGURATIONS = {
 
 PCA_CONFIGURATIONS = {
     'grid': {
-        'bosz': BoszPcaGridBuilder,
+        'bosz': {
+                'class': ModelPcaGridBuilder,
+                'config': Bosz()
+        }
     }
 }
 

@@ -276,7 +276,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         # a limited cube of the index array.
         if not self.grid.preload_arrays and self.grid.has_value_index('flux'):
             # rows: parameters, columns: models
-            index = self.grid.get_sliced_value_index('flux')
+            index = self.grid.get_value_index_unsliced('flux')
             self.grid_index = np.array(np.where(index))
 
         # TODO: review this but this has something to do with parameter ranges

@@ -4,11 +4,18 @@ import time
 from tqdm import tqdm
 
 from pfsspec.physics import Physics
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.pcagridbuilder import PcaGridBuilder
+from pfsspec.stellarmod.modelgrid import ModelGrid
 
 class ModelPcaGridBuilder(PcaGridBuilder):
-    def __init__(self, grid=None, orig=None):
+    def __init__(self, config, grid=None, orig=None):
         super(ModelPcaGridBuilder, self).__init__(orig=orig)
+
+        if isinstance(orig, ModelPcaGridBuilder):
+            self.config = config if config is not None else orig.config
+        else:
+            self.config = config
     
     def add_args(self, parser):
         super(ModelPcaGridBuilder, self).add_args(parser)
@@ -20,8 +27,18 @@ class ModelPcaGridBuilder(PcaGridBuilder):
     def parse_args(self):
         super(ModelPcaGridBuilder, self).parse_args()
 
+    def create_grid(self):
+        return ModelGrid(self.config, ArrayGrid)
+
+    def create_pca_grid(self):
+        config = type(self.config)(orig=self.config, pca=True)
+        return ModelGrid(config, ArrayGrid)
+
     def open_data(self, input_path, output_path):
-        # Open input
+        self.open_input_grid(input_path)
+        self.open_output_grid(output_path)
+
+    def open_input_grid(self, input_path):
         fn = os.path.join(input_path, 'spectra') + '.h5'
         self.input_grid = self.create_grid()
         self.input_grid.load(fn)
@@ -29,17 +46,16 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         self.input_grid.build_axis_indexes()
 
         # Source indexes
-        index = self.input_grid.get_sliced_value_index('flux')
+        index = self.input_grid.grid.get_value_index_unsliced('flux')
         self.input_grid_index = np.array(np.where(index))
 
         # Target indexes
-        # TODO: rename members
-        index = self.input_grid.get_value_index('flux')
+        index = self.input_grid.grid.get_value_index('flux')
         self.output_grid_index = np.array(np.where(index))
 
         self.grid_shape = self.input_grid.get_shape()
 
-        # Open output
+    def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_pca_grid()
         # TODO: copy axes
@@ -63,7 +79,7 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         # When fitting, the output fluxes will be already normalized, so
         # here we return the flux field only
         idx = tuple(self.input_grid_index[:, i])
-        spec = self.input_grid.get_model(idx)
+        spec = self.input_grid.get_model_at(idx)
         return spec.flux
 
     def run(self):
@@ -75,9 +91,9 @@ class ModelPcaGridBuilder(PcaGridBuilder):
 
         # Copy continuum fit parameters
         params = self.input_grid.get_value_sliced('params')
-        self.output_grid.allocate_value('params', shape=(params.shape[-1],))
-        self.output_grid.set_value('params', params)
-        self.output_grid.set_constant('constants', self.input_grid.get_constant('constants'))
+        self.output_grid.grid.allocate_value('params', shape=(params.shape[-1],))
+        self.output_grid.grid.set_value('params', params)
+        self.output_grid.grid.set_constant('constants', self.input_grid.grid.get_constant('constants'))
 
         # Save principal components to a grid
         coeffs = np.full(self.input_grid.get_shape() + (self.PC.shape[1],), np.nan)
@@ -86,8 +102,8 @@ class ModelPcaGridBuilder(PcaGridBuilder):
             idx = tuple(self.output_grid_index[:, i])
             coeffs[idx] = self.PC[i, :]
 
-        self.output_grid.allocate_value('flux', shape=self.V.shape, pca=True)
-        self.output_grid.set_value('flux', (coeffs, self.S, self.V), pca=True)
+        self.output_grid.grid.allocate_value('flux', shape=self.V.shape, pca=True)
+        self.output_grid.grid.set_value('flux', (coeffs, self.S, self.V), pca=True)
 
         """
         # Pad the array of continuum fit parameters, fit with RBF and save intou output array
