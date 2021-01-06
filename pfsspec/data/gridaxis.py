@@ -2,14 +2,24 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 class GridAxis():
-    def __init__(self, name, values=None):
-        self.name = name
-        self.values = values
-        self.index = None
-        self.min = None
-        self.max = None
-        self.ip_to_index = None
-        self.ip_to_value = None
+    def __init__(self, name, values=None, orig=None):
+
+        if isinstance(orig, GridAxis):
+            self.name = orig.name
+            self.values = orig.values if values is None else values
+            self.index = orig.index
+            self.min = orig.min
+            self.max = orig.max
+            self.ip_to_index = orig.ip_to_index
+            self.ip_to_value = orig.ip_to_value
+        else:
+            self.name = name
+            self.values = values
+            self.index = None
+            self.min = None
+            self.max = None
+            self.ip_to_index = None
+            self.ip_to_value = None
 
     def build_index(self):
         # NOTE: assume one dimension here

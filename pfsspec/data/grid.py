@@ -47,7 +47,10 @@ class Grid(PfsObject):
             self.axes[p].build_index()
 
     def set_axes(self, axes):
-        self.axes = axes
+        self.axes = {}
+        for k in axes:
+            self.axes[k] = type(axes[k])(k, orig=axes[k])
+            self.axes[k].build_index()
 
     def get_axes(self):
         return self.axes

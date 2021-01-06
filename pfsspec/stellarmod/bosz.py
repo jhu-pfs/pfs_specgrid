@@ -22,6 +22,8 @@ class Bosz(ModelGridConfig):
         grid.init_axis('C_M', np.arange(-0.75, 0.75, 0.25))
         grid.init_axis('O_M', np.arange(-0.25, 0.75, 0.25))
 
+        grid.build_axis_indexes()
+
     def init_constants(self, grid):
         super(Bosz, self).init_constants(grid)
 

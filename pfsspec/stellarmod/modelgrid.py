@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d, interpn
 
 from pfsspec.pfsobject import PfsObject
 from pfsspec.data.arraygrid import ArrayGrid
+from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagrid import PcaGrid
 
 class ModelGrid(PfsObject):
@@ -228,4 +229,11 @@ class ModelGrid(PfsObject):
             return spec
         else:
             return None
+
+    def interpolate_model_rbf(self, **kwargs):
+        if isinstance(self.grid, RbfGrid) or \
+           isinstance(self.grid, PcaGrid) and isinstance(self.grid.grid, RbfGrid):
+                return self.get_nearest_model(**kwargs)
+        else:
+            raise Exception("Operation not supported.")
    

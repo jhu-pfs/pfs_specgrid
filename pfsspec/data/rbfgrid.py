@@ -90,13 +90,13 @@ class RbfGrid(Grid):
             raise Exception('Value must be an Rbf object.')
         self.values[name] = value
 
-    def get_value_at(self, name, idx, s=None):
-        # TODO: implement slicing along the value dimensions if necessary
-        if s is not None:
-            raise NotImplementedError()
+    def has_value_at(self, name, idx, mode='any'):
+        return True
 
+    def get_value_at(self, name, idx, s=None):
         idx = Grid.rectify_index(idx)
-        return self.values[name](idx)
+        value = self.values[name](*idx)
+        return value[s or slice(None)]
 
     def get_value(self, name, s=None, **kwargs):
         idx = self.get_index(**kwargs)
@@ -143,15 +143,18 @@ class RbfGrid(Grid):
             self.logger.info('Loading RBF "{}" of size {}'.format(name, s))
             xi = self.load_item('{}_rbf_xi'.format(name), np.ndarray)
             nodes = self.load_item('{}_rbf_nodes'.format(name), np.ndarray)
-            self.values[name] = self.load_rbf(xi, nodes)
-            self.logger.info('Loaded RBF "{}" of size {}'.format(name, s))
+            if xi is not None and nodes is not None:
+                self.values[name] = self.load_rbf(xi, nodes)
+                self.logger.info('Loaded RBF "{}" of size {}'.format(name, s))
+            else:
+                self.values[name] = None
+                self.logger.info('Skipped loading RBF "{}" of size {}'.format(name, s))
+            
 
     def set_object_params(self, obj, idx=None, **kwargs):
         if idx is not None:
             for i, p in enumerate(self.axes):
-                raise NotImplementedError()
-                # TODO: interpolate here
-                # setattr(obj, p, float(self.axes[p].values[idx[i]]))
+                setattr(obj, p, float(self.axes[p].ip_to_value(idx[i])))
         if kwargs is not None:
             for p in kwargs:
                 setattr(obj, p, float(kwargs[p]))
