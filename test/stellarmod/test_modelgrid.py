@@ -88,3 +88,10 @@ class TestModelGrid(TestBase):
         args = {}
         grid = self.get_test_grid(args)
         spec = grid.get_nearest_model(Fe_H=0., T_eff=4500, log_g=4, C_M=0, O_M=0)
+        self.assertIsNotNone(spec)
+
+    def test_interpolate_model_linear(self):
+        args = {}
+        grid = self.get_test_grid(args)
+        spec = grid.interpolate_model_linear(Fe_H=-1.2, T_eff=4125, log_g=4.3, C_M=0, O_M=0)
+        self.assertIsNotNone(spec)

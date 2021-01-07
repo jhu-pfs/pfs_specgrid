@@ -200,7 +200,7 @@ class ModelGrid(PfsObject):
         raise NotImplementedError()
 
     def interpolate_model_linear(self, **kwargs):
-        r = self.interpolate_value_linear('flux', **kwargs)
+        r = self.grid.interpolate_value_linear('flux', **kwargs)
         if r is None:
             return None
         flux, kwargs = r
@@ -208,14 +208,14 @@ class ModelGrid(PfsObject):
         if flux is not None:
             spec = self.get_parameterized_spectrum(**kwargs)
             spec.flux = flux
-            if self.has_value('cont'):
-                spec.cont = self.interpolate_value_linear('cont', **kwargs)
+            if self.grid.has_value('cont'):
+                spec.cont = self.grid.interpolate_value_linear('cont', **kwargs)
             return spec
         else:
             return None
 
     def interpolate_model_spline(self, free_param, **kwargs):
-        r = self.interpolate_value_spline('flux', free_param, **kwargs)
+        r = self.grid.interpolate_value_spline('flux', free_param, **kwargs)
         if r is None:
             return None
         flux, bestargs = r
@@ -224,8 +224,8 @@ class ModelGrid(PfsObject):
             spec = self.get_parameterized_spectrum(**bestargs)
             spec.interp_param = free_param
             spec.flux = flux
-            if self.has_value('cont'):
-                spec.cont, _ = self.interpolate_value_spline('cont', free_param, **kwargs)
+            if self.grid.has_value('cont'):
+                spec.cont, _ = self.grid.interpolate_value_spline('cont', free_param, **kwargs)
             return spec
         else:
             return None
