@@ -65,3 +65,22 @@ class Physics():
         """
         wlum = wave * 1e5
         return (1+1e-6*(287.6155 - 1.62877/wlum**2 - 0.04080/wlum**4))
+
+    @staticmethod
+    def cm_to_pc(d):
+        return d / 3.08567758128e19
+
+    @staticmethod
+    def pc_to_cm(d):
+        return d * 3.08567758128e19
+
+    @staticmethod
+    def get_radius(log_L, T_eff):
+        # Calculate the radius of a star with known luminosity and effective
+        # temperature using the Stefan-Boltzmann law
+        
+        L_sun = 3.839e33        # erg/s
+        sb = 5.6704e-5          # grams s^-3 kelvin^-4
+        L = L_sun * 10**log_L   # luminosity from isochrone is in log(L/lsun)
+        radius = np.sqrt(L / (4 * np.pi * sb * T_eff**4))
+        return radius           # radius in cm
