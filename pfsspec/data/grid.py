@@ -1,4 +1,5 @@
 import logging
+import numbers
 import numpy as np
 from collections import Iterable
 
@@ -145,6 +146,11 @@ class Grid(PfsObject):
                 setattr(obj, p, float(self.axes[p].values[idx[i]]))
         if kwargs is not None:
             for p in kwargs:
-                setattr(obj, p, float(kwargs[p]))
+                if hasattr(obj, p):
+                    if isinstance(kwargs[p], numbers.Number):
+                        setattr(obj, p, float(kwargs[p]))
+                    else:
+                        setattr(obj, p, kwargs[p])
+
 
 #endregion

@@ -280,7 +280,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             index = self.grid.grid.get_value_index_unsliced('flux')
             self.grid_index = np.array(np.where(index))
 
-        # If building a grid from another grid, a params index is created
+        # If building a dataset from all grid points a params index is created
         count = 0
         size = 1
         shape = ()
