@@ -1,3 +1,4 @@
+from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
 from pfsspec.surveys.survey import Survey
@@ -8,7 +9,7 @@ from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
 from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
-
+from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
 from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
@@ -78,7 +79,8 @@ PREPARE_CONFIGURATIONS = {
         'bosz': {
             # TODO: imput grid type? array? rbf? pca?
             'builder': ModelGridDatasetBuilder,
-            'config': Bosz,
+            'config': Bosz(),
+            'grid': ArrayGrid,
             'pipelines': MODEL_PIPELINE_TYPES
         }
     }

@@ -200,20 +200,21 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def draw_random_params(self):
         # Always draw random parameters from self.random_state
+        axes = self.grid.get_axes()
 
         # Draw model physical parameters
         params = {}
-        for p in self.grid.axes:
+        for p in axes:
             if self.sample_dist == 'uniform':
                 r = self.random_state.uniform(0, 1)
             elif self.sample_dist == 'beta':
                 r = self.random_state.beta(0.7, 0.7)    # Add a bit more weight to the tails
             else:
                 raise NotImplementedError()
-            params[p] = self.grid.axes[p].min + r * (self.grid.axes[p].max - self.grid.axes[p].min)
+            params[p] = axes[p].min + r * (axes[p].max - axes[p].min)
 
         if self.interp_param == 'random':
-            choices = [k for k in self.grid.axes.keys() if self.grid.axes[k].min != self.grid.axes[k].max]
+            choices = [k for k in axes.keys() if axes[k].min != axes[k].max]
             free_param = self.random_state.choice(choices)
         else:
             free_param = self.interp_param
@@ -274,12 +275,12 @@ class ModelGridDatasetBuilder(DatasetBuilder):
     def build(self):
         # If the parameter range is limited to a subset of the grid, we generate
         # a limited cube of the index array.
-        if not self.grid.preload_arrays and self.grid.has_value_index('flux'):
+        if not self.grid.preload_arrays and self.grid.grid.has_value_index('flux'):
             # rows: parameters, columns: models
-            index = self.grid.get_value_index_unsliced('flux')
+            index = self.grid.grid.get_value_index_unsliced('flux')
             self.grid_index = np.array(np.where(index))
 
-        # TODO: review this but this has something to do with parameter ranges
+        # If building a grid from another grid, a params index is created
         count = 0
         size = 1
         shape = ()
