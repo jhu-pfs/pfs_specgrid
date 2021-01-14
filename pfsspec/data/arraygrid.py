@@ -69,6 +69,7 @@ class ArrayGrid(Grid):
             for i, k in enumerate(self.axes):
                 if type(self.slice[i]) is slice:
                     axes[k] = GridAxis(k, self.axes[k].values[self.slice[i]])
+                    axes[k].build_index()
             return axes
         else:
             return super(ArrayGrid, self).get_axes()
