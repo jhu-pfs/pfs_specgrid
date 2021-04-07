@@ -2,6 +2,8 @@ import numpy as np
 
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
+from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
+
 
 class ModelGridConfig():
     def __init__(self, pca=False, orig=None):
@@ -41,7 +43,9 @@ class ModelGridConfig():
         return ModelSpectrum()
 
     def create_continuum_model(self):
-        return LogChebyshevContinuumModel()
+        # return LogChebyshevContinuumModel()
+        return AlexContinuumModel()
+
 
     @staticmethod
     def is_value_valid(self, name, value):
