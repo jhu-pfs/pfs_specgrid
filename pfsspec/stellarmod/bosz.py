@@ -3,6 +3,7 @@ import numpy as np
 from pfsspec.stellarmod.modelgridconfig import ModelGridConfig
 from pfsspec.stellarmod.boszspectrum import BoszSpectrum
 from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
+from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
 
 class Bosz(ModelGridConfig):
     def __init__(self, orig=None, pca=None):
@@ -38,5 +39,7 @@ class Bosz(ModelGridConfig):
         return spec
 
     def create_continuum_model(self):
-        model = LogChebyshevContinuumModel()
+        # model = LogChebyshevContinuumModel()
+        model = AlexContinuumModel()
+
         return model
