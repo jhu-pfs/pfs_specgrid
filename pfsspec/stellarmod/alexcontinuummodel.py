@@ -6,7 +6,6 @@ import logging
 from scipy import stats
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
-import statsmodels.api as sm
 
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodel import ContinuumModel

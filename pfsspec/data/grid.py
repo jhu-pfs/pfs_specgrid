@@ -37,6 +37,10 @@ class Grid(PfsObject):
     def set_constants(self, constants):
         self.constants = constants
 
+    def copy_axes(self, other):
+        for k in other.axes:
+            self.axes[k] = other.axes[k]
+
     def init_axes(self):
         pass
 

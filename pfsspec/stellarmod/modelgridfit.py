@@ -61,6 +61,7 @@ class ModelGridFit(PfsObject):
         # Open output
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_grid()
+        self.output_grid.grid.copy_axes(self.input_grid.grid)
         self.output_grid.set_wave(self.input_grid.get_wave())
         self.output_grid.build_axis_indexes()
 
