@@ -22,6 +22,10 @@ class RbfGrid(Grid):
 
             self.init_values()
 
+    @property
+    def array_grid(self):
+        return None
+
     def init_value(self, name, shape=None, **kwargs):
         if shape is None:
             self.values[name] = None

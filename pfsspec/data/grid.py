@@ -53,8 +53,12 @@ class Grid(PfsObject):
             self.axes[k] = type(axes[k])(k, orig=axes[k])
             self.axes[k].build_index()
 
-    def get_axes(self):
-        return self.axes
+    def get_axes(self, squeeze=False):
+        axes = {}
+        for k in axes:
+            if not squeeze or self.axes[k].values.shape[0] > 1:
+                axes[k] = self.axes[k]
+        return axes
 
     def init_constants(self):
         pass

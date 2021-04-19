@@ -37,6 +37,10 @@ class ArrayGrid(Grid):
 
             self.init_values()
 
+    @property
+    def array_grid(self):
+        return self
+
 #region Support slicing via command-line arguments
 
     def init_from_args(self, args):

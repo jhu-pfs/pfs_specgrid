@@ -52,11 +52,11 @@ class GridBuilder(PfsObject):
         self.open_output_grid(output_path)
 
         # Source indexes
-        index = self.input_grid.grid.get_value_index_unsliced('flux')
+        index = self.input_grid.array_grid.get_value_index_unsliced('flux')
         self.input_grid_index = np.array(np.where(index))
 
         # Target indexes
-        index = self.input_grid.grid.get_value_index('flux')
+        index = self.input_grid.array_grid.get_value_index('flux')
         self.output_grid_index = np.array(np.where(index))
 
         self.grid_shape = self.input_grid.get_shape()

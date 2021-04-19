@@ -28,6 +28,10 @@ class PcaGrid(PfsObject):
     def preload_arrays(self, value):
         self.grid.preload_arrays = value
 
+    @property
+    def array_grid(self):
+        return self.grid.array_grid
+
     def init_from_args(self, args):
         self.grid.init_from_args(args)
 
@@ -49,8 +53,8 @@ class PcaGrid(PfsObject):
     def set_axes(self, axes):
         self.grid.set_axes(axes)
 
-    def get_axes(self):
-        return self.grid.get_axes()
+    def get_axes(self, squeeze=False):
+        return self.grid.get_axes(squeeze=squeeze)
 
     def build_axis_indexes(self):
         self.grid.build_axis_indexes()

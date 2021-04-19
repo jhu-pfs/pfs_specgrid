@@ -39,6 +39,15 @@ class ModelGrid(PfsObject):
     def preload_arrays(self, value):
         self.grid.preload_arrays = value
 
+    @property
+    def array_grid(self):
+        if isinstance(self.grid, ArrayGrid):
+            return self.grid
+        elif isinstance(self.grid, (PcaGrid, RbfGrid)):
+            return self.grid.array_grid
+        else:
+            raise NotImplementedError()
+
     def create_grid(self, grid_type):
         grid = grid_type(self.config)
 
