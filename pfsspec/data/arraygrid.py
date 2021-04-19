@@ -62,14 +62,16 @@ class ArrayGrid(Grid):
 
         return tuple(s)
 
-    def get_axes(self):
+    def get_axes(self, squeeze=False):
         # Return axes that are limited by the slices
         if self.slice is not None:
             axes = {}
             for i, k in enumerate(self.axes):
                 if type(self.slice[i]) is slice:
-                    axes[k] = GridAxis(k, self.axes[k].values[self.slice[i]])
-                    axes[k].build_index()
+                    v = self.axes[k].values[self.slice[i]]
+                    if not squeeze or v.shape[0] > 1:
+                        axes[k] = GridAxis(k, v)
+                        axes[k].build_index()
             return axes
         else:
             return super(ArrayGrid, self).get_axes()
@@ -288,9 +290,12 @@ class ArrayGrid(Grid):
     def get_values_at(self, idx, s=None):
         return {name: self.get_value_at(name, idx, s) for name in self.values}
 
-    def get_value(self, name, s=None, **kwargs):
+    def get_value(self, name, s=None, squeeze=False, **kwargs):
         idx = self.get_index(**kwargs)
-        return self.get_value_at(name, idx, s)
+        v = self.get_value_at(name, idx, s)
+        if squeeze:
+            v = np.squeeze(v)
+        return v
 
     def get_nearest_value(self, name, s=None, **kwargs):
         idx = self.get_nearest_index(**kwargs)
@@ -483,16 +488,18 @@ class ArrayGrid(Grid):
 
         # If slicing is turned on, these functions will automatically return the sliced
         # value array and the sliced (and squeezed) axes.
-        orig_axes = self.get_axes()
-        orig_value = self.get_value(name, s=s)
-
-        return ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
+        orig_axes = self.get_axes(squeeze=False)
+        orig_value = self.get_value(name, s=s, squeeze=False)
+        padded_value = ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
+        return padded_value
 
     @staticmethod
     def get_grid_points(axes, padding=False, interpolation='ijk'):
         xi = {}
         for p in axes:
-            if interpolation == 'ijk':
+            if axes[p].values.shape[0] == 1:
+                xi[p] = axes[p].values
+            elif interpolation == 'ijk':
                 if not padding:
                     xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64)
                 else:
@@ -508,11 +515,14 @@ class ArrayGrid(Grid):
         padded_axes = {}
         for p in orig_axes:
             # Padded axis with linear extrapolation from the original edge values
-            paxis = np.empty(orig_axes[p].values.shape[0] + 2)
-            paxis[1:-1] = orig_axes[p].values
-            paxis[0] = paxis[1] - (paxis[2] - paxis[1])
-            paxis[-1] = paxis[-2] + (paxis[-2] - paxis[-3])
-            padded_axes[p] = GridAxis(p, paxis)
+            if orig_axes[p].values.shape[0] > 1:
+                paxis = np.empty(orig_axes[p].values.shape[0] + 2)
+                paxis[1:-1] = orig_axes[p].values
+                paxis[0] = paxis[1] - (paxis[2] - paxis[1])
+                paxis[-1] = paxis[-2] + (paxis[-2] - paxis[-3])
+                padded_axes[p] = GridAxis(p, paxis)
+            else:
+                padded_axes[p] = orig_axes[p]
         return padded_axes
 
     @staticmethod
@@ -541,8 +551,22 @@ class ArrayGrid(Grid):
         # Pad original slice with phantom cells
         # We a do a bit of extra work here because we interpolated the entire new slice, not just
         # the edges. The advantage is that we can fill in some of the holes this way.
-        oijk = [orig_xi[p] for p in orig_xi]
-        pijk = np.stack(np.meshgrid(*[padded_xi[p] for p in padded_xi], indexing='ij'), axis=-1)
-        padded_value = interpn(oijk, orig_value, pijk, method='linear', bounds_error=False, fill_value=None)
+        oijk = []
+        pijk = []
+        padded_shape = []
+        for p in orig_xi:
+            if orig_xi[p].shape[0] > 1:
+                oijk.append(orig_xi[p])
+                pijk.append(padded_xi[p])
+                padded_shape.append(padded_xi[p].shape[0])
+            else:
+                padded_shape.append(1)
+        pijk = np.stack(np.meshgrid(*pijk, indexing='ij'), axis=-1)
+        padded_shape = tuple(padded_shape)
+
+        #oijk = [orig_xi[p] for p in orig_xi if orig_xi[p].shape[0] > 1]
+        #pijk = np.stack(np.meshgrid(*[padded_xi[p] for p in padded_xi if padded_xi[p].shape[0] > 1], indexing='ij'), axis=-1)
+        padded_value = interpn(oijk, np.squeeze(orig_value), pijk, method='linear', bounds_error=False, fill_value=None)
+        padded_value = np.reshape(padded_value, padded_shape + (padded_value.shape[-1],))
 
         return padded_value, padded_axes

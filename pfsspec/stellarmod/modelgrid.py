@@ -89,8 +89,8 @@ class ModelGrid(PfsObject):
     def set_constants(self, constants):
         self.grid.set_constants(constants)
 
-    def get_axes(self):
-        return self.grid.get_axes()
+    def get_axes(self, squeeze=False):
+        return self.grid.get_axes(squeeze=squeeze)
 
     def set_axes(self, axes):
         self.grid.set_axes(axes)
