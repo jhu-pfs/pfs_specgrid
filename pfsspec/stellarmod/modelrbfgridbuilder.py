@@ -18,19 +18,7 @@ class ModelRbfGridBuilder(RbfGridBuilder):
         else:
             self.config = config
 
-    def add_args(self, parser):
-        super(ModelRbfGridBuilder, self).add_args(parser)
-
-        # Axes of input grid can be used as parameters to filter the range
-        grid = self.create_grid()
-        grid.add_args(parser)
-
-    def parse_args(self):
-        super(ModelRbfGridBuilder, self).parse_args()
-
-        # Axes limits will be parsed only after the input grid is opened
-
-    def create_grid(self):
+    def create_input_grid(self):
         # It doesn't really matter if the input is already a PCA grid or just a direct
         # array because RBF interpolation is the same. On the other hand,
         # when we want to slice a PCA grid in wavelength, we have to load the
@@ -41,23 +29,17 @@ class ModelRbfGridBuilder(RbfGridBuilder):
         grid = ModelGrid(config, ArrayGrid)
         return grid
 
-    def create_rbf_grid(self):
+    def create_output_grid(self):
         config = self.config
         if self.pca is not None and self.pca:
             config = type(config)(pca=True)
         grid = ModelGrid(config, RbfGrid)
         return grid
 
-    def open_data(self, input_path, output_path):
-        self.open_input_grid(input_path)
-        self.open_output_grid(output_path)
-
     def open_input_grid(self, input_path):
         fn = os.path.join(input_path, 'spectra') + '.h5'
-        self.input_grid = self.create_grid()
+        self.input_grid = self.create_input_grid()
         self.input_grid.load(fn, format='h5')
-        self.input_grid.init_from_args(self.args)
-        self.input_grid.build_axis_indexes()
 
         # Source indexes
         if isinstance(self.input_grid.grid, PcaGrid):
@@ -70,7 +52,7 @@ class ModelRbfGridBuilder(RbfGridBuilder):
 
     def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
-        self.output_grid = self.create_rbf_grid()
+        self.output_grid = self.create_output_grid()
         
         # Pad the output axes. This automatically takes the parameter ranges into
         # account since the grid is sliced.
@@ -93,9 +75,6 @@ class ModelRbfGridBuilder(RbfGridBuilder):
 
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
-
-    def save_data(self, output_path):
-        self.output_grid.save(self.output_grid.filename, format=self.output_grid.fileformat)
 
     def run(self):
         self.output_grid.set_constants(self.input_grid.get_constants())

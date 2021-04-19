@@ -3,54 +3,26 @@ import numpy as np
 import time
 from tqdm import tqdm
 
+from pfsspec.data.gridbuilder import GridBuilder
 from pfsspec.rbf import Rbf
-from pfsspec.pfsobject import PfsObject
 from pfsspec.data.arraygrid import ArrayGrid
 
-class RbfGridBuilder(PfsObject):
+class RbfGridBuilder(GridBuilder):
     def __init__(self, input_grid=None, output_grid=None, orig=None):
-        super(RbfGridBuilder, self).__init__()
+        super(RbfGridBuilder, self).__init__(input_grid=input_grid, output_grid=output_grid, orig=orig)
 
         if isinstance(orig, RbfGridBuilder):
-            self.input_grid = input_grid if input_grid is not None else orig.input_grid
-            self.output_grid = output_grid if output_grid is not None else orig.output_grid
-            self.input_grid_index = None
-
-            self.top = orig.top
             self.pca = orig.pca
         else:
-            self.input_grid = input_grid
-            self.output_grid = output_grid
-            self.input_grid_index = None
-
-            self.top = None
             self.pca = None
 
     def add_args(self, parser):
-        parser.add_argument('--top', type=int, default=None, help='Limit number of results')
+        super(RbfGridBuilder, self).add_args(parser)
         parser.add_argument('--pca', action='store_true', help='Run on a PCA grid')
 
     def parse_args(self):
-        self.top = self.get_arg('top', self.top)
+        super(RbfGridBuilder, self).parse_args()
         self.pca = self.get_arg('pca', self.pca)
-
-    def create_grid(self):
-        raise NotImplementedError()
-
-    def create_rbf_grid(self):
-        raise NotImplementedError()
-
-    def open_data(self, input_path, output_path):
-        raise NotImplementedError()
-
-    def save_data(self, output_path):
-        raise NotImplementedError()
-
-    def init_process(self):
-        pass
-
-    def run(self):
-        raise NotImplementedError()
 
     def fit_rbf(self, value, axes, mask=None, padding=False, interpolation='ijk', function='multiquadric', epsilon=None, smooth=0.0):
         """Returns the Radial Base Function interpolation of a grid slice.

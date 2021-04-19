@@ -33,7 +33,8 @@ class Fit(Script):
         self.fit = FIT_CONFIGURATIONS[self.args['type']][self.args['source']]['class'](config)
         self.fit.parallel = self.threads != 1
         self.fit.threads = self.threads
-        self.fit.parse_args(self.args)
+        self.fit.args = self.args
+        self.fit.parse_args()
 
     def open_data(self):
         self.fit.open_data(self.args['in'], self.outdir)
@@ -51,7 +52,7 @@ class Fit(Script):
     def run(self):
         self.init_logging(self.outdir)
         self.fit.run()
-        self.fit.save_data()
+        self.fit.save_data(self.outdir)
 
 def main():
     script = Fit()

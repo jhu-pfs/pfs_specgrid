@@ -9,7 +9,7 @@ from pfsspec.data.pcagridbuilder import PcaGridBuilder
 from pfsspec.stellarmod.modelgrid import ModelGrid
 
 class ModelPcaGridBuilder(PcaGridBuilder):
-    def __init__(self, config, grid=None, orig=None):
+    def __init__(self, config, orig=None):
         super(ModelPcaGridBuilder, self).__init__(orig=orig)
 
         if isinstance(orig, ModelPcaGridBuilder):
@@ -17,47 +17,23 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         else:
             self.config = config
     
-    def add_args(self, parser):
-        super(ModelPcaGridBuilder, self).add_args(parser)
-
-        # Axes of input grid can be used as parameters to filter the range
-        grid = self.create_grid()
-        grid.add_args(parser)
-
-    def parse_args(self):
-        super(ModelPcaGridBuilder, self).parse_args()
-
-    def create_grid(self):
+    def create_input_grid(self):
         return ModelGrid(self.config, ArrayGrid)
 
-    def create_pca_grid(self):
+    def create_output_grid(self):
         config = type(self.config)(orig=self.config, pca=True)
         return ModelGrid(config, ArrayGrid)
 
-    def open_data(self, input_path, output_path):
-        self.open_input_grid(input_path)
-        self.open_output_grid(output_path)
-
     def open_input_grid(self, input_path):
         fn = os.path.join(input_path, 'spectra') + '.h5'
-        self.input_grid = self.create_grid()
+        self.input_grid = self.create_input_grid()
         self.input_grid.load(fn)
-        self.input_grid.init_from_args(self.args)
-        self.input_grid.build_axis_indexes()
-
-        # Source indexes
-        index = self.input_grid.grid.get_value_index_unsliced('flux')
-        self.input_grid_index = np.array(np.where(index))
-
-        # Target indexes
-        index = self.input_grid.grid.get_value_index('flux')
-        self.output_grid_index = np.array(np.where(index))
-
-        self.grid_shape = self.input_grid.get_shape()
 
     def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
-        self.output_grid = self.create_pca_grid()
+        self.output_grid = self.create_output_grid()
+
+        # Copy axes from input
         self.output_grid.set_axes(self.input_grid.get_axes())
 
         # DEBUG
@@ -67,9 +43,6 @@ class ModelPcaGridBuilder(PcaGridBuilder):
 
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
-
-    def save_data(self, output_path):
-        self.output_grid.save(self.output_grid.filename, format=self.output_grid.fileformat)
 
     def get_vector_shape(self):
         return self.input_grid.get_wave().shape
@@ -89,15 +62,17 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         self.output_grid.wave = self.input_grid.get_wave()
 
         # Copy continuum fit parameters
-        params = self.input_grid.get_value_sliced('params')
-        self.output_grid.grid.allocate_value('params', shape=(params.shape[-1],))
-        self.output_grid.grid.set_value('params', params)
-        self.output_grid.grid.set_constant('constants', self.input_grid.grid.get_constant('constants'))
+        if self.input_grid.grid.has_value('params'):
+            params = self.input_grid.get_value_sliced('params')
+            self.output_grid.grid.allocate_value('params', shape=(params.shape[-1],))
+            self.output_grid.grid.set_value('params', params)
+        if self.input_grid.grid.has_constant('constants'):
+            self.output_grid.grid.set_constant('constants', self.input_grid.grid.get_constant('constants'))
 
         # Save principal components to a grid
         coeffs = np.full(self.input_grid.get_shape() + (self.PC.shape[1],), np.nan)
-        vector_count = self.get_vector_count()
-        for i in range(vector_count):
+        input_count = self.get_input_count()
+        for i in range(input_count):
             idx = tuple(self.output_grid_index[:, i])
             coeffs[idx] = self.PC[i, :]
 

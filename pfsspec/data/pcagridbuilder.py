@@ -4,20 +4,13 @@ from sklearn.decomposition import TruncatedSVD
 import time
 from tqdm import tqdm
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.data.gridbuilder import GridBuilder
 
-class PcaGridBuilder(PfsObject):
+class PcaGridBuilder(GridBuilder):
     def __init__(self, input_grid=None, output_grid=None, orig=None):
-        super(PcaGridBuilder, self).__init__()
+        super(PcaGridBuilder, self).__init__(input_grid=input_grid, output_grid=output_grid, orig=orig)
 
         if isinstance(orig, PcaGridBuilder):
-            self.input_grid = input_grid if input_grid is not None else orig.input_grid
-            self.output_grid = output_grid if output_grid is not None else orig.output_grid
-            self.input_grid_index = None
-            self.output_grid_index = None
-            self.grid_shape = None
-
-            self.top = orig.top
             self.svd_method = orig.svd_method
             self.svd_truncate = orig.svd_truncate
 
@@ -27,13 +20,6 @@ class PcaGridBuilder(PfsObject):
             self.V = orig.V
             self.PC = orig.PC
         else:
-            self.input_grid = input_grid
-            self.output_grid = output_grid
-            self.input_grid_index = None
-            self.output_grid_index = None
-            self.grid_shape = None
-
-            self.top = None
             self.svd_method = 'svd'
             self.svd_truncate = None
 
@@ -44,33 +30,16 @@ class PcaGridBuilder(PfsObject):
             self.PC = None
 
     def add_args(self, parser):
-        parser.add_argument('--top', type=int, default=None, help='Limit number of results')
+        super(PcaGridBuilder, self).add_args(parser)
+
         parser.add_argument('--svd-method', type=str, default='svd', choices=['svd', 'trsvd'], help='Truncate PCA')
         parser.add_argument('--svd-truncate', type=int, default=None, help='Truncate SVD')
 
     def parse_args(self):
-        self.top = self.get_arg('top', self.top)
+        super(PcaGridBuilder, self).parse_args()
+
         self.svd_method = self.get_arg('svd_method', self.svd_method)
         self.svd_truncate = self.get_arg('svd_truncate', self.svd_truncate)
-
-    def create_grid(self):
-        raise NotImplementedError()
-
-    def create_pca_grid(self):
-        raise NotImplementedError()
-
-    def open_data(self, input_path, output_path):
-        raise NotImplementedError()
-
-    def save_data(self, output_path):
-        raise NotImplementedError()
-
-    def get_vector_count(self):
-        # Return the number of data vectors
-        vector_count = self.input_grid_index.shape[1]
-        if self.top is not None:
-            vector_count = min(self.top, vector_count)
-        return vector_count
 
     def get_vector_shape(self):
         # Return the shape of data vectors, a one element tuple
@@ -80,14 +49,11 @@ class PcaGridBuilder(PfsObject):
         # Return the ith data vector
         raise NotImplementedError()
 
-    def init_process(self):
-        pass
-
     def run(self):
         # TODO: clean it up
 
         # Copy all data vectors into a single matrix
-        vector_count = self.get_vector_count()
+        vector_count = self.get_input_count()
         vector_shape = self.get_vector_shape()
         data_shape = (vector_count,) + vector_shape
 
