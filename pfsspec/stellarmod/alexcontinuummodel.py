@@ -16,7 +16,7 @@ class AlexContinuumModel(ContinuumModel):
         if isinstance(orig, AlexContinuumModel):
             pass
         else:
-            self.photo_limits = self.get_photo_limits(d = 0.5)
+            self.photo_limits = self.get_photo_limits(d = 0.5, lb = 3000, ub = 14000)
             self.legendre_rate = None
             self.legendre_rank = 6
             self.legendre_deg = 7
@@ -24,15 +24,16 @@ class AlexContinuumModel(ContinuumModel):
             self.gap_ids = [0, 2, 4]
             self.offset = [0, None, 0, None, 0, None, None]
 
-            self.slope_cutoff = 8
+            self.slope_cutoff = 25
             self.init_s0s1 = [[0.15, 1], [None], [0.15, 0.1], [None],
                                 [2., 3.1], [None], [None]] 
 
             self.fit_gap = {0: True, 2: True, 4: True, 6: False}
-
+            
+            self.x1_y_ub = 0.005
+            self.wave_mask = None
             self.wave = None
             self.log_wave = None
-            self.wave_mask = None
             self.masks = None
             self.limits = None
             self.eval_masks = None
@@ -41,7 +42,7 @@ class AlexContinuumModel(ContinuumModel):
             # self.method = method
             self.test = test
 
-
+#######################################MAJOR############################################
     def add_args(self, parser):
         super(AlexContinuumModel, self).add_args(parser)
 
@@ -70,12 +71,13 @@ class AlexContinuumModel(ContinuumModel):
     def normalize(self, spec):
         norm_flux, norm_params = self.get_norm_flux_n_params(spec)
         norm_cont = np.zeros_like(self.wave)
-        # gap_params = np.array([])
+        
+        gap_params = np.array([])
 
-        norm_params = np.array([])
-        gap_params = self.fit_gaps(norm_flux)
+        # norm_params = np.array([])
+        # gap_params = self.fit_gaps(norm_flux)
         # print(gap_params)
-        norm_cont = self.eval_gaps(norm_cont, gap_params)
+        # norm_cont = self.eval_gaps(norm_cont, gap_params)
         if self.debug:
             self.norm_flux = norm_flux
             self.norm_cont = norm_cont
@@ -175,6 +177,8 @@ class AlexContinuumModel(ContinuumModel):
     #     else:
     #         self.fit_gap[gap_id] = True
     
+#######################################FIT GAP############################################
+
     def check_fit(self, y):
         return (len(y) > 3) and (y[0] < -0.001)
 
@@ -202,10 +206,8 @@ class AlexContinuumModel(ContinuumModel):
             self.params_est[gap_id] = pmt
 
         try:
-            # bnds = (0, np.inf)
             # bnds = (0, [np.inf, np.inf, np.inf, , 20])
             bnds = (0, np.inf)
-
             pmt, _ = curve_fit(self.sigmoid, gap_hull_x, gap_hull_y, pmt, bounds=bnds) 
             # pmt, _ = curve_fit(self.sigmoid, gap_hull_x, gap_hull_y, pmt) 
         except:
@@ -229,7 +231,6 @@ class AlexContinuumModel(ContinuumModel):
             pmt = self.fit_curve_with_sigmoid(pts[:, 0], pts[:, 1], w0, sigfun, pmt, (), type = 2)
         return pmt
 
-    # def get_
     def get_min_max_norm(self, x):
         xmin, xmax = np.min(x), np.max(x)
         return (x - xmin)/(xmax - xmin)
@@ -241,7 +242,8 @@ class AlexContinuumModel(ContinuumModel):
         dd = np.diff(yy) / np.diff(xx)
         dd = np.abs(np.append(dd, dd[-1]))
         dd_median, dd_std = np.median(dd), dd.std()
-        dd_high = dd_median + dd_std * 2
+        dd_high = dd_median + dd_std * 3.0
+        # print(dd_high, cutoff)
         slope_cut = np.min([dd_high, cutoff])
         mask = (dd < slope_cut)
         return x[mask], y[mask], dd[mask]
@@ -295,7 +297,7 @@ class AlexContinuumModel(ContinuumModel):
         x = self.log_wave[mask][offset:]
         y = norm_flux[mask][offset:]
         dx = self.dx[gap_id]
-        x1 = x[np.abs(y + 0.005).argmin()]
+        x1 = x[np.abs(y + self.x1_y_ub).argmin()]
         if self.debug:
             self.x1[gap_id] = x1
         x_mask = (x < x1)
@@ -478,7 +480,6 @@ class AlexContinuumModel(ContinuumModel):
         # exp_arg = 0 if arg.all() < -1e4 else np.exp(arg)
         y[i1] = 1 - alpha1 * np.exp(arg)
         y[im] = b * (x[im] - c) + 0.5
-
         return a * (y - 1)
 
     def sigmoid_fixing_right(self,x,rLevel,a,b,c,s0,s1):
@@ -557,10 +558,12 @@ class AlexContinuumModel(ContinuumModel):
     def get_log(self, x):
         return np.log(np.where(x <= 1, 1, x))
 
-    def get_photo_limits(self, d = 0.5):
+    def get_photo_limits(self, d = 0.5, lb = 3000, ub = 14000):
         limits = np.array(Physics.HYDROGEN_LIMITS)
         cuts = np.sort((np.append(limits - d, limits + d)))
-        return np.array([3000, *Physics.air_to_vac(cuts), 15000 + 1])
+        photo_limits = np.array([lb, *Physics.air_to_vac(cuts), ub])
+        return photo_limits
+
 
     def find_masks_between_limits(self, wave, dlambda):
         masks = []
@@ -582,7 +585,7 @@ class AlexContinuumModel(ContinuumModel):
 
     def find_limits(self, wave):
         if self.wave_mask is None:
-            self.wave_mask = (wave > 3000.) & (wave < 14000.)
+            self.wave_mask = (wave >= self.photo_limits[0]) & (wave <= self.photo_limits[-1])
 
         if self.wave is None:
             self.wave = wave[self.wave_mask]
@@ -610,7 +613,7 @@ class AlexContinuumModel(ContinuumModel):
             # print(legendre_rate)
     
     def get_gap_masks(self):
-        hi = [3600, None, 5000, None, 10000, None, 15000]
+        hi = [3600, None, 5000, None, 10000, None, 14000]
         gap_masks = {}
         for i in self.gap_ids:
             mask = self.masks[i] 
