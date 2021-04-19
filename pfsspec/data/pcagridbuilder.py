@@ -79,10 +79,12 @@ class PcaGridBuilder(GridBuilder):
         end = time.time()
         elapsed = end - start
 
-        # Calculate principal components
+        # Calculate principal components and truncated basis
         if self.svd_truncate is None:
             self.PC = np.dot(self.X, self.V)
         else:
-            self.PC = np.dot(self.X, self.V[:, :self.svd_truncate])       # shape: (items, truncate)
+            self.S = self.S[:self.svd_truncate]
+            self.V = self.V[:, :self.svd_truncate]
+            self.PC = np.dot(self.X, self.V)       # shape: (items, truncate)
 
         self.output_grid.svd_truncate = self.svd_truncate

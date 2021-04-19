@@ -47,6 +47,8 @@ class ModelGridFit(GridBuilder):
     def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_output_grid()
+
+        # Copy data from the input grid
         self.output_grid.grid.set_axes(self.input_grid.grid.get_axes())
         self.output_grid.set_wave(self.input_grid.get_wave())
         self.output_grid.build_axis_indexes()

@@ -33,16 +33,18 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         fn = os.path.join(output_path, 'spectra') + '.h5'
         self.output_grid = self.create_output_grid()
 
-        # Copy axes from input
+        # Copy data from the input grid
         self.output_grid.set_axes(self.input_grid.get_axes())
+        self.output_grid.wave = self.input_grid.get_wave()
+        self.output_grid.build_axis_indexes()
+
+        # Force creating output file for direct hdf5 writing
+        self.output_grid.save(fn, format='h5')
 
         # DEBUG
-        self.output_grid.preload_arrays = True
-        self.output_grid.grid.preload_arrays = True
+        # self.output_grid.preload_arrays = True
+        # self.output_grid.grid.preload_arrays = True
         # END DEBUG
-
-        self.output_grid.filename = fn
-        self.output_grid.fileformat = 'h5'
 
     def get_vector_shape(self):
         return self.input_grid.get_wave().shape
@@ -56,10 +58,6 @@ class ModelPcaGridBuilder(PcaGridBuilder):
 
     def run(self):
         super(ModelPcaGridBuilder, self).run()
-
-        # Copy data from the input grid
-        self.output_grid.set_axes(self.input_grid.get_axes())
-        self.output_grid.wave = self.input_grid.get_wave()
 
         # Copy continuum fit parameters
         if self.input_grid.grid.has_value('params'):
@@ -76,7 +74,7 @@ class ModelPcaGridBuilder(PcaGridBuilder):
             idx = tuple(self.output_grid_index[:, i])
             coeffs[idx] = self.PC[i, :]
 
-        self.output_grid.grid.allocate_value('flux', shape=self.V.shape, pca=True)
+        self.output_grid.grid.allocate_value('flux', shape=coeffs.shape, pca=True)
         self.output_grid.grid.set_value('flux', (coeffs, self.S, self.V), pca=True)
 
         """
