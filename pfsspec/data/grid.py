@@ -55,7 +55,7 @@ class Grid(PfsObject):
 
     def get_axes(self, squeeze=False):
         axes = {}
-        for k in axes:
+        for k in self.axes:
             if not squeeze or self.axes[k].values.shape[0] > 1:
                 axes[k] = self.axes[k]
         return axes

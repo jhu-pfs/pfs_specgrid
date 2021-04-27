@@ -494,8 +494,8 @@ class ArrayGrid(Grid):
         # value array and the sliced (and squeezed) axes.
         orig_axes = self.get_axes(squeeze=False)
         orig_value = self.get_value(name, s=s, squeeze=False)
-        padded_value = ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
-        return padded_value
+        padded_value, padded_axes = ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
+        return padded_value, padded_axes
 
     @staticmethod
     def get_grid_points(axes, padding=False, interpolation='ijk'):
@@ -539,18 +539,6 @@ class ArrayGrid(Grid):
 
         orig_xi = ArrayGrid.get_grid_points(orig_axes, padding=False, interpolation=interpolation)
         padded_xi = ArrayGrid.get_grid_points(padded_axes, padding=True, interpolation=interpolation)
-
-        # orig_xi = {}
-        # padded_xi = {}
-        # for p in orig_axes:
-        #     if interpolation == 'ijk':
-        #         orig_xi[p] = np.arange(orig_axes[p].values.shape[0], dtype=np.float64)
-        #         padded_xi[p] = np.arange(-1, orig_axes[p].values.shape[0] + 1, dtype=np.float64)
-        #     elif interpolation == 'xyz':
-        #         orig_xi[p] = orig_axes[p].values
-        #         padded_xi[p] = padded_axes[p].values
-        #     else:
-        #         raise NotImplementedError()
 
         # Pad original slice with phantom cells
         # We a do a bit of extra work here because we interpolated the entire new slice, not just
