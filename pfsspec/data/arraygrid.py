@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import itertools
 from collections import Iterable
-from scipy.interpolate import RegularGridInterpolator, CubicSpline
+from scipy.interpolate import LinearNDInterpolator, RegularGridInterpolator, CubicSpline
 from scipy.interpolate import interp1d, interpn
 
 from pfsspec.rbf import Rbf
@@ -476,7 +476,7 @@ class ArrayGrid(Grid):
 
         return fn(kwargs[free_param]), kwargs
 
-    def get_value_padded(self, name, interpolation='ijk', s=None):
+    def get_value_padded(self, name, interpolation='ijk', s=None, fill_holes=False):
         """Returns a slice of the grid and pads with a single item in every direction using linearNd extrapolation.
 
         Extrapolation is done either in grid coordinates or in axis coordinates
@@ -494,7 +494,13 @@ class ArrayGrid(Grid):
         # value array and the sliced (and squeezed) axes.
         orig_axes = self.get_axes(squeeze=False)
         orig_value = self.get_value(name, s=s, squeeze=False)
+
+        if fill_holes and self.has_value_index(name):
+            mask = self.get_value_index(name)
+            orig_value, orig_axes = ArrayGrid.fill_holes(orig_axes, orig_value, mask, interpolation=interpolation)
+
         padded_value, padded_axes = ArrayGrid.pad_array(orig_axes, orig_value, interpolation=interpolation)
+                
         return padded_value, padded_axes
 
     @staticmethod
@@ -530,6 +536,36 @@ class ArrayGrid(Grid):
         return padded_axes
 
     @staticmethod
+    def fill_holes(orig_axes, orig_value, mask, interpolation='ijk'):
+        # Replace the masked values inside the convex hull with linear interpolation
+
+        orig_xi = ArrayGrid.get_grid_points(orig_axes, padding=False, interpolation=interpolation)
+
+        oijk = []
+        for p in orig_xi:
+            if orig_xi[p].shape[0] > 1:
+                oijk.append(orig_xi[p])
+
+        oijk = np.stack(np.meshgrid(*oijk, indexing='ij'), axis=-1)
+        oijk = oijk.reshape((-1, oijk.shape[-1]))
+
+        oval = orig_value.reshape((-1, orig_value.shape[-1]))
+
+        pijk = oijk[~(mask.flatten())]
+        oijk = oijk[mask.flatten()]
+        oval = oval[mask.flatten()]
+
+        ip = LinearNDInterpolator(oijk, oval)
+        fill_value = ip(pijk)
+
+        fill_value = orig_value.copy()
+        fill_value = fill_value.reshape((-1, fill_value.shape[-1]))
+        fill_value[~(mask.flatten())] = ip(pijk)
+        fill_value = fill_value.reshape(orig_value.shape)
+
+        return fill_value, orig_axes
+
+    @staticmethod
     def pad_array(orig_axes, orig_value, interpolation='ijk'):
         # Depending on the interpolation method, the original axes are converted from
         # actual values to index values. The padded axes will have the original values
@@ -545,20 +581,33 @@ class ArrayGrid(Grid):
         # the edges. The advantage is that we can fill in some of the holes this way.
         oijk = []
         pijk = []
+        padding = []
         padded_shape = []
         for p in orig_xi:
             if orig_xi[p].shape[0] > 1:
                 oijk.append(orig_xi[p])
                 pijk.append(padded_xi[p])
+                padding.append((1, 1))
                 padded_shape.append(padded_xi[p].shape[0])
             else:
+                padding.append((0, 0))
                 padded_shape.append(1)
-        pijk = np.stack(np.meshgrid(*pijk, indexing='ij'), axis=-1)
+
+        padding = tuple(padding)
         padded_shape = tuple(padded_shape)
 
-        #oijk = [orig_xi[p] for p in orig_xi if orig_xi[p].shape[0] > 1]
-        #pijk = np.stack(np.meshgrid(*[padded_xi[p] for p in padded_xi if padded_xi[p].shape[0] > 1], indexing='ij'), axis=-1)
-        padded_value = interpn(oijk, np.squeeze(orig_value), pijk, method='linear', bounds_error=False, fill_value=None)
+        # TODO: now we interpolate to the entire grid, although it would be
+        #       enough to do it for the edges only and use the original values
+        #       inside
+        pijk = np.stack(np.meshgrid(*pijk, indexing='ij'), axis=-1)
+
+        # fill_value=None : extrapolate
+        ip = RegularGridInterpolator(oijk, orig_value, method='linear', bounds_error=False, fill_value=None)
+        padded_value = ip(pijk)
         padded_value = np.reshape(padded_value, padded_shape + (padded_value.shape[-1],))
+        
+        # Fill in the middle from the original
+        mask = np.isnan(padded_value)
+        padded_value[mask] = np.pad(orig_value, padding + ((0, 0),), mode='constant', constant_values=np.nan)[mask]
 
         return padded_value, padded_axes
