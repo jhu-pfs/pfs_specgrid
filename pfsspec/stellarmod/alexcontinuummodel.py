@@ -10,7 +10,6 @@ from scipy.interpolate import interp1d
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodel import ContinuumModel
 
-
 class AlexContinuumModel(ContinuumModel):
     def __init__(self, orig=None, debug = False, test = None):
         if isinstance(orig, AlexContinuumModel):
@@ -21,7 +20,7 @@ class AlexContinuumModel(ContinuumModel):
             self.legendre_rate = None
             self.legendre_rank = 6
             self.legendre_deg = 7
-            self.gap_fill = np.ones(5) * (-1000)
+            self.gap_fill = np.full((5,), np.nan) #np.ones(5) * (-1000)
             self.dx = None
             self.gap_ids = [0, 2, 4]
             self.offset = [0, None, 0, None, 0, None, None]
