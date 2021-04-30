@@ -68,34 +68,29 @@ def fill_holes_filter(value, mask_function=np.isnan, fill_filter=np.nanmean, val
     # array of ndim = 2 or larger. Averaging is done over values in last
     # dimension.
     
-    res = value.copy()
+    pp = value.copy()
 
-    for i in range(value.shape[-1]):
-        pp = value[..., i]
+    # Fill in large continuous masked regions
+    mask = mask_function(pp)
+    # Squeeze array because binary_erosion doesn't work with thin arrays
+    mask = ndimage.binary_erosion(mask.squeeze())
+    mask = mask.reshape(pp.shape)
+    # Fill in large regions using value_filter
+    pp[mask] = value_filter(pp)
 
-        # Fill in large continuous masked regions
+    last_count = pp.size
+    while True:
         mask = mask_function(pp)
-        # Squeeze array because binary_erosion doesn't work with thin arrays
-        mask = ndimage.binary_erosion(mask.squeeze())
-        mask = mask.reshape(pp.shape)
-        # Fill in large regions using value_filter
-        pp[mask] = value_filter(pp)
+        count = np.sum(mask)
+        # Stop if all filled in or cannot fill in anything
+        if count == 0:
+            break
+        elif count == last_count:
+            break
+        last_count = count
+        pp[mask] = ndimage.generic_filter(pp, fill_filter, size=3, mode='constant', cval=np.nan)[mask]
 
-        last_count = pp.size
-        while True:
-            mask = mask_function(pp)
-            count = np.sum(mask)
-            # Stop if all filled in or cannot fill in anything
-            if count == 0:
-                break
-            elif count == last_count:
-                break
-            last_count = count
-            pp[mask] = ndimage.generic_filter(pp, fill_filter, size=3, mode='constant', cval=np.nan)[mask]
-
-        res[..., i] = pp
-
-    return res
+    return pp
 
 
 def pad_array(orig_axes, orig_value, size=1, interpolation='ijk'):

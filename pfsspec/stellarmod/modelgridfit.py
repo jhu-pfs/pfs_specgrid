@@ -112,14 +112,15 @@ class ModelGridFit(GridBuilder):
 
     def run_step_smooth(self):
         params = self.input_grid.grid.get_value('params')
+
         if self.input_grid.grid.has_value_index('params'):
             mask = self.input_grid.grid.get_value_index('params')
-        else:
-            mask = None
-        params[mask] = np.nan
+            params[~mask] = np.nan
         
         # Fill in holes of the grid
-        filled_params = fill_holes_filter(params.copy(), fill_filter=np.nanmean, value_filter=np.nanmin)
+        filled_params = np.empty_like(params)
+        for i in range(params.shape[-1]):
+            filled_params[..., i] = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
 
         # Smooth the parameters. This needs to be done parameter by parameter
         smooth_params = np.empty_like(params)
@@ -127,13 +128,15 @@ class ModelGridFit(GridBuilder):
             smooth_params[..., i] = anisotropic_diffusion(filled_params[..., i])
 
         # Allocate output grid
-        self.output_grid.grid.value_shapes['params'] =  (params.shape[-1],)
+        self.output_grid.grid.value_shapes['params'] = (params.shape[-1],)
         self.output_grid.set_wave(np.array([0]))    # Dummy size
         self.output_grid.allocate_values()
         self.output_grid.build_axis_indexes()
 
         self.output_grid.grid.set_value('params', smooth_params)
         self.output_grid.grid.value_indexes['params'] = np.full(smooth_params.shape, True)
+
+        self.output_grid.grid.set_constants(self.input_grid.grid.get_constants())
 
     def run_step_normalize(self):
         pass
