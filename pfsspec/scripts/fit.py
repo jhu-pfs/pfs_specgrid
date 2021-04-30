@@ -27,6 +27,7 @@ class Fit(Script):
 
         parser.add_argument('--in', type=str, help="Input data path.\n")
         parser.add_argument('--out', type=str, help='Output data path.\n')
+        parser.add_argument('--params', type=str, help='Parameters grid, if different from input.\n')
 
     def create_fit(self):
         config = FIT_CONFIGURATIONS[self.args['type']][self.args['source']]['config']
@@ -37,7 +38,7 @@ class Fit(Script):
         self.fit.parse_args()
 
     def open_data(self):
-        self.fit.open_data(self.args['in'], self.outdir)
+        self.fit.open_data(self.args['in'], self.outdir, self.args['params'])
 
     def prepare(self):
         super(Fit, self).prepare()

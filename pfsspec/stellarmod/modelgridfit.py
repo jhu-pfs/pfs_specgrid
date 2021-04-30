@@ -17,6 +17,9 @@ class ModelGridFit(GridBuilder):
         super(ModelGridFit, self).__init__(orig=orig)
 
         if isinstance(orig, ModelGridFit):
+            self.params_grid = orig.params_grid
+            self.params_grid_index = None
+
             self.config = config if config is not None else orig.config
             self.parallel = orig.parallel
             self.threads = orig.threads
@@ -29,6 +32,9 @@ class ModelGridFit(GridBuilder):
 
             self.continuum_model = orig.continuum_model
         else:
+            self.params_grid = None
+            self.params_grid_index = None
+
             self.config = config
             self.parallel = True
             self.threads = multiprocessing.cpu_count() // 2
@@ -66,11 +72,19 @@ class ModelGridFit(GridBuilder):
         if 'smoothing_gamma' in self.args and self.args['smoothing_gamma'] is not None:
             self.smoothing_gamma = self.args['smoothing_gamma']
 
+    def create_params_grid(self):
+        return ModelGrid(self.config, ArrayGrid)
+
     def create_input_grid(self):
         return ModelGrid(self.config, ArrayGrid)
 
     def create_output_grid(self):
         return ModelGrid(self.config, ArrayGrid)
+
+    def open_params_grid(self, params_path):
+        fn = os.path.join(params_path, 'spectra') + '.h5'
+        self.params_grid = self.create_params_grid()
+        self.params_grid.load(fn)
 
     def open_input_grid(self, input_path):
         fn = os.path.join(input_path, 'spectra') + '.h5'
@@ -82,8 +96,9 @@ class ModelGridFit(GridBuilder):
         self.output_grid = self.create_output_grid()
 
         # Copy data from the input grid
-        self.output_grid.grid.set_axes(self.input_grid.grid.get_axes())
-        self.output_grid.set_wave(self.input_grid.get_wave())
+        g = self.input_grid or self.params_grid
+        self.output_grid.grid.set_axes(g.grid.get_axes())
+        self.output_grid.set_wave(g.get_wave())
         self.output_grid.build_axis_indexes()
 
         # Force creating output file for direct hdf5 writing
@@ -92,6 +107,24 @@ class ModelGridFit(GridBuilder):
         # DEBUG
         # self.output_grid.preload_arrays = True
         # END DEGUB
+
+    def open_data(self, input_path, output_path, params_path):
+        if params_path is not None:
+            self.open_params_grid(params_path)
+            self.params_grid.init_from_args(self.args)
+            self.params_grid.build_axis_indexes()
+
+            # Source indexes
+            index = self.params_grid.array_grid.get_value_index_unsliced('params')
+            self.params_grid_index = np.array(np.where(index))
+
+            # Target indexes
+            index = self.params_grid.array_grid.get_value_index('params')
+            self.output_grid_index = np.array(np.where(index))
+
+            self.grid_shape = self.params_grid.get_shape()
+
+        super(ModelGridFit, self).open_data(input_path, output_path)
 
     def get_gridpoint_model(self, i):
         input_idx = tuple(self.input_grid_index[:, i])
@@ -121,7 +154,7 @@ class ModelGridFit(GridBuilder):
             for i, input_idx, output_idx, spec, params in p.map(self.process_item, range(input_count)):
                 if not output_initialized:
                     self.output_grid.grid.value_shapes['params'] =  params.shape
-                    self.output_grid.set_wave(spec.wave)
+                    self.output_grid.set_wave(np.array([0]))    # Dummy size
                     self.output_grid.allocate_values()
                     self.output_grid.build_axis_indexes()
                     output_initialized = True
@@ -131,10 +164,10 @@ class ModelGridFit(GridBuilder):
         self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)
 
     def run_step_smooth(self):
-        params = self.input_grid.grid.get_value('params')
+        params = self.params_grid.grid.get_value('params')
 
-        if self.input_grid.grid.has_value_index('params'):
-            mask = self.input_grid.grid.get_value_index('params')
+        if self.params_grid.grid.has_value_index('params'):
+            mask = self.params_grid.grid.get_value_index('params')
             params[~mask] = np.nan
         
         # Fill in holes of the grid
@@ -163,7 +196,7 @@ class ModelGridFit(GridBuilder):
         self.output_grid.grid.set_value('params', smooth_params)
         self.output_grid.grid.value_indexes['params'] = mask
 
-        self.output_grid.grid.set_constants(self.input_grid.grid.get_constants())
+        self.output_grid.grid.set_constants(self.params_grid.grid.get_constants())
 
     def run_step_normalize(self):
         pass
