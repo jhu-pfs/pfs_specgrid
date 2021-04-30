@@ -22,6 +22,10 @@ class ModelGridFit(GridBuilder):
             self.threads = orig.threads
 
             self.step = orig.step
+            self.smoothing_iter = orig.smoothing_iter
+            self.smoothing_option = orig.smoothing_option
+            self.smoothing_kappa = orig.smoothing_kappa
+            self.smoothing_gamma = orig.smoothing_gamma
 
             self.continuum_model = orig.continuum_model
         else:
@@ -30,6 +34,10 @@ class ModelGridFit(GridBuilder):
             self.threads = multiprocessing.cpu_count() // 2
 
             self.step = None
+            self.smoothing_iter = 5
+            self.smoothing_option = 1
+            self.smoothing_kappa = 50
+            self.smoothing_gamma = 0.1
 
             self.continuum_model = self.config.create_continuum_model()
 
@@ -38,6 +46,10 @@ class ModelGridFit(GridBuilder):
         self.continuum_model.add_args(parser)
 
         parser.add_argument('--step', type=str, choices=ModelGridFit.STEPS, help='Fitting steps to perform.\n')
+        parser.add_argument('--smoothing-iter', type=int, help='Smoothing iterations.\n')
+        parser.add_argument('--smoothing-option', type=int, help='Smoothing kernel function.\n')
+        parser.add_argument('--smoothing-kappa', type=float, help='Smoothing kappa.\n')
+        parser.add_argument('--smoothing-gamma', type=float, help='Smoothing gamma.\n')
 
     def parse_args(self):
         super(ModelGridFit, self).parse_args()
@@ -45,6 +57,14 @@ class ModelGridFit(GridBuilder):
 
         if 'step' in self.args and self.args['step'] is not None:
             self.step = self.args['step']
+        if 'smoothing_iter' in self.args and self.args['smoothing_iter'] is not None:
+            self.smoothing_iter = self.args['smoothing_iter']
+        if 'smoothing_option' in self.args and self.args['smoothing_option'] is not None:
+            self.smoothing_option = self.args['smoothing_option']
+        if 'smoothing_kappa' in self.args and self.args['smoothing_kappa'] is not None:
+            self.smoothing_kappa = self.args['smoothing_kappa']
+        if 'smoothing_gamma' in self.args and self.args['smoothing_gamma'] is not None:
+            self.smoothing_gamma = self.args['smoothing_gamma']
 
     def create_input_grid(self):
         return ModelGrid(self.config, ArrayGrid)
@@ -128,7 +148,10 @@ class ModelGridFit(GridBuilder):
             fp = filled_params[..., i]
             shape = fp.shape
             fp = fp.squeeze()
-            sp = anisotropic_diffusion(fp)
+            sp = anisotropic_diffusion(fp, 
+                                        niter=self.smoothing_iter,
+                                        kappa=self.smoothing_kappa,
+                                        gamma=self.smoothing_gamma)
             smooth_params[..., i] = sp.reshape(shape)
 
         # Allocate output grid
@@ -138,7 +161,7 @@ class ModelGridFit(GridBuilder):
         self.output_grid.build_axis_indexes()
 
         self.output_grid.grid.set_value('params', smooth_params)
-        self.output_grid.grid.value_indexes['params'] = np.full(smooth_params.shape, True)
+        self.output_grid.grid.value_indexes['params'] = mask
 
         self.output_grid.grid.set_constants(self.input_grid.grid.get_constants())
 
