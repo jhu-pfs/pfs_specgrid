@@ -125,7 +125,11 @@ class ModelGridFit(GridBuilder):
         # Smooth the parameters. This needs to be done parameter by parameter
         smooth_params = np.empty_like(params)
         for i in range(params.shape[-1]):
-            smooth_params[..., i] = anisotropic_diffusion(filled_params[..., i])
+            fp = filled_params[..., i]
+            shape = fp.shape
+            fp = fp.squeeze()
+            sp = anisotropic_diffusion(fp)
+            smooth_params[..., i] = sp.reshape(shape)
 
         # Allocate output grid
         self.output_grid.grid.value_shapes['params'] = (params.shape[-1],)
