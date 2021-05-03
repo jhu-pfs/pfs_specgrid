@@ -132,10 +132,11 @@ class ModelGridFit(GridBuilder):
         spec = self.input_grid.get_model_at(input_idx)
         return input_idx, output_idx, spec
 
-    def process_item(self, i):
-        input_idx, output_idx, spec = self.get_gridpoint_model(i)
-        params = self.continuum_model.normalize(spec)
-        return i, input_idx, output_idx, spec, params
+    def get_gridpoint_params(self, i):
+        input_idx = tuple(self.input_grid_index[:, i])
+        output_idx = tuple(self.output_grid_index[:, i])
+        params = self.params_grid.get_value_at(input_idx)
+        return input_idx, output_idx, params
 
     def store_item(self, idx, spec, params):
         self.output_grid.grid.set_value_at('params', idx, params, valid=True)
@@ -144,14 +145,25 @@ class ModelGridFit(GridBuilder):
             self.output_grid.grid.set_value_at('flux', idx, spec.flux)
             self.output_grid.grid.set_value_at('cont', idx, spec.cont)
 
+    def process_item_fit(self, i):
+        input_idx, output_idx, spec = self.get_gridpoint_model(i)
+
+        if not self.model_initialized:
+            self.continuum_model.init_wave(spec.wave)
+            self.model_initialized = True
+
+        params = self.continuum_model.fit(spec)
+        return i, input_idx, output_idx, spec, params
+
     def run_step_fit(self):
+        self.model_initialized = False
         output_initialized = False
         input_count = self.get_input_count()
 
         # Fit every model
         t = tqdm(total=input_count)
         with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
-            for i, input_idx, output_idx, spec, params in p.map(self.process_item, range(input_count)):
+            for i, input_idx, output_idx, spec, params in p.map(self.process_item_fit, range(input_count)):
                 if not output_initialized:
                     self.output_grid.grid.value_shapes['params'] =  params.shape
                     self.output_grid.set_wave(np.array([0]))    # Dummy size
@@ -161,7 +173,7 @@ class ModelGridFit(GridBuilder):
                 self.store_item(output_idx, spec, params)
                 t.update(1)
 
-        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)
+        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants()
 
     def run_step_smooth(self):
         params = self.params_grid.grid.get_value('params')
@@ -198,8 +210,30 @@ class ModelGridFit(GridBuilder):
 
         self.output_grid.grid.set_constants(self.params_grid.grid.get_constants())
 
+    def process_item_normalize(self, i):
+        input_idx, output_idx, spec = self.get_gridpoint_model(i)
+        _, _, params = self.get_gridpoint_params(i)
+        params = self.continuum_model.normalize(spec)
+        return i, input_idx, output_idx, spec, params
+
     def run_step_normalize(self):
-        pass
+        output_initialized = False
+        input_count = self.get_input_count()
+
+        # Normalize every model
+        t = tqdm(total=input_count)
+        with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
+            for i, input_idx, output_idx, spec, params in p.map(self.process_item_normalize, range(input_count)):
+                if not output_initialized:
+                    self.output_grid.grid.value_shapes['params'] =  params.shape
+                    self.output_grid.set_wave(spec.wave)
+                    self.output_grid.allocate_values()
+                    self.output_grid.build_axis_indexes()
+                    output_initialized = True
+                self.store_item(output_idx, spec, params)
+                t.update(1)
+
+        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)
 
     def run(self):
         if self.step == 'fit':

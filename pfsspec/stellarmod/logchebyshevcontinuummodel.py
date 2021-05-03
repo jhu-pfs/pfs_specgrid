@@ -116,20 +116,20 @@ class LogChebyshevContinuumModel(ContinuumModel):
 
         return flux
 
-    def fit(self, wave, flux):
-        params = self.fit_between_limits(wave, flux)
+    def fit(self, spec):
+        params = self.fit_between_limits(spec.wave, spec.flux)
         return params
 
     def eval(self, wave, params):
         flux = self.eval_between_limits(wave, params)
-        return flux
+        return wave, flux
 
-    def normalize(self, spec):
+    def normalize(self, spec, params):
         wave = spec.wave
         norm = 4 * np.log10(spec.T_eff)
         cont = np.log10(spec.cont) - norm
 
-        params = self.fit(wave, cont)
+        params = self.fit(wave, cont)       ## TODO
         model = self.eval(wave, params)
 
         spec.cont = cont

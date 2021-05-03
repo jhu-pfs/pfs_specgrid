@@ -10,14 +10,23 @@ class ContinuumModel(PfsObject):
     def init_from_args(self, parser):
         pass
 
-    def fit(self, wave, flux):
+    def get_constants(self):
         raise NotImplementedError()
 
-    def eval(self, wave, constants, params):
+    def set_constants(self, constants):
         raise NotImplementedError()
 
-    def normalize(self, spec, constants, params):
+    def init_wave(self, wave):
         raise NotImplementedError()
 
-    def denormalize(self, spec, constants, params):
+    def fit(self, spec):
+        raise NotImplementedError()
+
+    def eval(self, params):
+        raise NotImplementedError()
+
+    def normalize(self, spec, params):
+        raise NotImplementedError()
+
+    def denormalize(self, spec, params):
         raise NotImplementedError()

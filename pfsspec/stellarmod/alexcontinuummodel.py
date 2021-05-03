@@ -10,227 +10,355 @@ from scipy.interpolate import interp1d
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodel import ContinuumModel
 
+class AlexContinuumModelTrace():
+    def __init__(self, orig=None):
+        if isinstance(orig, AlexContinuumModelTrace):
+            self.limit_fit = orig.limit_fit
+            self.norm_flux = orig.norm_flux
+            self.params = orig.params
+        else:
+            self.limit_fit = None
+            self.norm_flux = None
+            self.params = None
+
 class AlexContinuumModel(ContinuumModel):
-    def __init__(self, orig=None, debug = False, test = None):
+    # Fit the upper envelope of a stellar spectrum model. The theoretical continuum
+    # is first fitted with Lengendre polinomials between the Hzdrogen photoionization
+    # limits, then the model is normalized and the remaining blended line regions
+    # are fitted with a modified sigmoid function to remove all non-linearities
+    # from the continuum.
+
+    def __init__(self, orig=None, trace=None):
+        super(AlexContinuumModel, self).__init__(orig=orig)
+
+        # Trace certain variables for debugging purposes
+        self.trace = trace
+
         if isinstance(orig, AlexContinuumModel):
             pass
         else:
-            self.photo_limits = self.get_photo_limits(d = 0.5, lb = 3000, ub = 14000)
-            self.gap_masks_ub = [3200, None, 4200, None, 12000, None, 12000]
-            self.legendre_rate = None
-            self.legendre_rank = 6
-            self.legendre_deg = 7
-            self.gap_fill = np.full((5,), np.nan) #np.ones(5) * (-1000)
-            self.dx = None
-            self.gap_ids = [0, 2, 4]
-            self.offset = [0, None, 0, None, 0, None, None]
+            # Global wavelength limits that we can fit
+            self.wave_min = 3000
+            self.wave_max = 14000
 
-            self.slope_cutoff = 25
-            # self.sigmoid_fn = self.sigmoid
-            # self.init_s0s1 = [[0.15, 1], [None], [0.15, 0.1], [None],
-            #                     [2., 3.1], [None], [None]] 
-            self.sigmoid_fn = self.sigmoid2
-            self.init_s0s1 = [[0.5, 0.5], [None], [0.5, 0.5], [None],
-                                [0.5, 0.5], [None], [None]] 
-
-            self.fit_gap = {0: True, 2: True, 4: True, 6: False}
-            
-            self.x1_y_ub = 0.001
+            # The wave vector is assumed to be constant for all spectra and cached
             self.wave_mask = None
             self.wave = None
             self.log_wave = None
-            self.masks = None
-            self.limits = None
-            self.eval_masks = None
-            self.gap_masks = None
-            self.debug = debug
-            # self.method = method
-            self.test = test
 
+            # Masks of continuum intervals
+            self.cont_fit_masks = None      # Continuum intervals for fitting
+            self.cont_eval_masks = None     # Intervals to evaluate continuum on
 
-#######################################MAJOR############################################
+            # Parameters of continuum Legendre fits
+            self.legendre_rate = None       # How many points to skip when fitting Legendre to continuum
+            self.legendre_rank = 6
+            self.legendre_deg = 7
+
+            # Bounds and masks of blended regions near photoionization limits
+
+            self.limit_wave = None                      # Limit wavelengths, including model lower and upper bounds
+            self.limit_map = None                       # Map to continuum intervals the blended regions are associated with
+            
+            # Blended region upper limits
+            self.blended_bounds = [3200.0, 4200, 12000]
+            
+            # Optional blue-side offset (in term of spectral elements) of fitting
+            # of blended regions. By default, blue end comes from the physical value
+            self.blended_offset = [0, 0, 0]
+            
+            self.blended_fit_masks = None                 # Masks where limits are fitted
+            self.blended_eval_masks = None                # Masks where limits are evaluated
+            
+            self.blended_dx = None            # TODO: what is this for?
+
+            # Parameters of blended region upper envelope fits
+                                    
+            # self.sigmoid_fn = self.sigmoid
+            # self.init_s0s1 = [[0.15, 1], [None], [0.15, 0.1], [None], [2., 3.1], [None], [None]] 
+            
+            self.blended_model_fn = self.sigmoid2
+            self.blended_param_count = 5
+            self.blended_default_params = np.full((self.blended_param_count,), np.nan)       # Default return value in case of bad fit
+
+            # TODO: rename these
+            self.init_s0s1 = [[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]]
+            self.slope_cutoff = 25
+            self.x1_y_ub = 0.001            # TODO: used by get_upper_points_for_gap
+
     def add_args(self, parser):
         super(AlexContinuumModel, self).add_args(parser)
 
     def init_from_args(self, args):
         super(AlexContinuumModel, self).init_from_args(args)
 
-    def prepare(self, spec):
-        self.find_limits(spec.wave)
-        # norm = 4 * np.log(spec.T_eff)
-        norm = 0
-        log_cont = self.get_log(spec.cont[self.wave_mask]) - norm
-        log_flux = self.get_log(spec.flux[self.wave_mask]) - norm
-        return log_flux, log_cont
+    def get_constants(self):
+        return np.array([])
 
-    def get_norm_flux_n_params(self, spec):
-        log_flux, log_cont = self.prepare(spec)
+    def set_constants(self, constants):
+        pass
+
+    def init_wave(self, wave):
+        self.find_limits(wave)
+
+#region Utility functions
+
+    def safe_log(self, x):
+        return np.log(np.where(x <= 1, 1, x))
+
+#endregion
+#region Main entrypoints: fit, eval and normalize
+
+    def fit(self, spec):
+        # Fit the spectrum and return the parameters
+        log_flux = self.safe_log(spec.flux[self.wave_mask])
+        log_cont = self.safe_log(spec.cont[self.wave_mask])
+        
+        # Fit continuum and normalize spectrum to fit blended lines as a next step
         try:
-            fits, params = self.fit_legendre(log_cont)
-            model_cont = self.eval_legendre(fits)
+            fits, cont_params = self.fit_continuum(log_cont)
+            model_cont = self.eval_continuum(fits=fits)
         except Exception as e:
             raise e
         norm_flux = log_flux - model_cont
-        return norm_flux, params
-    
-    def normalize(self, spec):
-        norm_flux, norm_params = self.get_norm_flux_n_params(spec)
-        norm_cont = np.zeros_like(self.wave)
-        
-        # gap_params = np.array([])
-        # norm_params = np.array([])
-        gap_params = self.fit_gaps(norm_flux)
-        # print(gap_params)
-        # norm_cont = self.eval_gaps(norm_cont, gap_params)
-        if self.debug:
-            self.norm_flux = norm_flux
-            self.norm_cont = norm_cont
 
+        # Fit blended lines of the photoionization limits
+        try:
+            limit_params = self.fit_blended_all(norm_flux)
+        except Exception as e:
+            raise e
+
+        if self.trace is not None:
+            self.trace.norm_flux = norm_flux
+
+        params = np.concatenate((cont_params, limit_params))
+
+        return params
+
+    def eval(self, params):
+        # Evaluate the continuum model over the wave grid
+
+        model_cont = self.eval_continuum(params=params)
+        model_cont += self.eval_blended_all(params)
+
+        return self.wave, model_cont
+    
+    def normalize(self, spec, params):
+        # Normalize the spectrum given the fit params and constants
+        # Returns normalized log flux
+
+        # Continuum
+        model_cont = self.eval_continuum(params=params)
+        if spec.cont is not None:
+            norm_cont = self.safe_log(spec.cont[self.wave_mask]) - model_cont
+        else:
+            norm_cont = None
+
+        # Continuum and blended regions
+        model_cont += self.eval_blended_all(params)
+        norm_flux = self.safe_log(spec.flux[self.wave_mask]) - model_cont
+
+        if self.trace is not None:
+            self.trace.norm_flux = norm_flux
+            self.trace.norm_cont = norm_cont
+            
         spec.wave = self.wave
         spec.cont = norm_cont
-        spec.flux = norm_flux - norm_cont
-        
-        # params = np.concatenate((params_gap_2, params_gap_4), axis = 0)\
-        params = np.concatenate((norm_params, gap_params))
-        # if not self.check(params): params[0] = np.inf 
-        return params
+        spec.flux = norm_flux
 
-    def check(self, value):
-        return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))
-    
-    # def fit_gaps(self, norm_flux):
-    #     params_gap_0, params_gap_2, params_gap_4, params_gap_6 = self.fit_gaps(norm_flux)
-    #     params = np.concatenate((params_gap_0, params_gap_2, params_gap_4, params_gap_6), axis = 0)
-    #     assert (len(params) == 16)
-    #     return params
-    
-    # def eval(self, norm_cont, params):
-    #     # if params[0] == np.inf: 
-    #     #     params[0] = 0
-    #     # params_legendre, params_gap = params[:self.legendre_deg], params[28:]
-    #     params_gap = params
-    #     params_gap_0 = params_gap[0:5]
-    #     params_gap_2 = params_gap[5:10]
-    #     params_gap_4 = params_gap[10:15]
-    #     params_gap_6 = params_gap[-1]
-    #     assert (len(params_gap_0) == 5) & (len(params_gap_2) == 5) & (len(params_gap_4) == 5)
-    #     norm_cont = self.eval_gaps(norm_cont, params_gap_0, params_gap_2, params_gap_4, params_gap_6)
-    #     return norm_cont
+    def denormalize(self, spec, params):
+        # Denormalize the spectrum given the fit params
+        # Expects normalized log flux
 
-    def fit_gaps(self, norm_flux):
-        if self.debug:
-            self.x1 = {}
-            self.hb = {}
-            self.hull = {}
-            self.params = {}
-            self.params_est = {}
-
-        if self.test is not None:
-            if self.test == 0:
-                params_gap_0 = self.fit_gap_sigmoid(norm_flux, gap_id = 0)
-                params_gap_2, params_gap_4 = np.zeros(5), np.zeros(5)
-            elif self.test == 2:
-                params_gap_2 = self.fit_gap_sigmoid(norm_flux, gap_id = 2)
-                params_gap_0, params_gap_4 = np.zeros(5), np.zeros(5)
-            elif self.test == 4:
-                params_gap_4 = self.fit_gap_sigmoid(norm_flux, gap_id = 4)
-                params_gap_0, params_gap_2 = np.zeros(5), np.zeros(5)
+        model_cont = self.eval_continuum(params=params)
+        if spec.cont is not None:
+            cont = np.exp(spec.cont + model_cont)
         else:
-            ################### GAP 0 #####################
-            params_gap_0 = self.fit_gap_sigmoid(norm_flux, gap_id = 0)
-            ################### GAP 2 #####################
-            params_gap_2 = self.fit_gap_sigmoid(norm_flux, gap_id = 2)
-            ################### GAP 4 #####################
-            params_gap_4 = self.fit_gap_sigmoid(norm_flux, gap_id = 4)
-            ################### GAP 6 #####################
-            # params_gap_6 = self.fit_gap_6(norm_flux, isEval=False)
-        # params_gap_6 = np.array([0])
+            cont = None
 
-        if self.debug:
-            self.params[0] = params_gap_0
-            self.params[2] = params_gap_2
-            self.params[4] = params_gap_4
-            # self.params[6] = params_gap_6
-        params = np.concatenate((params_gap_0, params_gap_2, params_gap_4), axis = 0)
-        # params = np.concatenate((params_gap_0, params_gap_2, params_gap_4, params_gap_6), axis = 0)
-        return params
+        model_cont += self.eval_blended_all(params)
+        flux = np.exp(spec.flux + model_cont)
         
-    def eval_gaps(self, norm_cont, gap_params):
-        self.find_limits(self.wave)
-        gap_params = np.where(gap_params == np.inf, 0, gap_params)
-        params_gap_0 = gap_params[0:5]
-        params_gap_2 = gap_params[5:10]
-        params_gap_4 = gap_params[10:15]
-        ################### GAP 0 #####################
-        norm_cont = self.eval_gap_sigmoid(norm_cont, params_gap_0, gap_id = 0)
-        ################### GAP 2 #####################
-        norm_cont = self.eval_gap_sigmoid(norm_cont, params_gap_2, gap_id = 2)
-        ################### GAP 4 #####################
-        norm_cont = self.eval_gap_sigmoid(norm_cont, params_gap_4, gap_id = 4)
-        ################### GAP 6 #####################
-        # params_gap_6 = gap_params[-1]
-        return norm_cont
+        spec.flux = flux
+        spec.cont = cont
 
-    # def check_fit_gap(self, y, gap_id, message = ''):
-    #     fit_gap = (len(y) > 3) and (y[0] < -0.005)
-    #     if not fit_gap:
-    #         # print(message)
-    #         self.fit_gap[gap_id] = False
-    #         return None
-    #     else:
-    #         self.fit_gap[gap_id] = True
-    
-#######################################FIT GAP############################################
+#endregion            
+#region Limits and mask
+
+    def get_limit_wavelengths(self):
+        # Returns the wavelength associated with the Hydrogen ionization limits
+        # and the global limits of what we can fit
+        limits = np.array(Physics.HYDROGEN_LIMITS)
+        limits = limits[(self.wave_min < limits) & (limits < self.wave_max)]
+        limits = np.array([self.wave_min, *Physics.air_to_vac(limits), self.wave_max])
+        return limits
+
+    def find_limits(self, wave):
+        # Exact wavelengths of the limits and the lower and upper bounds of what we can fit
+        if self.limit_wave is None:
+            self.limit_wave = self.get_limit_wavelengths()
+
+        # Mask that defines the entire range we can fit. Precalculate masked wavelength
+        # grid and log lambda grid for convenience.
+        if self.wave_mask is None:
+            [self.wave_mask], _ = self.find_cont_masks(wave, [self.limit_wave[0], self.limit_wave[-1]], dlambda=0)
+            self.wave = wave[self.wave_mask]
+            self.log_wave = np.log(self.wave)
+
+        # Every mask below will refer to the grid defined by wave_mask
+
+        # Masks that define the regions where we fit the continuum
+        if self.cont_fit_masks is None:
+            self.cont_fit_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.5)
+
+        # Disjoint masks that define where we evaluate the continuum, no gaps here
+        if self.cont_eval_masks is None:
+            self.cont_eval_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.0)
+
+        # Masks where we will fit the blended lines' upper envelope. These are a
+        # little bit redward from the photoionization limit.
+        if self.blended_fit_masks is None:
+            self.blended_fit_masks, self.limit_map = self.find_blended_masks(self.wave, self.cont_fit_masks)
+
+        # Masks where we should evaluate the blended lines's upper envelope.
+        if self.blended_eval_masks is None:
+            self.blended_eval_masks, _ = self.find_blended_masks(self.wave, self.cont_eval_masks)
+
+        # TODO: what is this exactly?
+        if self.blended_dx is None:
+            mask = (self.wave > 3000) & (self.wave < 3006) 
+            dx = int(len(self.wave[mask]))
+            # [200, 0, 400, 0, 200, 0, 200]
+            self.blended_dx = [dx, 2 * dx, dx]
+        
+        # Downsampling of the wavelength grid for fitting the continuum
+        if self.legendre_rate is None:
+            dx = int(self.blended_dx[0] / 2)
+            self.legendre_rate = [dx, 3 * dx, 2 * dx, 25]
+
+    def find_cont_masks(self, wave, limits, dlambda):
+        # Find intervals between the limits
+        masks = []
+        bounds = []
+        for i in range(len(limits) - 1):
+            mask = (wave >= limits[i] + dlambda) & (wave < limits[i + 1] - dlambda)
+            masks.append(mask)
+            wm = wave[mask]
+            if wm.size > 0:
+                bounds.append([wm[0], wm[-1]])
+            else:
+                bounds.append([np.nan, np.nan])
+
+        return masks, bounds
+
+    def find_blended_masks(self, wave, cont_masks):
+        blended_masks = []
+        limit_map = []
+        for i in range(len(self.blended_bounds)):
+            # Find the continuum region the limit is associated with
+            for j in range(len(self.limit_wave)):
+                if j == len(self.limit_wave) - 1:
+                    limit_map.append(None)
+                    break
+                if self.limit_wave[j] < self.blended_bounds[i] and self.blended_bounds[i] < self.limit_wave[j + 1]:
+                    limit_map.append(j)
+                    break
+
+            if limit_map[i] is not None:
+                mask = cont_masks[limit_map[i]]
+                blended_masks.append(mask & (wave < self.blended_bounds[i]))
+            else:
+                blended_masks.append(None)
+
+        return blended_masks, limit_map
+
+#endregion
+#region Blended region fitting
+
+    def fit_blended_all(self, norm_flux):
+        if self.trace is not None:
+            self.trace.x1 = {}
+            self.trace.hb = {}
+            self.trace.hull = {}
+            self.trace.params = {}
+            self.trace.params_est = {}
+
+        params = []
+        for i in range(len(self.limit_map)):
+            pp = self.fit_blended(norm_flux, gap_id=i)
+            params.append(pp)
+            if self.trace is not None:
+                self.trace.params[i] = pp
+
+        params = np.concatenate(params, axis = 0)
+        return params
+
+    def get_blended_params(self, params, i):
+        k = len(self.cont_fit_masks) * self.legendre_deg
+        p = params[k + i * self.blended_param_count:k + (i + 1) * self.blended_param_count]
+        return p
+        
+    def eval_blended_all(self, params):
+        # Evaluate model around the limits
+        model = np.zeros_like(self.wave)
+        for i in range(len(self.limit_map)):
+            p = self.get_blended_params(params, i)
+            flux, mask = self.eval_blended(p, i)
+            model[mask] += flux
+        return model
+
+    def eval_blended(self, params, i):
+        mask = self.blended_eval_masks[i]
+        if np.any(np.isnan(params) | np.isinf(params)) or abs(params).sum() == 0:
+            return np.zeros_like(self.log_wave[mask]), mask
+        else:
+            model = self.blended_model_fn(self.log_wave[mask], *params)
+            return model, mask
 
     def check_fit(self, y):
+        # Make sure number of fitted parameters is correct and in the right range.
         return (len(y) > 3) and (y[0] < -0.001)
 
-    def fit_gap_sigmoid(self, norm_flux, gap_id = None):
-        gap_control_pts = self.get_upper_points_for_gap(norm_flux, gap_id = gap_id)
-        # if self.fit_gap[gap_id] is False: 
+    def fit_blended(self, norm_flux, gap_id=None):
+        gap_control_pts = self.get_upper_points_for_gap(norm_flux, gap_id=gap_id)
+        # if self.limit_fit[gap_id] is False: 
         # x1 = np.max(gap_control_pts[:, 0])
         if not self.check_fit(gap_control_pts[:, 1]):
-            if self.debug: self.fit_gap[gap_id] = False
-            return self.gap_fill 
+            if self.trace is not None:
+                self.trace.limit_fit[gap_id] = False
+            return self.blended_default_params 
 
         gap_hull_x, gap_hull_y, dd = self.get_slope_filtered_robust(gap_control_pts[:, 0],\
                                             gap_control_pts[:, 1])
         # self.check_fit_gap(gap_hull_y, gap_id, message = 'no hull left')
-        # if self.fit_gap[gap_id] is False:
+        # if self.limit_fit[gap_id] is False:
         if not self.check_fit(gap_hull_y):
-            if self.debug: self.fit_gap[gap_id] = False
-            return self.gap_fill
+            if self.trace is not None:
+                self.trace.limit_fit[gap_id] = False
+            return self.blended_default_params
 
         y0, slope_mid, x_mid = self.get_init_sigmoid_estimation(gap_hull_x, gap_hull_y, method = "interp1d")
         pmt = np.append([y0, slope_mid, x_mid], self.init_s0s1[gap_id])
 
-        if self.debug:
-            self.hb[gap_id] = gap_control_pts
-            self.hull[gap_id] = np.column_stack((gap_hull_x, gap_hull_y))
-            self.params_est[gap_id] = pmt
+        if self.trace is not None:
+            self.trace.hb[gap_id] = gap_control_pts
+            self.trace.hull[gap_id] = np.column_stack((gap_hull_x, gap_hull_y))
+            self.trace.params_est[gap_id] = pmt
 
         try:
             # bnds = ([0, 0, 0, 0, 0], \
-            #         [3., np.inf, np.log(self.gap_masks_ub[gap_id]), 20., 20.])
+            #         [3., np.inf, np.log(self.blended_bounds[gap_id]), 20., 20.])
             bnds = ([0, 0, 0, 0, 0], \
-                    [10., 1000, np.log(self.gap_masks_ub[gap_id]), 1., 1.])
+                    [10., 1000, np.log(self.blended_bounds[gap_id]), 1., 1.])
             # bnds = (0, np.inf)
-            pmt, _ = curve_fit(self.sigmoid_fn, gap_hull_x, gap_hull_y, pmt, bounds=bnds) 
-            # pmt, _ = curve_fit(self.sigmoid_fn, gap_hull_x, gap_hull_y, pmt) 
+            pmt, _ = curve_fit(self.blended_model_fn, gap_hull_x, gap_hull_y, pmt, bounds=bnds) 
+            # pmt, _ = curve_fit(self.blended_model_fn, gap_hull_x, gap_hull_y, pmt) 
         except:
-            if self.debug: self.fit_gap[gap_id] = False
+            if self.trace is not None:
+                self.trace.limit_fit[gap_id] = False
             # logging.warning('curve')
-            return self.gap_fill
+            return self.blended_default_params
         return pmt
-
-    def eval_gap_sigmoid(self, norm_cont, params, gap_id = None):
-        if abs(params).sum() == 0:
-            return norm_cont
-        # if norm_cont is None: norm_cont = np.zeros_like(self.wave)
-        mask = self.gap_masks[gap_id]
-        model = self.sigmoid_fn(self.wave[mask], *params)        
-        norm_cont[mask] = model
-        return norm_cont
 
     def fit_sigmoid_iterate(self, pts, w0, sigfun, pmt, thr = None):
         if (pts.shape[0]<7): return pmt
@@ -268,7 +396,6 @@ class AlexContinuumModel(ContinuumModel):
         # mask_dy = self.mask_outlier(y)
         # return x[mask_dy], y[mask_dy], dd[mask_dy]
 
-
     def get_init_sigmoid_estimation(self, x, y, dd = None, method = None):
         y_mid = y[0] / 2.
         # fit_mask = (y > (y_mid / 2 + y_mid)) & (y < (y_mid - y_mid / 2))
@@ -298,18 +425,19 @@ class AlexContinuumModel(ContinuumModel):
         return a, slope_mid / a, x_mid
         # return a, slope_mid_dd, x_mid
 
-    def get_upper_points_for_gap(self, norm_flux, gap_id = None):
-        mask = self.gap_masks[gap_id]
-        offset = self.offset[gap_id]
+    def get_upper_points_for_gap(self, norm_flux, gap_id=None):
+        mask = self.blended_fit_masks[gap_id]
+        offset = self.blended_offset[gap_id]
         
         x = self.log_wave[mask][offset:]
         y = norm_flux[mask][offset:]
-        dx = self.dx[gap_id]
+        dx = self.blended_dx[gap_id]
         x1 = x[np.abs(y + self.x1_y_ub).argmin()]
-        if self.debug:
-            self.x1[gap_id] = x1
         x_mask = (x < x1)
 
+        if self.trace is not None:
+            self.trace.x1[gap_id] = x1
+        
         if len(x[x_mask]) > 5:
             internal_maxs = self.get_interval_max(x[x_mask], y[x_mask], dx)
             hb = self.get_accumulate_max(internal_maxs[:, 0], internal_maxs[:, 1])
@@ -332,9 +460,11 @@ class AlexContinuumModel(ContinuumModel):
         hb = np.column_stack((x[mask], y[mask])) 
         return hb
 
-    def get_interval_max(self, x, y, dx = 500):
+    def get_interval_max(self, x, y, dx=500):
+        # Get the maximum in every interval of dx
+
         N = x.shape[0]
-        pad_row = np.int(np.floor(N/dx))+1 
+        pad_row = np.int(np.floor(N / dx)) + 1 
         pad_num = pad_row*dx - N
         pad_val = np.min(y)-1
 
@@ -352,10 +482,9 @@ class AlexContinuumModel(ContinuumModel):
         dx_mean, dx_std = np.median(dx), np.std(dx)
         mask = dx < dx_mean + 1.5 * dx_std 
         return mask
-############################################### Fit Functions ###############################
 
-    def fit_linear(self, x, a, b):
-        return  x*a + b
+#endregion
+#region Modified sigmoid fitting to blended regions
 
     def fit_curve_with_sigmoid(self, wx, wy, w0, sigfun, pmt, bnds, type='nbnd'):
         #---------------------------------------------------------
@@ -382,76 +511,9 @@ class AlexContinuumModel(ContinuumModel):
                 bnds=np.array([[0, 0, 0, 0, 0],[8.0,0.1,w0,20,20]])
             elif type == 4:
                 bnds=np.array([[0, 0, 0, 0, 0],[0.5,3.0,0.1,w0,20,20]])
-        #print('[fitS]',pmt)
-        # pmt, pcov = curve_fit(sigfun, wx, wy, pmt)
 
         pmt, pcov = curve_fit(sigfun, wx, wy, pmt, bounds=bnds) 
-        #print('[fitSigmoid2]','pmt:',pmt)
         return pmt
-
-    
-    def sigmoid_jac(self, x, a, b, c, s0, s1):
-        s0 = s0 + 1
-        s1 = s1 + 1
-        x0 = c - 1 / (2 * b)
-        x1 = c + 1 / (2 * b)
-
-        beta0  = 2 * b * s0
-        alpha0 = 1 / (2 * s0 * np.e)   
-        beta1  = 2 * b * s1
-        alpha1 = 1 / (2 * s1 * np.e)
-        
-        t0 = x0 + 1 / beta0
-        t1 = x1 - 1 / beta1
-        i0 = (x <= t0)
-        i1 = (x >= t1)
-        im = (x > t0) & (x < t1)
-        
-        y = np.zeros(x.shape)
-        y[i0] = alpha0 * np.exp(beta0 * (x[i0] - x0))
-        arg = - beta1 * (x[i1] - x1)
-        # exp_arg = 0 if arg.all() < -1e4 else np.exp(arg)
-        y[i1] = 1 - alpha1 * np.exp(arg)
-        y[im] = b * (x[im] - c) + 0.5
-        ans = a * (y - 1)
-
-        # return np.derivative(ans, a), d ans/d b, d ans/ dc,  d ans/ d s0 
-
-    # def sigmoid(self, x, a, b, c, s0, s1):
-    #     #---------------------------------------------------------
-    #     # splice a sigmoid-like curve from three pieces:
-    #     #  - a linear segment in the middle, with a slope of b
-    #     #     and a value of 1/2 at c
-    #     #  - two exponential pieces, both left and right
-    #     #    which are tangential to the line in their
-    #     #    respective quadrants
-    #     # The three curves are merged seamlessly, with a
-    #     # conntinous function and derivative
-    #     # 2021-02-14   Alex Szalay
-    #     #---------------------------------------------------------
-    #     s0 = s0 + 1
-    #     s1 = s1 + 1
-    #     x0 = c - 1 / (2 * b)
-    #     x1 = c + 1 / (2 * b)
-
-    #     beta0  = 2 * b * s0
-    #     alpha0 = 1 / (2 * s0 * np.e)   
-    #     beta1  = 2 * b * s1
-    #     alpha1 = 1 / (2 * s1 * np.e)
-        
-    #     t0 = x0 + 1 / beta0
-    #     t1 = x1 - 1 / beta1
-    #     i0 = (x <= t0)
-    #     i1 = (x >= t1)
-    #     im = (x > t0) & (x < t1)
-        
-    #     y = np.zeros(x.shape)
-    #     y[i0] = alpha0 * np.exp(beta0 * (x[i0] - x0))
-    #     arg = - beta1 * (x[i1] - x1)
-    #     # exp_arg = 0 if arg.all() < -1e4 else np.exp(arg)
-    #     y[i1] = 1 - alpha1 * np.exp(arg)
-    #     y[im] = b * (x[im] - c) + 0.5
-    #     return a * (y - 1)
 
     def sigmoid2(self, x, a, b, c, r0, r1):
         #---------------------------------------------------------
@@ -489,282 +551,54 @@ class AlexContinuumModel(ContinuumModel):
         # a1 = a / (y[t1] - y[]) 
         return a * (y - 1)
 
-    def sigmoid_fixing_right(self,x,rLevel,a,b,c,s0,s1):
-        # q is the negative of the DC level at the right end
-        return self.sigmoid(x,a-rLevel,b,c,s0,s1)+rLevel
+#endregion
+#region Continuum fitting with Legendre polynomials
 
-    def fit_poly(self, hp,rank=4,plot=0):
-        #-----------------------------------------------------
-        # fits an orthogonal polynomial to a spectrum segment.
-        # the fit is done in linear wavelength space
-        # input/output is
-        #    x: wavelength
-        #    y: log(flux)
-        #-----------------------------------------------------
-        x, y = hp[:,0],  hp[:,1] 
-        # set domain
-        dom = (min(x),max(x))
-        # check the number of points
-        nn = x.shape[0]
-        if (nn>4):
-            fit, resid = np.polynomial.legendre.Legendre.fit(x, y, rank, domain=dom, full=True)
-        elif (nn>=2) :
-            fit, resid = np.polynomial.legendre.Legendre.fit(x, y, 1, domain=dom, full=True)
-        else:
-            logging.error('not enough points', nn)
-            return None
-        return fit, resid
-
-    def fit_poly_clipped(self, pts, pmt = [], thr = None):
-        fit, resid = self.fit_poly(pts,1)
-        pts2       = self.clip_fitted_points(pts,fit,pmt,thr)
-        fit, resid = self.fit_poly(pts2,1)
-        return fit, resid
-
-########################### FIT LEGENDRE #############################
-
-    def fit_legendre(self, log_cont):
+    def fit_continuum(self, log_cont):
         fits = []
-        params = np.zeros((len(self.gap_ids), self.legendre_deg))
-        for i, n in enumerate(self.gap_ids):
-            ff = self.fit_legendre_by_n(n, log_cont)
+        cc = len(self.cont_fit_masks)
+        params = np.zeros((cc, self.legendre_deg), dtype=log_cont.dtype)
+        for i in range(cc):
+            ff = self.fit_legendre(i, log_cont)
             params[i] = ff.coef
             fits.append(ff)
         return fits, params.flatten()
         
-    def eval_legendre(self, fits):
+    def eval_continuum(self, params=None, fits=None):
+        # Evaluate the fitted continuum model (Legendre polynomial) over the
+        # wavelength grid. Either params (the coefficients) or fits (a list of already
+        # initialized Legendre objects) must be specified.
+
         model_cont = np.zeros_like(self.log_wave)
-        for n in range(len(fits)):
-            ff = fits[n]
-            model_cont[self.eval_masks[n]] = ff(self.log_wave[self.eval_masks[n]])
+
+        if params is not None:
+            for n in range(len(self.cont_eval_masks)):
+                pp = params[n * self.legendre_deg:(n + 1) * self.legendre_deg]
+                # TODO: this is a repetition whats in fit_legendre_by_n,
+                #       store the xx grid and the domains somewhere
+                rate = self.legendre_rate[n]
+                xx = self.log_wave[self.cont_fit_masks[n]][::rate]
+                ff = np.polynomial.legendre.Legendre(pp, domain=(xx[0], xx[-1]))
+                model_cont[self.cont_eval_masks[n]] = ff(self.log_wave[self.cont_eval_masks[n]])
+        elif fits is not None:
+            for n in range(len(fits)):
+                ff = fits[n]
+                model_cont[self.cont_eval_masks[n]] = ff(self.log_wave[self.cont_eval_masks[n]])
+        else:
+            raise Exception('Either params or fits must be specified.')
+
         return model_cont
 
-    def fit_legendre_by_n(self, n, log_cont):
-        #--------------------------------------------------------------
-        # fit the nth segment n=(0,2,4,6) with a Legendre polynomial
-        #--------------------------------------------------------------      
+    def fit_legendre(self, n, log_cont):
+        # Fit the nth continuum segment with a Legendre polynomial
+        # TODO: we could do some caching of xx here
         rate = self.legendre_rate[n]
-        xx = self.log_wave[self.masks[n]][::rate]
-        yy = log_cont[self.masks[n]][::rate]
+        xx = self.log_wave[self.cont_fit_masks[n]][::rate]
+        yy = log_cont[self.cont_fit_masks[n]][::rate]
 
-        ff, res = np.polynomial.legendre.Legendre.fit(xx, yy, self.legendre_rank,\
-                                                        domain=(xx[0],xx[-1]), full=True)
+        ff, res = np.polynomial.legendre.Legendre.fit(xx, yy, self.legendre_rank,
+                                                      domain=(xx[0], xx[-1]), full=True)
         assert np.sqrt(res[0] / xx.shape[0]).round(1) == 0
         return ff
 
-    # def set_constants(self, wave, constants= [6,1]):
-    #     self.chebyshev_degrees = int(constants[0])
-    #     self.limits_dlambda = constants[1]
-    #     self.find_limits(wave, self.limits_dlambda)
-
-    #     for i in range(len(self.fit_limits)):
-    #         self.fit_limits[i][0] = constants[2 + 2 * i + 0]
-    #         self.fit_limits[i][1] = constants[2 + 2 * i + 1]
-
-###########################DONE#############################
-    def get_log(self, x):
-        return np.log(np.where(x <= 1, 1, x))
-
-    def get_photo_limits(self, d = 0.5, lb = 3000, ub = 14000):
-        limits = np.array(Physics.HYDROGEN_LIMITS)
-        cuts = np.sort((np.append(limits - d, limits + d)))
-        photo_limits = np.array([lb, *Physics.air_to_vac(cuts), ub])
-        return photo_limits
-
-
-    def find_masks_between_limits(self, wave, dlambda):
-        masks = []
-        limits = []
-        mm = np.zeros_like(wave)
-        for i in range(len(self.photo_limits) - 1):
-            mask = (wave >= self.photo_limits[i] + dlambda) & (wave < self.photo_limits[i + 1] - dlambda)
-
-            masks.append(mask)
-            wm = wave[mask]
-            
-            if wm.size > 0:
-                limits.append([wave[mask].min(), wave[mask].max()])
-            else:
-                limits.append([np.nan, np.nan])
-            mm[mask] = i
-        self.mm = mm
-        return masks, limits
-
-    def find_limits(self, wave):
-        if self.wave_mask is None:
-            self.wave_mask = (wave >= self.photo_limits[0]) & (wave <= self.photo_limits[-1])
-
-        if self.wave is None:
-            self.wave = wave[self.wave_mask]
-            self.log_wave = np.log(self.wave)
-
-        if self.masks is None:
-            self.masks, self.limits = self.find_masks_between_limits(self.wave, dlambda=0)
-
-        if self.eval_masks is None:
-            self.eval_masks = [self.masks[0], self.masks[1] | self.masks[2],
-                    self.masks[3] | self.masks[4], self.masks[5] | self.masks[6]]
-
-        if self.gap_masks is None:
-            self.gap_masks = self.get_gap_masks()
-
-        if self.dx is None:
-            mask = (self.wave > 3000) & (self.wave < 3006) 
-            dx = int(len(self.wave[mask]))
-            # [200, 0, 400, 0, 200, 0, 200]
-            self.dx = [dx, 0, 2 * dx, 0, dx, 0, dx]
-        
-        if self.legendre_rate is None:
-            dx = int(self.dx[0] / 2)
-            self.legendre_rate = [dx, 1, 3 * dx, 1, 2 * dx, 1, 25]
-            # print(legendre_rate)
-    
-    def get_gap_masks(self):
-        gap_masks = {}
-        for i in self.gap_ids:
-            mask = self.masks[i] 
-            gap_masks[i] = mask & (self.wave < self.gap_masks_ub[i])
-        return gap_masks
-            
-    # def fit_between_limits_cheby(self, wave, flux):
-    #     self.find_limits(wave, self.limits_dlambda)
-
-    #     pp = []
-    #     for i in range(len(self.fit_masks)):
-    #         mask = self.fit_masks[i]
-    #         wave_min, wave_max = self.fit_limits[i]
-            
-    #         p = np.polynomial.chebyshev.chebfit(
-    #             (wave[mask] - wave_min) / (wave_max - wave_min), 
-    #             flux[mask], 
-    #             deg=self.chebyshev_degrees)
-    #         pp.append(p)
-        
-    #     return np.concatenate(pp)
-
-    def eval_between_limits_cheby(self, wave, pp):
-        self.find_limits()
-
-        flux = np.full(wave.shape, np.nan)
-
-        for i in range(len(self.eval_masks)):
-            mask = self.eval_masks[i]
-            wave_min, wave_max = self.eval_limits[i]
-
-            if wave_min is not None and wave_max is not None:
-                flux[mask] = np.polynomial.chebyshev.chebval(
-                    (wave[mask] - wave_min) / (wave_max - wave_min), 
-                    pp[i * (self.chebyshev_degrees + 1): (i + 1) * (self.chebyshev_degrees + 1)])
-
-        return flux
-
-
-
-    def denormalize(self, spec, params):
-        wave = spec.wave
-        norm = 4 * np.log10(spec.T_eff)
-        model = self.eval(wave, params)
-        
-        spec.flux = 10**(spec.flux + norm + model)
-        if spec.cont is not None:
-            spec.cont = 10**(spec.cont + norm)
-
-    
-    def fit_gap_6(self, norm_flux, isEval = True):
-        na, nb, lo, hi, dx, thr = self.gap_params[3]       
-        wa, qa, mask_left =  self.get_margin(na, norm_flux, lo = lo)
-        ha = self.get_control_points(wa, qa, dx)
-        ca = ha[-10:,:]
-
-        wb, qb, mask_right =  self.get_margin(nb, norm_flux, hi = hi)
-        hb = self.get_control_points(wb, qb, dx)
-        cb = hb[:10,:]
-        if isEval: 
-            return ca, cb, mask_left, mask_right
-        return np.concatenate((ca, cb))
-        # return ca, wa,qa,wb,qb,lo,hi,fita, fitb
-
-    def eval_gap_6(self, norm_cont, ca, cb, mask_left, mask_right, pmt = []):
-        thr = self.sigma_clip_threshold[3][3]
-        eval_gap_6_left, ra = self.fit_poly_clipped(ca, thr = thr)
-        eval_gap_6_right, rb = self.fit_poly_clipped(cb, thr = thr)
-        left_index = np.where(mask_left)[0][-800]
-        mask_left[:left_index] = False
-        model_left = eval_gap_6_left(self.wave[mask_left], *pmt)
-        model_right = eval_gap_6_right(self.wave[mask_right], *pmt)
-        norm_cont[mask_left] = model_left
-        norm_cont[mask_right] = model_right
-
-        # mask = mask_left | mask_right
-        # model = np.concatenate((model_left, model_right))
-        return norm_cont
-
-
-    def get_constants(self, wave):
-        return np.array([])
-
-####################################################################################################################
-    # def fit_gap_4(self, norm_flux):
-    #     sigfun = self.sigmoid
-    #     gap_4_control_pts = self.get_control_points_gap(norm_flux, gap_id = 4)
-    #     cb2 = copy.deepcopy(gap_4_control_pts)
-
-    #     w0 = 8500      
-    #     pmt = [-cb2[0,1], 0.005, w0, 0.25, 0.1]
-    #     pmt0 = self.fit_curve_with_sigmoid(cb2[:, 0], cb2[:, 1], w0, sigfun, pmt, (), type = 2)
-    #     pmt = self.fit_sigmoid_iterate(cb2, w0, sigfun, pmt0, thr = [3, 2])
-    #     if isEval: 
-    #         return gap_4_control_pts, sigfun, pmt
-    #     return pmt
-
-    # def fit_gap_2(self, norm_flux, isEval = True):
-    #     sigfun = self.sigmoid
-    #     gap_2_control_pts = self.get_control_points_gap(norm_flux, gap_id=2)
-    #     cb2 = copy.deepcopy(gap_2_control_pts)
-
-    #     w0 = 3750      
-    #     pmt = [-cb2[0,1], 0.008, w0, 0.15, 0.1]
-    #     pmt0 = self.fit_curve_with_sigmoid(cb2[:, 0], cb2[:, 1], w0, sigfun, pmt, (), type = 2)
-    #     pmt = self.fit_sigmoid_iterate(cb2, w0, sigfun, pmt0, thr = [2, 0.5])
-    #     if isEval: 
-    #         return gap_2_control_pts, sigfun, pmt
-    #     return pmt
-
-    # def fit_gap_4(self, norm_flux, isEval = True):
-    #     gap_4_control_pts, mask, sigfun, pmt = self.fit_gap_sigmoid(norm_flux)
-    #     if isEval: return gap_4_control_pts, mask, sigfun, pmt
-    #     return pmt
-
-    # def fit_gap_0(self, norm_flux):
-    #     gap_id = 0
-    #     sigfun = self.sigfun[gap_id]
-    #     gap_control_pts = self.get_control_points_for_gap(norm_flux, gap_id = gap_id)
-    #     if self.debug:
-    #         self.cc[gap_id] = gap_control_pts
-    #     gap_0_control_pts, mask = self.get_control_points_for_gap(norm_flux, gap_id=0)
-    #     cc = [0,0,0,0,0,0]
-    #     return cc
-
-        # def get_control_points_for_gap(self, norm_flux, ):
-    #     hb = self.get_control_points_by_segment(gap_id, norm_flux)
-        # if self.debug:
-        #     self.hb[gap_id] = hb
-        # hb = hb[5:, :]
-        # cb = hb[hb[:,0]<9200,:]
-        # cc = self.fit_gap_robust(cb, gap_id = gap_id,  isEval = False)
-        # return cc
-        # if self.method == 'acc':
-        #     return hb[10:,:]
-        # elif self.method == 'dx':
-        #     cb = hb[hb[:,0]<9200,:]
-        #     cc = self.fit_gap_robust(cb, gap_id = gap_id,  isEval = False)
-        #     return cc
-        # else:
-        #     return hb
-
-    # def get_control_points_for_gap_accumulate(self, norm_flux, gap_id = None):
-
-    #     hb = self.get_control_points_by_segment(gap_id, norm_flux)
-    #     cb = hb[hb[:,0]<9200,:]
-    #     cc = self.fit_gap_robust(cb, gap_id = gap_id,  isEval = False)
-    #     return cc
+#endregion
