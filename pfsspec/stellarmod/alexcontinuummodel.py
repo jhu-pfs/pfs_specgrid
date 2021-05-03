@@ -9,6 +9,7 @@ from scipy.interpolate import interp1d
 
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodel import ContinuumModel
+from pfsspec.util.array_filters import *
 
 class AlexContinuumModelTrace():
     def __init__(self, orig=None):
@@ -86,11 +87,30 @@ class AlexContinuumModel(ContinuumModel):
             self.slope_cutoff = 25
             self.x1_y_ub = 0.001            # TODO: used by get_upper_points_for_gap
 
+            self.smoothing_iter = 5
+            self.smoothing_option = 1
+            self.smoothing_kappa = 50
+            self.smoothing_gamma = 0.1
+
     def add_args(self, parser):
         super(AlexContinuumModel, self).add_args(parser)
 
+        parser.add_argument('--smoothing-iter', type=int, help='Smoothing iterations.\n')
+        parser.add_argument('--smoothing-option', type=int, help='Smoothing kernel function.\n')
+        parser.add_argument('--smoothing-kappa', type=float, help='Smoothing kappa.\n')
+        parser.add_argument('--smoothing-gamma', type=float, help='Smoothing gamma.\n')
+
     def init_from_args(self, args):
         super(AlexContinuumModel, self).init_from_args(args)
+
+        if 'smoothing_iter' in args and args['smoothing_iter'] is not None:
+            self.smoothing_iter = args['smoothing_iter']
+        if 'smoothing_option' in args and args['smoothing_option'] is not None:
+            self.smoothing_option = args['smoothing_option']
+        if 'smoothing_kappa' in args and args['smoothing_kappa'] is not None:
+            self.smoothing_kappa = args['smoothing_kappa']
+        if 'smoothing_gamma' in args and args['smoothing_gamma'] is not None:
+            self.smoothing_gamma = args['smoothing_gamma']
 
     def get_constants(self):
         return np.array([])
@@ -181,6 +201,32 @@ class AlexContinuumModel(ContinuumModel):
         
         spec.flux = flux
         spec.cont = cont
+
+    def smooth_params(self, params):
+        # Smooth the parameter grid
+        # Apply only to parameters of the blended region fits, not the
+        # Legendre coefficients
+
+        k = self.legendre_deg * len(self.cont_fit_masks)
+        l = k + len(self.limit_map) * self.blended_param_count
+
+        smooth_params = np.empty_like(params)
+        smooth_params[..., :k] = params[..., :k]
+
+        for i in range(k, l):
+            # Fill in holes of the grid
+            fp = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
+
+            # Smooth the parameters.
+            shape = fp.shape
+            fp = fp.squeeze()
+            sp = anisotropic_diffusion(fp, 
+                                        niter=self.smoothing_iter,
+                                        kappa=self.smoothing_kappa,
+                                        gamma=self.smoothing_gamma)
+            smooth_params[..., i] = sp.reshape(shape)
+
+        return smooth_params
 
 #endregion            
 #region Limits and mask

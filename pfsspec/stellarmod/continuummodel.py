@@ -30,3 +30,6 @@ class ContinuumModel(PfsObject):
 
     def denormalize(self, spec, params):
         raise NotImplementedError()
+
+    def smooth_params(self, params):
+        raise NotImplementedError()
