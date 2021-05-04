@@ -81,7 +81,7 @@ class RbfGrid(Grid):
         if self.preload_arrays:
             return name in self.values and self.values[name] is not None
         else:
-            return name in self.values and self.has_item(name)
+            return name in self.values and self.has_item(name + '_rbf_xi')
 
     def set_values(self, values, s=None, **kwargs):
         for k in values:

@@ -8,6 +8,7 @@ from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagrid import PcaGrid
 from pfsspec.data.rbfgridbuilder import RbfGridBuilder
 from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.util.array_filters import *
 
 class ModelRbfGridBuilder(RbfGridBuilder):
     def __init__(self, config, grid=None, orig=None):
@@ -96,53 +97,8 @@ class ModelRbfGridBuilder(RbfGridBuilder):
         # Fit RBF
         for name in grid.values:
             if grid.has_value(name):
-                padded_value, padded_axes = grid.get_value_padded(name, interpolation='ijk', s=wave_slice)
+                padded_value, padded_axes = pad_array(grid.get_axes(), grid.get_value(name, s=wave_slice))
                 rbf = self.fit_rbf(padded_value, padded_axes)
                 self.output_grid.grid.set_value(name, rbf)
-
-
-
-
-#######################
-
-
-#region RBF interpolation
-
-    # TODO: is it used for anything?
-    # def get_slice_rbf(self, s=None, interpolation='xyz', padding=True, **kwargs):
-    #     # Interpolate the continuum and flux in a wavelength slice `s` and parameter
-    #     # slices defined by kwargs using RBF. The input RBF is padded with linearly extrapolated
-    #     # values to make the interpolation smooth
-
-    #     if padding:
-    #         flux, axes = self.get_value_padded('flux', s=s, interpolation=interpolation, **kwargs)
-    #         cont, axes = self.get_value_padded('cont', s=s, interpolation=interpolation, **kwargs)
-    #     else:
-    #         flux = self.get_value('flux', s=s, **kwargs)
-    #         cont = self.get_value('cont', s=s, **kwargs)
-
-    #         axes = {}
-    #         for p in self.axes.keys():
-    #             if p not in kwargs:            
-    #                 if interpolation == 'ijk':
-    #                     axes[p] = GridAxis(p, np.arange(self.axes[p].values.shape[0], dtype=np.float64))
-    #                 elif interpolation == 'xyz':
-    #                     axes[p] = self.axes[p]
-
-    #     # Max nans and where the continuum is zero
-    #     mask = ~np.isnan(cont) & (cont != 0)
-    #     if mask.ndim > len(axes):
-    #         mask = np.all(mask, axis=-(mask.ndim - len(axes)))
-
-    #     # Rbf must be generated on a uniform grid
-    #     if padding:
-    #         aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0]) - 1.0) for p in axes}
-    #     else:
-    #         aa = {p: GridAxis(p, np.arange(axes[p].values.shape[0])) for p in axes}
-
-    #     rbf_flux = self.fit_rbf(flux, aa, mask=mask)
-    #     rbf_cont = self.fit_rbf(cont, aa, mask=mask)
-
-    #     return rbf_flux, rbf_cont, axes
 
 #endregion

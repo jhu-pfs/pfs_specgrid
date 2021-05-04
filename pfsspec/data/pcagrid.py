@@ -128,7 +128,7 @@ class PcaGrid(PfsObject):
             v = np.dot(self.eigv[name], pc)
             return v[s or slice(None)]
         else:
-            return self.grid.get_value_at(name, idx, s=s, raw=True)
+            return self.grid.get_value_at(name, idx, s=s)
 
     def get_value(self, name, s=None, **kwargs):
         idx = self.get_index(**kwargs)

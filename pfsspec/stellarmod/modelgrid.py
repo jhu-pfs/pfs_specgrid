@@ -116,6 +116,8 @@ class ModelGrid(PfsObject):
     def load(self, filename, s=None, format=None):
         super(ModelGrid, self).load(filename=filename, s=s, format=format)
         self.grid.load(filename, s=s, format=format)
+        self.continuum_model = self.config.create_continuum_model()
+        self.continuum_model.init_wave(self.get_wave())
 
     def save_items(self):
         self.grid.filename = self.filename
@@ -184,25 +186,39 @@ class ModelGrid(PfsObject):
         spec.wave = self.get_wave()
         return spec
 
-    def get_model_at(self, idx):
+    def get_model(self, denormalize=False, **kwargs):
+        spec = self.get_parameterized_spectrum(s=self.wave_slice, **kwargs)
+        spec.flux = np.array(self.grid.get_value('flux', s=self.wave_slice, **kwargs), copy=True)
+        if self.grid.has_value('cont'):
+            spec.cont = np.array(self.grid.get_value('cont', s=self.wave_slice, **kwargs), copy=True)
+
+        if denormalize and self.grid.has_value('params'):
+            params = self.grid.get_value('params', **kwargs)
+            self.continuum_model.denormalize(spec, params)
+
+        return spec
+
+    def get_model_at(self, idx, denormalize=False):
         if self.grid.has_value_at('flux', idx):
             spec = self.get_parameterized_spectrum(idx, s=self.wave_slice)
             spec.flux = np.array(self.grid.get_value_at('flux', idx, s=self.wave_slice), copy=True)
             if self.grid.has_value('cont'):
                 spec.cont = np.array(self.grid.get_value_at('cont', idx, s=self.wave_slice), copy=True)
-            if self.grid.has_value('params'):
+
+            if denormalize and self.grid.has_value('params'):
                 params = self.grid.get_value_at('params', idx)
                 self.continuum_model.denormalize(spec, params)
+            
             return spec
         else:
             return None
 
-    def get_nearest_model(self, **kwargs):
+    def get_nearest_model(self, denormalize=False, **kwargs):
         """
         Finds grid point closest to the parameters specified
         """
         idx = self.grid.get_nearest_index(**kwargs)
-        spec = self.get_model_at(idx)
+        spec = self.get_model_at(idx, denormalize=denormalize)
         return spec
 
     def interpolate_model(self, interpolation=None, **kwargs):
