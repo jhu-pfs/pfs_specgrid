@@ -210,7 +210,7 @@ class AlexContinuumModel(ContinuumModel):
         k = self.legendre_deg * len(self.cont_fit_masks)
         l = k + len(self.limit_map) * self.blended_param_count
 
-        smooth_params = np.empty_like(params)
+        smooth_params = np.full(params.shape, np.nan)
         smooth_params[..., :k] = params[..., :k]
 
         for i in range(k, l):

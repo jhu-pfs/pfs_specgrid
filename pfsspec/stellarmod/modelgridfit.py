@@ -111,10 +111,10 @@ class ModelGridFit(GridBuilder):
         return input_idx, output_idx, spec
 
     def get_gridpoint_params(self, i):
-        input_idx = tuple(self.input_grid_index[:, i])
+        params_idx = tuple(self.params_grid_index[:, i])
         output_idx = tuple(self.output_grid_index[:, i])
-        params = self.params_grid.get_value_at(input_idx)
-        return input_idx, output_idx, params
+        params = self.params_grid.grid.get_value_at('params', params_idx)
+        return params_idx, output_idx, params
 
     def store_item(self, idx, spec, params):
         self.output_grid.grid.set_value_at('params', idx, params, valid=True)
@@ -177,12 +177,17 @@ class ModelGridFit(GridBuilder):
     def process_item_normalize(self, i):
         input_idx, output_idx, spec = self.get_gridpoint_model(i)
         _, _, params = self.get_gridpoint_params(i)
-        params = self.continuum_model.normalize(spec)
+
+        self.continuum_model.normalize(spec, params)
         return i, input_idx, output_idx, spec, params
 
     def run_step_normalize(self):
         output_initialized = False
         input_count = self.get_input_count()
+
+        # Initialize model
+        self.continuum_model.init_wave(self.input_grid.get_wave())
+        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants()
 
         # Normalize every model
         t = tqdm(total=input_count)
@@ -190,14 +195,12 @@ class ModelGridFit(GridBuilder):
             for i, input_idx, output_idx, spec, params in p.map(self.process_item_normalize, range(input_count)):
                 if not output_initialized:
                     self.output_grid.grid.value_shapes['params'] =  params.shape
-                    self.output_grid.set_wave(spec.wave)
+                    self.output_grid.set_wave(self.continuum_model.wave)
                     self.output_grid.allocate_values()
                     self.output_grid.build_axis_indexes()
                     output_initialized = True
                 self.store_item(output_idx, spec, params)
                 t.update(1)
-
-        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants(self.output_grid.wave)
 
     def run(self):
         if self.step == 'fit':
