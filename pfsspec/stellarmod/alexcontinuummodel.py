@@ -18,7 +18,7 @@ class AlexContinuumModelTrace():
             self.norm_flux = orig.norm_flux
             self.params = orig.params
         else:
-            self.limit_fit = None
+            self.limit_fit = {0: True, 1: True, 2: True}
             self.norm_flux = None
             self.params = None
 
@@ -145,14 +145,16 @@ class AlexContinuumModel(ContinuumModel):
             raise e
         norm_flux = log_flux - model_cont
 
+        if self.trace is not None:
+            self.trace.norm_flux = norm_flux
+            
         # Fit blended lines of the photoionization limits
         try:
             limit_params = self.fit_blended_all(norm_flux)
         except Exception as e:
             raise e
 
-        if self.trace is not None:
-            self.trace.norm_flux = norm_flux
+
 
         params = np.concatenate((cont_params, limit_params))
 
