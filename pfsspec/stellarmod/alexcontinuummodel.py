@@ -52,6 +52,7 @@ class AlexContinuumModel(ContinuumModel):
             self.cont_eval_masks = None     # Intervals to evaluate continuum on
 
             # Parameters of continuum Legendre fits
+            self.legendre_rate_multiplier = np.array([1, 3, 2])
             self.legendre_rate = None       # How many points to skip when fitting Legendre to continuum
             self.legendre_rank = 6
             self.legendre_deg = 7
@@ -62,16 +63,18 @@ class AlexContinuumModel(ContinuumModel):
             self.limit_map = None                       # Map to continuum intervals the blended regions are associated with
             
             # Blended region upper limits
-            self.blended_bounds = [3200.0, 4200, 12000]
+            self.blended_bounds = np.array([3200.0, 4200, 12000])
+            self.blended_count = self.blended_bounds.size
             
             # Optional blue-side offset (in term of spectral elements) of fitting
             # of blended regions. By default, blue end comes from the physical value
-            self.blended_offset = [0, 0, 0]
+            self.blended_offset = np.array(self.blended_count * [0,])
             
             self.blended_fit_masks = None                 # Masks where limits are fitted
             self.blended_eval_masks = None                # Masks where limits are evaluated
-            
-            self.blended_dx = None            # TODO: what is this for?
+
+            self.blended_dx_multiplier = np.array([1, 2, 1])
+            self.blended_dx = None
 
             # Parameters of blended region upper envelope fits
                                     
@@ -83,7 +86,7 @@ class AlexContinuumModel(ContinuumModel):
             self.blended_default_params = np.full((self.blended_param_count,), np.nan)       # Default return value in case of bad fit
 
             # TODO: rename these
-            self.init_s0s1 = [[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]]
+            self.init_s0s1 = self.blended_count * [[0.5, 0.5],]
             self.slope_cutoff = 25
             self.x1_y_ub = 0.001            # TODO: used by get_upper_points_for_gap
 
@@ -241,46 +244,37 @@ class AlexContinuumModel(ContinuumModel):
 
     def find_limits(self, wave):
         # Exact wavelengths of the limits and the lower and upper bounds of what we can fit
-        if self.limit_wave is None:
-            self.limit_wave = self.get_limit_wavelengths()
+        self.limit_wave = self.get_limit_wavelengths()
 
         # Mask that defines the entire range we can fit. Precalculate masked wavelength
         # grid and log lambda grid for convenience.
-        if self.wave_mask is None:
-            [self.wave_mask], _ = self.find_cont_masks(wave, [self.limit_wave[0], self.limit_wave[-1]], dlambda=0)
-            self.wave = wave[self.wave_mask]
-            self.log_wave = np.log(self.wave)
+        [self.wave_mask], _ = self.find_cont_masks(wave, [self.limit_wave[0], self.limit_wave[-1]], dlambda=0)
+        self.wave = wave[self.wave_mask]
+        self.log_wave = np.log(self.wave)
 
         # Every mask below will refer to the grid defined by wave_mask
 
         # Masks that define the regions where we fit the continuum
-        if self.cont_fit_masks is None:
-            self.cont_fit_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.5)
+        self.cont_fit_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.5)
 
         # Disjoint masks that define where we evaluate the continuum, no gaps here
-        if self.cont_eval_masks is None:
-            self.cont_eval_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.0)
+        self.cont_eval_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.0)
 
         # Masks where we will fit the blended lines' upper envelope. These are a
         # little bit redward from the photoionization limit.
-        if self.blended_fit_masks is None:
-            self.blended_fit_masks, self.limit_map = self.find_blended_masks(self.wave, self.cont_fit_masks)
+        self.blended_fit_masks, self.limit_map = self.find_blended_masks(self.wave, self.cont_fit_masks)
 
         # Masks where we should evaluate the blended lines's upper envelope.
-        if self.blended_eval_masks is None:
-            self.blended_eval_masks, _ = self.find_blended_masks(self.wave, self.cont_eval_masks)
+        self.blended_eval_masks, _ = self.find_blended_masks(self.wave, self.cont_eval_masks)
+
+        mask = (self.wave > 3000) & (self.wave < 3006) 
+        dx = int(len(self.wave[mask]))
 
         # TODO: what is this exactly?
-        if self.blended_dx is None:
-            mask = (self.wave > 3000) & (self.wave < 3006) 
-            dx = int(len(self.wave[mask]))
-            # [200, 0, 400, 0, 200, 0, 200]
-            self.blended_dx = [dx, 2 * dx, dx]
+        self.blended_dx = self.blended_dx_multiplier * dx
         
         # Downsampling of the wavelength grid for fitting the continuum
-        if self.legendre_rate is None:
-            dx = int(self.blended_dx[0] / 2)
-            self.legendre_rate = [dx, 3 * dx, 2 * dx, 25]
+        self.legendre_rate = self.legendre_rate_multiplier * dx
 
     def find_cont_masks(self, wave, limits, dlambda):
         # Find intervals between the limits
