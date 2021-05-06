@@ -1,3 +1,5 @@
+import numpy as np
+
 from pfsspec.pfsobject import PfsObject
 
 class ContinuumModel(PfsObject):
@@ -33,3 +35,24 @@ class ContinuumModel(PfsObject):
 
     def smooth_params(self, params):
         raise NotImplementedError()
+
+    def fit_model_simple(self, model, x, y, w=None, p0=None):
+        # Simple chi2 fit to x and y with optional weights
+        params = model.fit(x, y, w=w, p0=p0)
+        return params
+
+    def fit_model_sigmaclip(self, model, x, y, w=None, p0=None, sigma_low=1, sigma_high=1):
+        w = w if w is not None else np.full(x.shape, 1.0)
+        m = np.full(x.shape, True)
+        p = p0
+        for i in range(5):
+            p = model.fit(x[m], y[m], w=w[m], p0=p)
+            f = model.eval(x, p)
+            
+            # Sigma clipping
+            s = np.std(f - y)
+            m = (y < f + sigma_high * s) & (f - sigma_low * s < y)
+        return p
+
+    def eval_model(self, model, x, params):
+        return model.eval(x, params)

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 import logging
+
 from scipy import stats
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
@@ -10,6 +11,8 @@ from scipy.interpolate import interp1d
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodel import ContinuumModel
 from pfsspec.util.array_filters import *
+
+from pfsspec.fit.legendre import Legendre
 
 class AlexContinuumModelTrace():
     def __init__(self, orig=None):
@@ -48,12 +51,13 @@ class AlexContinuumModel(ContinuumModel):
             self.log_wave = None
 
             # Masks of continuum intervals
+            self.cont_fit_rate_multiplier = np.array([1, 3, 2])
+            self.cont_fit_rate = None       # How many points to skip when fitting Legendre to continuum            
             self.cont_fit_masks = None      # Continuum intervals for fitting
             self.cont_eval_masks = None     # Intervals to evaluate continuum on
+            self.cont_models = None
 
             # Parameters of continuum Legendre fits
-            self.legendre_rate_multiplier = np.array([1, 3, 2])
-            self.legendre_rate = None       # How many points to skip when fitting Legendre to continuum
             self.legendre_rank = 6
             self.legendre_deg = 7
 
@@ -63,7 +67,8 @@ class AlexContinuumModel(ContinuumModel):
             self.limit_map = None                       # Map to continuum intervals the blended regions are associated with
             
             # Blended region upper limits
-            self.blended_bounds = np.array([3200.0, 4200, 12000])
+            # self.blended_bounds = np.array([3200.0, 5000, 12000])
+            self.blended_bounds = np.array([3400.0, 8000, 13000])
             self.blended_count = self.blended_bounds.size
             
             # Optional blue-side offset (in term of spectral elements) of fitting
@@ -139,8 +144,8 @@ class AlexContinuumModel(ContinuumModel):
         
         # Fit continuum and normalize spectrum to fit blended lines as a next step
         try:
-            fits, cont_params = self.fit_continuum(log_cont)
-            model_cont = self.eval_continuum(fits=fits)
+            cont_params = self.fit_continuum_all(log_flux, log_cont)
+            model_cont = self.eval_continuum_all(cont_params)
         except Exception as e:
             raise e
         norm_flux = log_flux - model_cont
@@ -163,7 +168,7 @@ class AlexContinuumModel(ContinuumModel):
     def eval(self, params):
         # Evaluate the continuum model over the wave grid
 
-        model_cont = self.eval_continuum(params=params)
+        model_cont = self.eval_continuum_all(params)
         model_cont += self.eval_blended_all(params)
 
         return self.wave, model_cont
@@ -173,7 +178,7 @@ class AlexContinuumModel(ContinuumModel):
         # Returns normalized log flux
 
         # Continuum
-        model_cont = self.eval_continuum(params=params)
+        model_cont = self.eval_continuum_all(params=params)
         if spec.cont is not None:
             norm_cont = self.safe_log(spec.cont[self.wave_mask]) - model_cont
         else:
@@ -258,9 +263,15 @@ class AlexContinuumModel(ContinuumModel):
 
         # Masks that define the regions where we fit the continuum
         self.cont_fit_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.5)
-
         # Disjoint masks that define where we evaluate the continuum, no gaps here
         self.cont_eval_masks, _ = self.find_cont_masks(self.wave, self.limit_wave, dlambda=0.0)
+        # Continuum models
+        self.cont_models = []
+        for i in range(len(self.cont_fit_masks)):
+            w0 = np.log(self.limit_wave[i])
+            w1 = np.log(self.limit_wave[i + 1])
+            m = Legendre(self.legendre_rank, domain=[w0, w1])
+            self.cont_models.append(m)
 
         # Masks where we will fit the blended lines' upper envelope. These are a
         # little bit redward from the photoionization limit.
@@ -276,7 +287,15 @@ class AlexContinuumModel(ContinuumModel):
         self.blended_dx = self.blended_dx_multiplier * dx
         
         # Downsampling of the wavelength grid for fitting the continuum
-        self.legendre_rate = self.legendre_rate_multiplier * dx
+        self.cont_fit_rate = self.cont_fit_rate_multiplier * dx
+
+        # TODO: delete, we don't need to downsample, it's fast enough
+        # for i in range(len(self.cont_fit_masks)):
+        #     mask = self.cont_fit_masks[i]
+        #     rate = self.cont_fit_rate[i]
+        #     m = np.full(mask.shape, False)
+        #     m[::rate] = mask[::rate]
+        #     self.cont_fit_masks[i] = m
 
     def find_cont_masks(self, wave, limits, dlambda):
         # Find intervals between the limits
@@ -317,6 +336,13 @@ class AlexContinuumModel(ContinuumModel):
 #endregion
 #region Blended region fitting
 
+    def get_blended_params(self, params, i):
+        k = 0
+        for j in range(len(self.cont_models)):
+            k += self.cont_models[j].get_param_count()
+        p = params[k + i * self.blended_param_count:k + (i + 1) * self.blended_param_count]
+        return p
+
     def fit_blended_all(self, norm_flux):
         if self.trace is not None:
             self.trace.x1 = {}
@@ -334,11 +360,6 @@ class AlexContinuumModel(ContinuumModel):
 
         params = np.concatenate(params, axis = 0)
         return params
-
-    def get_blended_params(self, params, i):
-        k = len(self.cont_fit_masks) * self.legendre_deg
-        p = params[k + i * self.blended_param_count:k + (i + 1) * self.blended_param_count]
-        return p
         
     def eval_blended_all(self, params):
         # Evaluate model around the limits
@@ -596,51 +617,55 @@ class AlexContinuumModel(ContinuumModel):
 #endregion
 #region Continuum fitting with Legendre polynomials
 
-    def fit_continuum(self, log_cont):
-        fits = []
-        cc = len(self.cont_fit_masks)
-        params = np.zeros((cc, self.legendre_deg), dtype=log_cont.dtype)
-        for i in range(cc):
-            ff = self.fit_legendre(i, log_cont)
-            params[i] = ff.coef
-            fits.append(ff)
-        return fits, params.flatten()
+    def get_cont_params(self, params, i):
+        # Count the number of parameters before i
+        l, u = 0, 0
+        for k in range(i + 1):
+            c = self.cont_models[i].get_param_count()
+            if k < i:
+                l += c
+            u += c
+        p = params[l:u]
+        return p
+
+    def fit_continuum_all(self, log_flux, log_cont):
+        params = []
+        for i in range(len(self.cont_models)):
+            p = self.fit_continuum(log_flux, log_cont, i)
+            params.append(p)
+        return np.concatenate(params)
+
+    def fit_continuum(self, log_flux, log_cont, i):
+        mask = self.cont_fit_masks[i]
+        x = self.log_wave[mask]
+        y = log_cont[mask]
+        model = self.cont_models[i]
+
+        params = self.fit_model_simple(model, x, y)
         
-    def eval_continuum(self, params=None, fits=None):
-        # Evaluate the fitted continuum model (Legendre polynomial) over the
-        # wavelength grid. Either params (the coefficients) or fits (a list of already
-        # initialized Legendre objects) must be specified.
+        # Find the minimum difference between the model fitted to the continuum
+        # and the actual flux and shift the model to avoid big jumps.
+        v = model.eval(x, params)
+        offset = np.min((v - log_flux[mask])[v > log_flux[mask]])
+        if offset > 1e-2:
+            model.shift(-offset, params)
 
+        return params
+        
+    def eval_continuum_all(self, params):
+        # Evaluate the fitted continuum model (Legendre polynomials) over the
+        # wavelength grid.
         model_cont = np.zeros_like(self.log_wave)
-
-        if params is not None:
-            for n in range(len(self.cont_eval_masks)):
-                pp = params[n * self.legendre_deg:(n + 1) * self.legendre_deg]
-                # TODO: this is a repetition whats in fit_legendre_by_n,
-                #       store the xx grid and the domains somewhere
-                rate = self.legendre_rate[n]
-                xx = self.log_wave[self.cont_fit_masks[n]][::rate]
-                ff = np.polynomial.legendre.Legendre(pp, domain=(xx[0], xx[-1]))
-                model_cont[self.cont_eval_masks[n]] = ff(self.log_wave[self.cont_eval_masks[n]])
-        elif fits is not None:
-            for n in range(len(fits)):
-                ff = fits[n]
-                model_cont[self.cont_eval_masks[n]] = ff(self.log_wave[self.cont_eval_masks[n]])
-        else:
-            raise Exception('Either params or fits must be specified.')
-
+        for i in range(len(self.cont_models)):
+            cont, mask = self.eval_continuum(params, i)
+            model_cont[mask] = cont
         return model_cont
 
-    def fit_legendre(self, n, log_cont):
-        # Fit the nth continuum segment with a Legendre polynomial
-        # TODO: we could do some caching of xx here
-        rate = self.legendre_rate[n]
-        xx = self.log_wave[self.cont_fit_masks[n]][::rate]
-        yy = log_cont[self.cont_fit_masks[n]][::rate]
-
-        ff, res = np.polynomial.legendre.Legendre.fit(xx, yy, self.legendre_rank,
-                                                      domain=(xx[0], xx[-1]), full=True)
-        assert np.sqrt(res[0] / xx.shape[0]).round(1) == 0
-        return ff
+    def eval_continuum(self, params, i):
+        pp = self.get_cont_params(params, i)
+        mask = self.cont_eval_masks[i]
+        wave = self.log_wave[mask]
+        cont = self.cont_models[i].eval(wave, pp)
+        return cont, mask
 
 #endregion
