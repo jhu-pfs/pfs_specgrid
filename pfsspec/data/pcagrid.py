@@ -14,11 +14,13 @@ class PcaGrid(PfsObject):
 
             self.eigs = orig.eigs
             self.eigv = orig.eigv
+            self.k = orig.k
         else:
             self.grid = grid
 
             self.eigs = {}
             self.eigv = {}
+            self.k = None
 
     @property
     def preload_arrays(self):
@@ -125,7 +127,10 @@ class PcaGrid(PfsObject):
     def get_value_at(self, name, idx, s=None, raw=False):
         if not raw and name in self.eigs:
             pc = self.grid.get_value_at(name, idx)
-            v = np.dot(self.eigv[name], pc)
+            if self.k is None:
+                v = np.dot(self.eigv[name], pc)
+            else:
+                v = np.dot(self.eigv[name][:, :self.k], pc[:self.k])
             return v[s or slice(None)]
         else:
             return self.grid.get_value_at(name, idx, s=s)
