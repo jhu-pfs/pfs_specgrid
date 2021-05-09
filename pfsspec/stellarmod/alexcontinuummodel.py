@@ -13,6 +13,7 @@ from pfsspec.stellarmod.continuummodel import ContinuumModel
 from pfsspec.util.array_filters import *
 
 from pfsspec.fit.legendre import Legendre
+from pfsspec.fit.alexsigmoid import AlexSigmoid
 
 class AlexContinuumModelTrace():
     def __init__(self, orig=None):
@@ -58,8 +59,7 @@ class AlexContinuumModel(ContinuumModel):
             self.cont_models = None
 
             # Parameters of continuum Legendre fits
-            self.legendre_rank = 6
-            self.legendre_deg = 7
+            self.legendre_deg = 6
 
             # Bounds and masks of blended regions near photoionization limits
 
@@ -71,12 +71,9 @@ class AlexContinuumModel(ContinuumModel):
             self.blended_bounds = np.array([3400.0, 8000, 13000])
             self.blended_count = self.blended_bounds.size
             
-            # Optional blue-side offset (in term of spectral elements) of fitting
-            # of blended regions. By default, blue end comes from the physical value
-            self.blended_offset = np.array(self.blended_count * [0,])
-            
             self.blended_fit_masks = None                 # Masks where limits are fitted
             self.blended_eval_masks = None                # Masks where limits are evaluated
+            self.blended_models = None
 
             self.blended_dx_multiplier = np.array([1, 2, 1])
             self.blended_dx = None
@@ -200,7 +197,7 @@ class AlexContinuumModel(ContinuumModel):
         # Denormalize the spectrum given the fit params
         # Expects normalized log flux
 
-        model_cont = self.eval_continuum(params=params)
+        model_cont = self.eval_continuum_all(params=params)
         if spec.cont is not None:
             cont = np.exp(spec.cont + model_cont)
         else:
@@ -217,7 +214,7 @@ class AlexContinuumModel(ContinuumModel):
         # Apply only to parameters of the blended region fits, not the
         # Legendre coefficients
 
-        k = self.legendre_deg * len(self.cont_fit_masks)
+        k = (self.legendre_deg + 1) * len(self.cont_fit_masks)
         l = k + len(self.limit_map) * self.blended_param_count
 
         smooth_params = np.full(params.shape, np.nan)
@@ -270,15 +267,19 @@ class AlexContinuumModel(ContinuumModel):
         for i in range(len(self.cont_fit_masks)):
             w0 = np.log(self.limit_wave[i])
             w1 = np.log(self.limit_wave[i + 1])
-            m = Legendre(self.legendre_rank, domain=[w0, w1])
+            m = Legendre(self.legendre_deg, domain=[w0, w1])
             self.cont_models.append(m)
 
         # Masks where we will fit the blended lines' upper envelope. These are a
         # little bit redward from the photoionization limit.
         self.blended_fit_masks, self.limit_map = self.find_blended_masks(self.wave, self.cont_fit_masks)
-
         # Masks where we should evaluate the blended lines's upper envelope.
         self.blended_eval_masks, _ = self.find_blended_masks(self.wave, self.cont_eval_masks)
+        # Blended region models
+        self.blended_models = []
+        for i in range(len(self.blended_fit_masks)):
+            m = AlexSigmoid(bounds=None)
+            self.blended_models.append(m)
 
         mask = (self.wave > 3000) & (self.wave < 3006) 
         dx = int(len(self.wave[mask]))
@@ -353,7 +354,7 @@ class AlexContinuumModel(ContinuumModel):
 
         params = []
         for i in range(len(self.limit_map)):
-            pp = self.fit_blended(norm_flux, gap_id=i)
+            pp = self.fit_blended(norm_flux, i)
             params.append(pp)
             if self.trace is not None:
                 self.trace.params[i] = pp
@@ -382,43 +383,43 @@ class AlexContinuumModel(ContinuumModel):
         # Make sure number of fitted parameters is correct and in the right range.
         return (len(y) > 3) and (y[0] < -0.001)
 
-    def fit_blended(self, norm_flux, gap_id=None):
-        gap_control_pts = self.get_upper_points_for_gap(norm_flux, gap_id=gap_id)
-        # if self.limit_fit[gap_id] is False: 
-        # x1 = np.max(gap_control_pts[:, 0])
+    def fit_blended(self, norm_flux, i):
+        gap_control_pts = self.get_upper_points_for_gap(norm_flux, i)
+        # if self.limit_fit[i] is False: 
+            # x1 = np.max(gap_control_pts[:, 0])
         if not self.check_fit(gap_control_pts[:, 1]):
             if self.trace is not None:
-                self.trace.limit_fit[gap_id] = False
+                self.trace.limit_fit[i] = False
             return self.blended_default_params 
 
         gap_hull_x, gap_hull_y, dd = self.get_slope_filtered_robust(gap_control_pts[:, 0],\
                                             gap_control_pts[:, 1])
-        # self.check_fit_gap(gap_hull_y, gap_id, message = 'no hull left')
-        # if self.limit_fit[gap_id] is False:
+        # self.check_fit_gap(gap_hull_y, i, message = 'no hull left')
+        # if self.limit_fit[i] is False:
         if not self.check_fit(gap_hull_y):
             if self.trace is not None:
-                self.trace.limit_fit[gap_id] = False
+                self.trace.limit_fit[i] = False
             return self.blended_default_params
 
         y0, slope_mid, x_mid = self.get_init_sigmoid_estimation(gap_hull_x, gap_hull_y, method = "interp1d")
-        pmt = np.append([y0, slope_mid, x_mid], self.init_s0s1[gap_id])
+        pmt = np.append([y0, slope_mid, x_mid], self.init_s0s1[i])
 
         if self.trace is not None:
-            self.trace.hb[gap_id] = gap_control_pts
-            self.trace.hull[gap_id] = np.column_stack((gap_hull_x, gap_hull_y))
-            self.trace.params_est[gap_id] = pmt
+            self.trace.hb[i] = gap_control_pts
+            self.trace.hull[i] = np.column_stack((gap_hull_x, gap_hull_y))
+            self.trace.params_est[i] = pmt
 
         try:
             # bnds = ([0, 0, 0, 0, 0], \
-            #         [3., np.inf, np.log(self.blended_bounds[gap_id]), 20., 20.])
+            #         [3., np.inf, np.log(self.blended_bounds[i]), 20., 20.])
             bnds = ([0, 0, 0, 0, 0], \
-                    [10., 1000, np.log(self.blended_bounds[gap_id]), 1., 1.])
+                    [10., 1000, np.log(self.blended_bounds[i]), 1., 1.])
             # bnds = (0, np.inf)
             pmt, _ = curve_fit(self.blended_model_fn, gap_hull_x, gap_hull_y, pmt, bounds=bnds) 
             # pmt, _ = curve_fit(self.blended_model_fn, gap_hull_x, gap_hull_y, pmt) 
         except:
             if self.trace is not None:
-                self.trace.limit_fit[gap_id] = False
+                self.trace.limit_fit[i] = False
             # logging.warning('curve')
             return self.blended_default_params
         return pmt
@@ -488,18 +489,22 @@ class AlexContinuumModel(ContinuumModel):
         return a, slope_mid / a, x_mid
         # return a, slope_mid_dd, x_mid
 
-    def get_upper_points_for_gap(self, norm_flux, gap_id=None):
-        mask = self.blended_fit_masks[gap_id]
-        offset = self.blended_offset[gap_id]
+    def get_upper_points_for_gap(self, norm_flux, i=None):
+        # Find control points for fitting a modified sigmoid function
+        # to a blended line region redward of the photoionization limits.
+
+        mask = self.blended_fit_masks[i]
         
-        x = self.log_wave[mask][offset:]
-        y = norm_flux[mask][offset:]
-        dx = self.blended_dx[gap_id]
+        x = self.log_wave[mask]
+        y = norm_flux[mask]
+        dx = self.blended_dx[i]
+
+        
         x1 = x[np.abs(y + self.x1_y_ub).argmin()]
         x_mask = (x < x1)
 
         if self.trace is not None:
-            self.trace.x1[gap_id] = x1
+            self.trace.x1[i] = x1
         
         if len(x[x_mask]) > 5:
             internal_maxs = self.get_interval_max(x[x_mask], y[x_mask], dx)
