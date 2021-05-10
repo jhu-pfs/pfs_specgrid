@@ -91,18 +91,39 @@ class ModelGridFit(GridBuilder):
             self.open_params_grid(params_path)
             self.params_grid.init_from_args(self.args)
             self.params_grid.build_axis_indexes()
-
-            # Source indexes
-            index = self.params_grid.array_grid.get_value_index_unsliced('params')
-            self.params_grid_index = np.array(np.where(index))
-
-            # Target indexes
-            index = self.params_grid.array_grid.get_value_index('params')
-            self.output_grid_index = np.array(np.where(index))
-
             self.grid_shape = self.params_grid.get_shape()
 
         super(ModelGridFit, self).open_data(input_path, output_path)
+
+    def build_data_index(self):
+        super(ModelGridFit, self).build_data_index()
+
+        # Source indexes, make sure that the params grid index and the input grid
+        # index are combined to avoid all holes in the grid.
+        # We have to do a bit of trickery here since params index and input index 
+        # can have different shapes, although they must slice down to the same
+        # shape.
+
+        params_index = self.params_grid.array_grid.get_value_index_unsliced('params')
+        if self.input_grid is not None and self.input_grid.array_grid.slice is not None:
+            params_slice = self.params_grid.array_grid.slice
+            input_slice = self.input_grid.array_grid.slice
+            
+            input_index = self.input_grid.array_grid.get_value_index_unsliced('flux')
+            input_index[input_slice or ()] &= params_index[params_slice or ()]
+            params_index[params_slice or ()] &= input_index[input_slice or ()]
+            
+            self.input_grid_index = np.array(np.where(input_index))
+        self.params_grid_index = np.array(np.where(params_index))
+
+        # Target indexes - this is already sliced down
+        index = self.params_grid.array_grid.get_value_index('params')
+        self.output_grid_index = np.array(np.where(params_index))
+
+    def verify_data_index(self):
+        # Make sure all data indices have the same shape
+        super(ModelGridFit, self).verify_data_index()
+        assert(self.params_grid_index.shape[-1] == self.output_grid_index.shape[-1])
 
     def get_gridpoint_model(self, i):
         input_idx = tuple(self.input_grid_index[:, i])

@@ -48,20 +48,29 @@ class GridBuilder(PfsObject):
             self.open_input_grid(input_path)
             self.input_grid.init_from_args(self.args)
             self.input_grid.build_axis_indexes()
-
-            # Source indexes
-            index = self.input_grid.array_grid.get_value_index_unsliced('flux')
-            self.input_grid_index = np.array(np.where(index))
-
-            # Target indexes
-            index = self.input_grid.array_grid.get_value_index('flux')
-            self.output_grid_index = np.array(np.where(index))
-
             self.grid_shape = self.input_grid.get_shape()
 
         # Open and preprocess output
         if output_path is not None:
             self.open_output_grid(output_path)
+
+        self.build_data_index()
+        self.verify_data_index()
+
+    def build_data_index(self):
+        # TODO: flux is hardcoded here, make generic
+
+        # Source indexes
+        index = self.input_grid.array_grid.get_value_index_unsliced('flux')
+        self.input_grid_index = np.array(np.where(index))
+
+        # Target indexes
+        index = self.input_grid.array_grid.get_value_index('flux')
+        self.output_grid_index = np.array(np.where(index))
+
+    def verify_data_index(self):
+        # Make sure all data indices have the same shape
+        assert(self.input_grid_index.shape[-1] == self.output_grid_index.shape[-1])
 
     def open_input_grid(self, input_path):
         raise NotImplementedError()

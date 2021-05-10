@@ -92,6 +92,9 @@ class ArrayGrid(Grid):
         else:
             return super(ArrayGrid, self).get_shape()
 
+    def get_shape_unsliced(self):
+        return super(ArrayGrid, self).get_shape()
+
 #endregion
 
     def get_value_shape(self, name):
@@ -233,6 +236,14 @@ class ArrayGrid(Grid):
             return index
         else:
             return self.value_indexes[name]
+
+    def get_mask_unsliced(self):
+        if self.slice is not None:
+            mask = np.full(self.get_shape_unsliced(), False)
+            mask[self.slice] = True
+        else:
+            mask = np.full(self.get_shape(), True)
+        return mask
 
     def has_value(self, name):
         if self.preload_arrays:
