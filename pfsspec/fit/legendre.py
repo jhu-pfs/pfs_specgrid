@@ -20,5 +20,5 @@ class Legendre():
         ll = np.polynomial.Legendre(params, domain=self.domain)
         return ll(x)
 
-    def find_p0(self, x, y):
+    def find_p0(self, x, y, w=None):
         return None

@@ -106,16 +106,25 @@ class ModelGridFit(GridBuilder):
 
         if self.params_grid is not None:
             params_index = self.params_grid.array_grid.get_value_index_unsliced('params')
-        
+
             if self.input_grid is not None and self.input_grid.array_grid.slice is not None:
                 params_slice = self.params_grid.array_grid.slice
                 input_slice = self.input_grid.array_grid.slice
                 
                 input_index = self.input_grid.array_grid.get_value_index_unsliced('flux')
-                input_index[input_slice or ()] &= params_index[params_slice or ()]
-                params_index[params_slice or ()] &= input_index[input_slice or ()]
+                
+                ii = input_index[input_slice or ()]
+                pi = params_index[params_slice or ()]
+                iis = ii.shape
+                pis = pi.shape
+
+                ii = ii.flatten() & pi.flatten()
+
+                input_index[input_slice or ()] = ii.reshape(iis)
+                params_index[params_slice or ()] = ii.reshape(pis)
                 
                 self.input_grid_index = np.array(np.where(input_index))
+
             self.params_grid_index = np.array(np.where(params_index))
 
             # Target indexes - this is already sliced down
