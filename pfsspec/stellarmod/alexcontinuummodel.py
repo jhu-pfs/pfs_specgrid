@@ -23,8 +23,8 @@ class AlexContinuumModelTrace():
         self.blended_params = {}
         self.blended_fit = {}
         self.x1 = {}
-        
-        #self.params = None
+
+        self.fill_holes = False
 
 class AlexContinuumModel(ContinuumModel):
     # Fit the upper envelope of a stellar spectrum model. The theoretical continuum
@@ -215,12 +215,19 @@ class AlexContinuumModel(ContinuumModel):
         for m in self.blended_models:
             l += m.get_param_count()
 
+        # Create the output params grid with all nans
         smooth_params = np.full(params.shape, np.nan)
+
+        # Copy Legendre polynomial coefficients as they are
         smooth_params[..., :k] = params[..., :k]
 
+        # Smooth all blended region fit parameters one by one
         for i in range(k, l):
             # Fill in holes of the grid
-            fp = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
+            if self.fill_holes:
+                fp = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
+            else:
+                fp = params[..., i]
 
             # Smooth the parameters.
             shape = fp.shape
@@ -514,9 +521,10 @@ class AlexContinuumModel(ContinuumModel):
         # Find the minimum difference between the model fitted to the continuum
         # and the actual flux and shift the model to avoid big jumps.
         v = model.eval(x, params)
-        offset = np.min((v - log_flux[mask])[v > log_flux[mask]])
-        if offset > 1e-2:
-            model.shift(-offset, params)
+        if np.any(v > log_flux[mask]):
+            offset = np.min((v - log_flux[mask])[v > log_flux[mask]])
+            if offset > 1e-2:
+                model.shift(-offset, params)
 
         return params
         

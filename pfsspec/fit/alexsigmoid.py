@@ -16,8 +16,21 @@ class AlexSigmoid():
 
     def fit(self, x, y, w=None, p0=None):
         # TODO: use the Jacobian
+
+        # Make sure p0 is within the bounds
+        pp0 = np.where(self.bounds[0] > p0, self.bounds[0], p0)
+        pp0 = np.where(self.bounds[1] < pp0, self.bounds[1], pp0)
+
         sigma = 1 / w if w is not None else None
-        pp, _ = curve_fit(AlexSigmoid.f, x, y, p0, sigma=sigma, bounds=self.bounds)
+
+        try:
+            pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, bounds=self.bounds)
+        except RuntimeError as ex:
+            # No convergence
+            raise ex
+        except Exception as ex:
+            raise ex
+
         return pp
 
     def eval(self, x, params):
