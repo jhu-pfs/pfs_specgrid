@@ -14,7 +14,7 @@ class AlexSigmoid():
     def get_param_count(self):
         return 5
 
-    def fit(self, x, y, w=None, p0=None):
+    def fit(self, x, y, w=None, p0=None, jac=None):
         # TODO: use the Jacobian
 
         # Make sure p0 is within the bounds
@@ -24,7 +24,7 @@ class AlexSigmoid():
         sigma = 1 / w if w is not None else None
 
         try:
-            pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, bounds=self.bounds)
+            pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, jac=AlexSigmoid.jac, bounds=self.bounds)
         except RuntimeError as ex:
             # No convergence
             raise ex
@@ -106,5 +106,64 @@ class AlexSigmoid():
 
     @staticmethod
     def jac(x, a, b, c, r0, r1):
-        # TODO: implement the Jacobian
-        raise NotImplementedError()
+        # Find the merge point t0, t1
+        t0 = c - (1 - r0) / (2 * b)
+        t1 = c + (1 - r1) / (2 * b)    
+
+        # Initialize Jacobian with zero matrix
+        jac = np.zeros((len(x), 5))
+        
+        # creating mask for different region
+        mask_left = x <= t0
+        mask_mid = (x > t0) & (x < t1)
+        mask_right = x >= t1
+        
+        # calculating jac for different region
+        jac[mask_left,:] = AlexSigmoid.jac_left(x[mask_left],a,b,c,r0,r1)
+        jac[mask_mid,:] = AlexSigmoid.jac_mid(x[mask_mid],a,b,c,r0,r1)    
+        jac[mask_right,:] = AlexSigmoid.jac_right(x[mask_right],a,b,c,r0,r1)        
+        
+        return jac
+
+    @staticmethod
+    def jac_left(x,a,b,c,r0,r1):
+        # Find the jacobian for x <= t0 region
+        c0 = (1 - 2 * b * (c - x)) / r0 - 1
+        exp = np.exp(c0)
+
+        # Calculate derivative for 5 variables
+        da = r0 * exp / 2.
+        db = a * (x - c) * exp
+        dc = -a * b * exp
+        dr0 = -a * exp * c0 /2.
+        dr1 = np.zeros_like(x)
+
+        return np.vstack((da,db,dc,dr0,dr1)).T
+
+    @staticmethod
+    def jac_mid(x,a,b,c,r0,r1):
+        # Find the jacobian for t0 < x < t1 region
+
+        # Calculate derivative for a,b,c,r0,r1
+        da = 0.5 + b * (x - c)
+        db = a * (x - c)
+        dc = -a * b * (np.zeros_like(x) + 1)
+        dr0 = np.zeros_like(x)
+        dr1 = np.zeros_like(x)
+
+        return np.vstack((da,db,dc,dr0,dr1)).T    
+    
+    @staticmethod
+    def jac_right(x,a,b,c,r0,r1):
+        # Find the jacobian for x > t1 region
+
+        c0 = (1 + 2 * b * (c - x)) / r1 - 1
+        exp = np.exp(c0)
+        # Calculate derivative for a,b,c,r0,r1
+        da = 1 - r1 * exp / 2.
+        db = a * (x - c) * exp
+        dc = - a * b * exp 
+        dr0 = np.zeros_like(x)
+        dr1 = a * exp * c0 / 2.
+
+        return np.vstack((da,db,dc,dr0,dr1)).T   

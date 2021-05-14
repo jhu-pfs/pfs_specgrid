@@ -169,9 +169,11 @@ class AlexContinuumModel(ContinuumModel):
 
         # Continuum and blended regions
         model_blended = self.eval_blended_all(params)
-        norm_flux = self.safe_log(spec.flux[self.wave_mask]) - model_cont - model_blended
+        cont_norm_flux = self.safe_log(spec.flux[self.wave_mask]) - model_cont
+        norm_flux = cont_norm_flux - model_blended
 
         if self.trace is not None:
+            self.trace.cont_norm_flux = cont_norm_flux
             self.trace.model_cont = model_cont
             self.trace.model_blended = model_blended
             self.trace.norm_flux = norm_flux
