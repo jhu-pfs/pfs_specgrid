@@ -122,6 +122,7 @@ class Grid(PfsObject):
                 self.axes[p].values = self.load_item(p, np.ndarray)
                 axes[p] = self.axes[p]
         self.axes = axes
+        self.build_axis_indexes()
 
     def save_items(self):
         self.save_axes()

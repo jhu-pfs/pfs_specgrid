@@ -57,17 +57,12 @@ class ModelRbfGridBuilder(RbfGridBuilder):
         
         # Pad the output axes. This automatically takes the parameter ranges into
         # account since the grid is sliced.
-        
-        # TODO: Now we take a slice of the grid, then pad it instead of using the
-        #       existing surrounding values. We might need a parameter to turn
-        #       padding on and off etc.
-        #       But what to do if we take a subcube that's on the edge of the grid?
-        #       Then padding should be done in one direction and not in the others
-        #       but this is a nightmare to figure out automatically.
-
         orig_axes = self.input_grid.get_axes()
-        padded_axes = ArrayGrid.pad_axes(orig_axes)
-        self.output_grid.set_axes(padded_axes)
+        if self.padding:
+            padded_axes = ArrayGrid.pad_axes(orig_axes)
+            self.output_grid.set_axes(padded_axes)
+        else:
+            self.output_grid.set_axes(orig_axes)
 
         # DEBUG
         self.output_grid.preload_arrays = True
@@ -89,16 +84,25 @@ class ModelRbfGridBuilder(RbfGridBuilder):
                     self.output_grid.grid.eigv[k] = self.input_grid.grid.eigv[k][self.input_grid.wave_slice or slice(None)]
 
             grid = self.input_grid.grid.grid
-            wave_slice = None                       # Do not slice PCs
+            value_slice = None                       # Do not slice PCs
         else:
             grid = self.input_grid.grid
-            wave_slice = self.input_grid.wave_slice
+            value_slice = self.input_grid.wave_slice
 
         # Fit RBF
+        # TODO: can we do it in one run and use the same xi and distance matrix for all?
         for name in grid.values:
-            if grid.has_value(name):
-                padded_value, padded_axes = pad_array(grid.get_axes(), grid.get_value(name, s=wave_slice))
-                rbf = self.fit_rbf(padded_value, padded_axes)
+            if grid.has_value(name):              
+                value = grid.get_value(name, s=value_slice)
+                mask = grid.get_value_index(name)
+                axes = grid.get_axes()
+
+                if self.padding:
+                    value, axes, mask = pad_array(axes, value, mask=mask)
+                    self.logger.info('Array `{}` padded to shape {}'.format(name, value.shape))
+
+                self.logger.info('Fitting RBF to array `{}`'.format(name))
+                rbf = self.fit_rbf(value, axes, mask=mask)
                 self.output_grid.grid.set_value(name, rbf)
 
 #endregion

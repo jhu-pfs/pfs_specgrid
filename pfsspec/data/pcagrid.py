@@ -100,11 +100,20 @@ class PcaGrid(PfsObject):
         else:
             self.grid.allocate_value(name, shape=shape)
 
+    def add_args(self, parser):
+        self.grid.add_args(parser)
+
+    def init_from_args(self, args):
+        self.grid.init_from_args(args)
+
     def get_index(self, **kwargs):
         return self.grid.get_index(**kwargs)
 
     def get_nearest_index(self, **kwargs):
         return self.grid.get_nearest_index(**kwargs)
+
+    def has_value_index(self, name):
+        return self.grid.has_value_index(name)
 
     def get_valid_value_count(self, name):
         return self.grid.get_valid_value_count(name)

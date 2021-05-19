@@ -54,17 +54,30 @@ class RbfGrid(Grid):
             self.value_shapes[name] = shape
         self.init_value(name, self.value_shapes[name])
 
+    def has_value_index(self, name):
+        # RBF doesn't have an index, it's continuous
+        return False
+
     def get_nearest_index(self, **kwargs):
+        # RBF doesn't have an index per se, but we can return the interpolated
+        # grid values from physical values
         return self.get_index(**kwargs)
 
     def get_index(self, **kwargs):
         # Convert values to axis index, the input to RBF
+        
+        # RBF works a little bit differently when a dimension is 1 length than
+        # normal arrays because even though that dimension is not squeezed, the
+        # RBF indexes are.
+        
         idx = ()
         for k in self.axes:
-            if k in kwargs:
-                idx += (self.axes[k].ip_to_index(kwargs[k]),)
-            else:
-                idx += (None,)
+            # Only include index along the axis if it's not a 1-length axis
+            if self.axes[k].values.shape[0] > 1:
+                if k in kwargs:                
+                    idx += (self.axes[k].ip_to_index(kwargs[k]),)
+                else:
+                    idx += (None,)
         return idx
 
     def get_params(self, idx):
@@ -122,20 +135,24 @@ class RbfGrid(Grid):
         # TODO: this is a little bit redundant here because we store the xi values
         #       for each RBF. The coordinates are supposed to be the same for
         #       all data values.
+        # TODO: save RBF parameters like function, etc.
         for name in self.values:
             if self.values[name] is not None:
                 self.logger.info('Saving RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
-                self.save_item('{}_rbf_xi'.format(name), self.values[name].xi)
-                self.save_item('{}_rbf_nodes'.format(name), self.values[name].nodes)
+                self.save_item('{}/rbf/xi'.format(name), self.values[name].xi)
+                self.save_item('{}/rbf/nodes'.format(name), self.values[name].nodes)
+                self.save_item('{}/rbf/function'.format(name), self.values[name].function)
+                self.save_item('{}/rbf/epsilon'.format(name), self.values[name].epsilon)
                 self.logger.info('Saved RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
 
     def load_items(self, s=None):
         super(RbfGrid, self).load_items(s=s)
         self.load_values(s=s)
 
-    def load_rbf(self, xi, nodes, function='multiquadric', epsilon=None, smooth=0.0):
+    def load_rbf(self, xi, nodes, function='multiquadric', epsilon=None):
+        # TODO: bring out kernel function name as parameter or save into hdf5
         rbf = Rbf()
-        rbf.load(nodes, xi, mode='N-D')
+        rbf.load(nodes, xi, function=function, epsilon=epsilon, mode='N-D')
         return rbf
 
     def load_values(self, s=None):
@@ -145,16 +162,18 @@ class RbfGrid(Grid):
 
         for name in self.values:
             self.logger.info('Loading RBF "{}" of size {}'.format(name, s))
-            xi = self.load_item('{}_rbf_xi'.format(name), np.ndarray)
-            nodes = self.load_item('{}_rbf_nodes'.format(name), np.ndarray)
+            xi = self.load_item('{}/rbf/xi'.format(name), np.ndarray)
+            nodes = self.load_item('{}/rbf/nodes'.format(name), np.ndarray)
+            function = self.load_item('{}/rbf/function'.format(name), str)
+            epsilon = self.load_item('{}/rbf/epsilon'.format(name), float)
             if xi is not None and nodes is not None:
-                self.values[name] = self.load_rbf(xi, nodes)
+                # TODO: save function name to hdf5 and load back from there
+                self.values[name] = self.load_rbf(xi, nodes, function=function, epsilon=epsilon)
                 self.logger.info('Loaded RBF "{}" of size {}'.format(name, s))
             else:
                 self.values[name] = None
                 self.logger.info('Skipped loading RBF "{}" of size {}'.format(name, s))
             
-
     def set_object_params(self, obj, idx=None, **kwargs):
         if idx is not None:
             for i, p in enumerate(self.axes):

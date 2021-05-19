@@ -99,11 +99,5 @@ class ModelPcaGridBuilder(PcaGridBuilder):
         self.output_grid.grid.allocate_value('flux', shape=coeffs.shape, pca=True)
         self.output_grid.grid.set_value('flux', (coeffs, self.S, self.V), pca=True)
 
-        """
-        # Pad the array of continuum fit parameters, fit with RBF and save intou output array
-        padded_params, padded_axes = self.input_grid.get_value_padded('params', interpolation='ijk')
-        rbf = self.output_grid.fit_rbf(padded_params, padded_axes, mask=None, function='multiquadric', epsilon=None, smooth=0.0)
-        self.output_grid.set_value('params', rbf)
-        """
         
     

@@ -93,10 +93,11 @@ def fill_holes_filter(value, mask_function=np.isnan, fill_filter=np.nanmean, val
     return pp
 
 
-def pad_array(orig_axes, orig_value, size=1, interpolation='ijk'):
+def pad_array(orig_axes, orig_value, mask=None, size=1, interpolation='ijk'):
     # Depending on the interpolation method, the original axes are converted from
     # actual values to index values. The padded axes will have the original values
     # extrapolated linearly.
+    # Mask should be true where valid values are. The padded mask will be the same.
 
     padded_axes = ArrayGrid.pad_axes(orig_axes, size=size)
 
@@ -104,8 +105,10 @@ def pad_array(orig_axes, orig_value, size=1, interpolation='ijk'):
     padded_xi = ArrayGrid.get_grid_points(padded_axes, padding=True, interpolation=interpolation)
 
     # Pad original slice with phantom cells
-    # We a do a bit of extra work here because we interpolated the entire new slice, not just
-    # the edges. The advantage is that we can fill in some of the holes this way.
+    # We a do a bit of extra work here because we interpolate the entire new slice, not just
+    # the edges.
+    # TODO: in theory, this method could be used to fill in the holes in the middle but
+    #       in practice this doesn't seem to work, so do more tests
     oijk = []
     pijk = []
     padding = []
@@ -134,10 +137,18 @@ def pad_array(orig_axes, orig_value, size=1, interpolation='ijk'):
     padded_value = np.reshape(padded_value, padded_shape + (padded_value.shape[-1],))
     
     # Fill in the middle from the original
-    mask = np.isnan(padded_value)
-    padded_value[mask] = np.pad(orig_value, padding + ((0, 0),), mode='constant', constant_values=np.nan)[mask]
+    mm = np.isnan(padded_value)
+    padded_value[mm] = np.pad(orig_value, padding + ((0, 0),), mode='constant', constant_values=np.nan)[mm]
 
-    return padded_value, padded_axes
+    # Create a new mask. The middle should be the original mask and the padded region
+    # is masked out if it is _not_ nan
+    if mask is not None:
+        padded_mask = np.pad(mask, padding, mode='constant', constant_values=False)
+        padded_mask[~padded_mask] |= ~np.any(mm, axis=-1)[~padded_mask]
+    else:
+        padded_mask = ~np.any(mm, axis=-1)
+
+    return padded_value, padded_axes, padded_mask
 
 
 def anisotropic_diffusion(img, niter=1, kappa=50, gamma=0.1, voxelspacing=None, option=1):

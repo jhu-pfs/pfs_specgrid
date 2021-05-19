@@ -490,18 +490,24 @@ class ArrayGrid(Grid):
         return fn(kwargs[free_param]), kwargs
 
     @staticmethod
-    def get_grid_points(axes, padding=False, interpolation='ijk'):
+    def get_grid_points(axes, padding=False, squeeze=False, interpolation='ijk'):
+        # Return a dictionary of the grid points, either by ijk index or xyz coordinates.
+        # When sqeeze=True, only axis with more than 1 grid point will be included.
+        # The result can be used to call np.meshgrid.
+
         xi = {}
         for p in axes:
-            if axes[p].values.shape[0] == 1:
-                xi[p] = axes[p].values
-            elif interpolation == 'ijk':
-                if not padding:
-                    xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64)
+            if interpolation == 'ijk':
+                if axes[p].values.shape[0] == 1:
+                    if not squeeze:
+                        xi[p] = np.array([0.0])
                 else:
-                    xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64) - 1.0
+                    xi[p] = np.arange(axes[p].values.shape[0], dtype=np.float64)
+                    if padding:
+                        xi[p] -= 1.0
             elif interpolation == 'xyz':
-                xi[p] = axes[p].values
+                if axes[p].values.shape[0] > 1 or not squeeze:
+                    xi[p] = axes[p].values
             else:
                 raise NotImplementedError()
         return xi
