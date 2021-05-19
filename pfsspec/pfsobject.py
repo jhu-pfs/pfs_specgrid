@@ -159,6 +159,7 @@ class PfsObject():
                 pass
 
         f = open_hdf5()
+        g, name = self.get_hdf5_group(f, name, create=True)
 
         if item is None:
             # Do not save if value is None
@@ -176,20 +177,24 @@ class PfsObject():
         elif isinstance(item, np.ndarray):
             if s is not None:
                 # in-place update
-                f[name][s] = item
+                g[name][s] = item
             else:
-                if name in f.keys():
-                    del f[name]
+                if name in g.keys():
+                    del g[name]
                 chunks = self.get_chunks(name, item.shape, s=s)
                 if chunks is not None:
-                    f.create_dataset(name, data=item, chunks=chunks)
+                    g.create_dataset(name, data=item, chunks=chunks)
                     self.logger.debug('Saving item {} with chunks {}'.format(name, chunks))
                 else:
-                    f.create_dataset(name, data=item)
+                    g.create_dataset(name, data=item)
         elif isinstance(item, numbers.Number):
-            if name in f.keys():
-                del f[name]
-            f.create_dataset(name, data=item)
+            # TODO: now storing a single number in a separate dataset. Change this
+            #       to store as an attribute. Keeping it now for compatibility.
+            if name in g.keys():
+                del g[name]
+            g.create_dataset(name, data=item)
+        elif isinstance(item, str):
+            g.attrs[name] = item
         else:
             raise NotImplementedError('Unsupported type: {}'.format(type(item).__name__))
 
@@ -281,6 +286,19 @@ class PfsObject():
         else:
             raise NotImplementedError()
 
+    def get_hdf5_group(self, f, name, create=False):
+        # If name contains /, split and dig down in the hierarchy
+        parts = name.split('/')
+        g = f
+        for part in parts[:-1]:
+            if create and part not in g:
+                g = g.create_group(part)
+            elif part not in g:
+                return None, None
+            else:
+                g = g[part]
+        return g, parts[-1]
+
     def load_item_hdf5(self, name, type, s=None):
         if type == pd.DataFrame:
             if s is not None:
@@ -289,12 +307,13 @@ class PfsObject():
                 return pd.read_hdf(self.filename, name)
         elif type == np.ndarray:
             with h5py.File(self.filename, 'r') as f:
-                if name in f.keys():
-                    #a = np.empty(f[name].shape, dtype=f[name].dtype)
+                g, name = self.get_hdf5_group(f, name, create=False)
+                if g is not None and name in g:
+                    #a = np.empty(g[name].shape, dtype=g[name].dtype)
                     #if slice is not None:
-                    #    f[name].read_direct(a, source_sel=slice, dest_sel=slice)
+                    #    g[name].read_direct(a, source_sel=slice, dest_sel=slice)
                     #else:
-                    #    f[name].read_direct(a)
+                    #    g[name].read_direct(a)
                     #return a
 
                     # Do some smart indexing magic here because index arrays are not supported by h5py
@@ -313,19 +332,19 @@ class PfsObject():
                                     raise Exception('Incompatible shapes')
                                 idxshape = s[i].shape
                             elif isinstance(s[i], slice):
-                                k = len(range(*s[i].indices(f[name].shape[i])))
+                                k = len(range(*s[i].indices(g[name].shape[i])))
                                 if shape is None:
                                     shape = (k, )
                                 else:
                                     shape = shape + (k, )
 
                         if shape is None:
-                            shape = f[name].shape
+                            shape = g[name].shape
                         else:
-                            shape = shape + f[name].shape[len(s):]
+                            shape = shape + g[name].shape[len(s):]
 
                         if idxshape is None:
-                            data = f[name][s]
+                            data = g[name][s]
                         else:
                             data = np.empty(shape)
                             for idx in np.ndindex(idxshape):
@@ -337,19 +356,28 @@ class PfsObject():
                                         ii.append(s[i][idx])
                                     elif isinstance(s[i], slice):
                                         ii.append(s[i])
-                                data[idx] = f[name][tuple(ii)]
+                                data[idx] = g[name][tuple(ii)]
                         return data
                     elif s is not None:
-                        return f[name][s]
+                        return g[name][s]
                     else:
-                        return f[name][:]
+                        return g[name][:]
                 else:
                     return None
         elif type == np.float or type == np.int:
+            # TODO: rewrite this to use attributes
             with h5py.File(self.filename, 'r') as f:
-                if name in f.keys():
-                    data = f[name][()]
+                g, name = self.get_hdf5_group(f, name, create=False)
+                if g is not None and name in g:
+                    data = g[name][()]
                     return data
+                else:
+                    return None
+        elif type == str:
+            with h5py.File(self.filename, 'r') as f:
+                g, name = self.get_hdf5_group(f, name, create=False)
+                if g is not None and name in g.attrs:
+                    return g.attrs[name]
                 else:
                     return None
         else:
