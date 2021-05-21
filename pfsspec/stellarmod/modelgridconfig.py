@@ -6,10 +6,15 @@ from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
 
 
 class ModelGridConfig():
-    def __init__(self, pca=False, orig=None):
+    # Implements functions to initialize a model grid. Inherited classes should
+    # implement grid-specific functionality in overridden functions.
+
+    def __init__(self, normalized=False, pca=False, orig=None):
         if isinstance(orig, ModelGridConfig):
+            self.normalized = normalized if normalized is not None else orig.normalized
             self.pca = pca if pca is not None else orig.pca
         else:
+            self.normalized = normalized
             self.pca = pca
 
     def init_axes(self, grid):
@@ -17,13 +22,9 @@ class ModelGridConfig():
         grid.init_axis('T_eff')
         grid.init_axis('log_g')
 
-    def init_constants(self, grid):
-        grid.init_constant('constants')
-
     def init_values(self, grid):
         grid.init_value('flux', pca=self.pca)
         grid.init_value('cont', pca=self.pca)
-        grid.init_value('params')
 
     def allocate_values(self, grid, wave):
         if self.pca is not None and self.pca:
@@ -31,28 +32,17 @@ class ModelGridConfig():
         else:
             grid.allocate_value('flux', wave.shape)
             grid.allocate_value('cont', wave.shape)
-        grid.allocate_value('params')
-
-    def get_is_value_valid_method(self):
-        return ModelGridConfig.is_value_valid
-    
-    def get_get_chunks_method(self):
-        return ModelGridConfig.get_chunks
 
     def create_spectrum(self):
         return ModelSpectrum()
 
     def create_continuum_model(self):
-        # return LogChebyshevContinuumModel()
-        return AlexContinuumModel()
+        return None
 
-
-    @staticmethod
-    def is_value_valid(self, name, value):
+    def is_value_valid(self, grid, name, value):
         return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))
 
-    @staticmethod
-    def get_chunks(self, name, shape, s=None):
+    def get_chunks(self, grid, name, shape, s=None):
         # The chunking strategy for spectrum grids should observe the following
         # - we often need only parts of the wavelength coverage
         # - interpolation algorithms iterate over the wavelengths in the outer loop
@@ -60,10 +50,10 @@ class ModelGridConfig():
         #   in memory along the entire interpolation axis
 
         # The shape of the spectrum grid is (param1, param2, wave)
-        if name in self.values and name in ['flux', 'cont']:
+        if name in grid.values and name in ['flux', 'cont']:
             newshape = []
             # Keep neighboring 3 models together in every direction
-            for i, k in enumerate(self.axes.keys()):
+            for i, k in enumerate(grid.axes.keys()):
                 if k in ['log_g', 'Fe_H', 'T_eff']:
                     newshape.append(min(shape[i], 3))
                 else:

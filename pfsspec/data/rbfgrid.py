@@ -10,13 +10,15 @@ class RbfGrid(Grid):
     # necessarily a grid, as RBF interpolation extends function to any point
     # but nodes are defined based on the predefined values along the axes.
 
-    def __init__(self, orig=None):
+    def __init__(self, config=None, orig=None):
         super(RbfGrid, self).__init__(orig=orig)
 
         if isinstance(orig, RbfGrid):
+            self.config = config if config is not None else orig.config
             self.values = orig.values
             self.value_shapes = orig.value_shapes
         else:
+            self.config = config
             self.values = {}
             self.value_shapes = {}
 

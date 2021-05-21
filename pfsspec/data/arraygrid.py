@@ -22,15 +22,17 @@ class ArrayGrid(Grid):
     Args:
         PfsObject ([type]): [description]
     """
-    def __init__(self, orig=None):
+    def __init__(self, config=None, orig=None):
         super(ArrayGrid, self).__init__(orig=orig)
 
         if isinstance(orig, ArrayGrid):
+            self.config = config if config is not None else orig.config
             self.values = orig.values
             self.value_shapes = orig.value_shapes
             self.value_indexes = orig.value_indexes
             self.slice = orig.slice
         else:
+            self.config = config
             self.values = {}
             self.value_shapes = {}
             self.value_indexes = {}
@@ -137,7 +139,10 @@ class ArrayGrid(Grid):
         self.init_value(name, self.value_shapes[name])
 
     def is_value_valid(self, name, value):
-        return np.logical_not(np.any(np.isnan(value), axis=-1))
+        if self.config is not None:
+            return self.config.is_value_valid(self, name, value)
+        else:
+            return np.logical_not(np.any(np.isnan(value), axis=-1))
 
     def build_value_indexes(self, rebuild=False):
         for name in self.values:
@@ -244,6 +249,12 @@ class ArrayGrid(Grid):
         else:
             mask = np.full(self.get_shape(), True)
         return mask
+
+    def get_chunks(self, name, shape, s=None):
+        if self.config is not None:
+            self.config.get_chunks(self, name, shape, s=s)
+        else:
+            super(ArrayGrid, self).get_chunks(name, shape, s=s)
 
     def has_value(self, name):
         if self.preload_arrays:
