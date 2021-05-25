@@ -85,9 +85,9 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
 
-    def build_rbf(self, input_grid, output_grid, name):
+    def build_rbf(self, input_grid, output_grid, name, s=None):
         if input_grid.has_value(name):
-            value = input_grid.get_value(name)
+            value = input_grid.get_value(name)[s or ()]
             mask = input_grid.get_value_index(name)
             axes = input_grid.get_axes()
 
@@ -105,6 +105,12 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         output_grid.set_value(name, rbf)
 
     def run_step_fit(self):
+        if self.params_grid is not None:
+            self.run_step_fit_params()
+        else:
+            self.run_step_fit_flux()
+
+    def run_step_fit_params(self):
         # Calculate RBF interpolation of continuum fit parameters
         # This is done parameter by parameter so continuum models which cannot
         # be fitted everywhere are still interpolated to as many grid positions
@@ -116,6 +122,21 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         for name in self.continuum_model.get_params_names():
             # TODO: can we run this with a PcaGrid output?
             self.build_rbf(self.params_grid.grid, self.output_grid.grid, name)
+
+    def run_step_fit_flux(self):
+        # Calculate RBF interpolation in the flux vector directly
+
+        # The wave slice should apply to the last dimension of the flux grid
+        if self.input_grid.wave_slice is not None:
+            s = (Ellipsis, self.input_grid.wave_slice)
+        else:
+            s = None
+
+        self.output_grid.set_wave(self.input_grid.get_wave())
+
+        for name in ['flux', 'cont']:
+            if self.input_grid.grid.has_value(name):
+                self.build_rbf(self.input_grid.grid, self.output_grid.grid, name, s=s)
 
     def run_step_pca(self):
         if self.params_grid is not None:
