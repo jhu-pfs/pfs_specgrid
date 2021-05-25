@@ -7,10 +7,12 @@ from pfsspec.physics import Physics
 from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.pcagridbuilder import PcaGridBuilder
 from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.stellarmod.modelgridbuilder import ModelGridBuilder
 
-class ModelPcaGridBuilder(PcaGridBuilder):
+class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
     def __init__(self, config, orig=None):
-        super(ModelPcaGridBuilder, self).__init__(orig=orig)
+        PcaGridBuilder.__init__(self, orig=orig)
+        ModelGridBuilder.__init__(self, config, orig=orig)
 
         if isinstance(orig, ModelPcaGridBuilder):
             self.config = config if config is not None else orig.config
@@ -20,43 +22,37 @@ class ModelPcaGridBuilder(PcaGridBuilder):
             self.normalization = None
 
     def add_args(self, parser):
-        super(ModelPcaGridBuilder, self).add_args(parser)
+        PcaGridBuilder.add_args(self, parser)
+        ModelGridBuilder.add_args(self, parser)
 
         parser.add_argument('--normalization', type=str, default='none', choices=['none', 'max', 'planck'], help='Normalization method.\n')
 
     def parse_args(self):
-        super(ModelPcaGridBuilder, self).parse_args()
+        PcaGridBuilder.parse_args(self)
+        ModelGridBuilder.parse_args(self)
 
         self.normalization = self.get_arg('normalization', self.normalization)
     
     def create_input_grid(self):
-        return ModelGrid(self.config, ArrayGrid)
+        # Input should not be a PCA grid
+        return ModelGridBuilder.create_input_grid(self)
 
     def create_output_grid(self):
+        # Output is always a PCA grid
         config = type(self.config)(orig=self.config, pca=True)
         return ModelGrid(config, ArrayGrid)
 
     def open_input_grid(self, input_path):
-        fn = os.path.join(input_path, 'spectra') + '.h5'
-        self.input_grid = self.create_input_grid()
-        self.input_grid.load(fn)
+        ModelGridBuilder.open_input_grid(self, input_path)
 
     def open_output_grid(self, output_path):
-        fn = os.path.join(output_path, 'spectra') + '.h5'
-        self.output_grid = self.create_output_grid()
+        ModelGridBuilder.open_output_grid(self, output_path)
 
-        # Copy data from the input grid
-        self.output_grid.set_axes(self.input_grid.get_axes())
-        self.output_grid.wave = self.input_grid.get_wave()
-        self.output_grid.build_axis_indexes()
+    def open_data(self, input_path, output_path, params_path=None):
+        return ModelGridBuilder.open_data(self, input_path, output_path, params_path=params_path)
 
-        # Force creating output file for direct hdf5 writing
-        self.output_grid.save(fn, format='h5')
-
-        # DEBUG
-        # self.output_grid.preload_arrays = True
-        # self.output_grid.grid.preload_arrays = True
-        # END DEBUG
+    def build_data_index(self):
+        return ModelGridBuilder.build_data_index(self)
 
     def get_vector_shape(self):
         return self.input_grid.get_wave().shape
@@ -81,11 +77,15 @@ class ModelPcaGridBuilder(PcaGridBuilder):
     def run(self):
         super(ModelPcaGridBuilder, self).run()
 
-        # Copy continuum fit parameters
-        if self.input_grid.grid.has_value('params'):
-            params = self.input_grid.get_value_sliced('params')
-            self.output_grid.grid.allocate_value('params', shape=(params.shape[-1],))
-            self.output_grid.grid.set_value('params', params)
+        # Copy continuum fit parameters, if available
+        if self.params_grid is not None:
+            for name in self.params_grid.continuum_model.get_params_names():
+                params = self.params_grid.get_value_sliced(name)
+                index = self.params_grid.grid.get_value_index(name)
+                self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
+                self.output_grid.grid.grid.set_value(name, params)
+                self.output_grid.grid.grid.value_indexes[name] = index
+        
         if self.input_grid.grid.has_constant('constants'):
             self.output_grid.grid.set_constant('constants', self.input_grid.grid.get_constant('constants'))
 

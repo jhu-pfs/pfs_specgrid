@@ -12,10 +12,10 @@ class Pca(Script):
         self.pca = None
 
     def add_subparsers(self, parser):
-        sps = parser.add_subparsers(dest='source')
+        sps = parser.add_subparsers(dest='type')
         for src in PCA_CONFIGURATIONS:
             ps = sps.add_parser(src)
-            spp = ps.add_subparsers(dest='pca')
+            spp = ps.add_subparsers(dest='source')
             for pca in PCA_CONFIGURATIONS[src]:
                 pp = spp.add_parser(pca)
                 self.add_args(pp)
@@ -28,15 +28,16 @@ class Pca(Script):
 
         parser.add_argument('--in', type=str, help="Input data path.\n")
         parser.add_argument('--out', type=str, help='Output data path.\n')
+        parser.add_argument('--params', type=str, help='Parameters grid, if different from input.\n')
 
     def create_pca(self):
-        config = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]['config']
-        self.pca = PCA_CONFIGURATIONS[self.args['source']][self.args['pca']]['class'](config)
+        config = PCA_CONFIGURATIONS[self.args['type']][self.args['source']]['config']
+        self.pca = PCA_CONFIGURATIONS[self.args['type']][self.args['source']]['class'](config)
         self.pca.args = self.args
         self.pca.parse_args() 
 
     def open_data(self):
-        self.pca.open_data(self.args['in'], self.outdir)
+        self.pca.open_data(self.args['in'], self.outdir, self.args['params'])
 
     def save_data(self):
         self.pca.save_data(self.outdir)

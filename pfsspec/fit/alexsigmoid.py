@@ -6,6 +6,7 @@ from scipy import stats
 class AlexSigmoid():
     def __init__(self, domain=None, bounds=None):
         self.domain = domain
+        
         if bounds is not None:
             self.bounds = bounds
         else:
@@ -24,7 +25,8 @@ class AlexSigmoid():
         sigma = 1 / w if w is not None else None
 
         try:
-            pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, jac=AlexSigmoid.jac, bounds=self.bounds)
+            #pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, jac=AlexSigmoid.jac, bounds=self.bounds)
+            pp, _ = curve_fit(AlexSigmoid.f, x, y, pp0, sigma=sigma, bounds=self.bounds)
         except RuntimeError as ex:
             # No convergence
             raise ex
@@ -65,7 +67,11 @@ class AlexSigmoid():
         s0 = 0.5
         s1 = 0.5
 
-        return np.array([a, slope_mid / a, x_mid, s0, s1])
+        # If amplitude is smaller than a limit
+        if a < self.bounds[0][0]:
+            return False, np.array([0, np.nan, np.nan, np.nan, np.nan])
+
+        return True, np.array([a, slope_mid / a, x_mid, s0, s1])
 
     @staticmethod
     def f(x, a, b, c, r0, r1):
@@ -80,90 +86,72 @@ class AlexSigmoid():
         # conntinous function and derivative
         # 2021-02-14   Alex Szalay
         #---------------------------------------------------------
-        x0 = c - 1 / (2 * b)
-        x1 = c + 1 / (2 * b)
 
-        beta0  = 2 * b / r0
-        alpha0 = r0 / (2 * np.e)   
-        beta1  = 2 * b / r1
-        alpha1 = r1 / (2 * np.e)
-        
-        t0 = x0 + 1 / beta0
-        t1 = x1 - 1 / beta1
-        i0 = (x <= t0)
-        i1 = (x >= t1)
-        im = (x > t0) & (x < t1)
-        
-        y = np.zeros(x.shape)
-        arg0 = beta0 * (x[i0] - x0)
-        arg1 = -beta1 * (x[i1] - x1)
+        # If the amplitude is zero, return an all zero vector, even if other
+        # parameters are nan. This is necessary to handle the case of very
+        # small amplitude blended regions.
+        if a == 0.0:
+            return np.zeros(x.shape)
+        else:
+            x0 = c - 1 / (2 * b)
+            x1 = c + 1 / (2 * b)
 
-        y[i0] = alpha0 * np.exp(arg0)
-        y[i1] = 1 - alpha1 * np.exp(arg1)
-        y[im] = b * (x[im] - c) + 0.5
+            beta0  = 2 * b / r0
+            alpha0 = r0 / (2 * np.e)   
+            beta1  = 2 * b / r1
+            alpha1 = r1 / (2 * np.e)
+            
+            t0 = x0 + 1 / beta0
+            t1 = x1 - 1 / beta1
+            i0 = (x <= t0)
+            i1 = (x >= t1)
+            im = (x > t0) & (x < t1)
+            
+            y = np.zeros(x.shape)
+            arg0 = beta0 * (x[i0] - x0)
+            arg1 = -beta1 * (x[i1] - x1)
 
-        return a * (y - 1)
+            y[i0] = alpha0 * np.exp(arg0)
+            y[i1] = 1 - alpha1 * np.exp(arg1)
+            y[im] = b * (x[im] - c) + 0.5
+
+            return a * (y - 1)
 
     @staticmethod
     def jac(x, a, b, c, r0, r1):
         # Find the merge point t0, t1
         t0 = c - (1 - r0) / (2 * b)
-        t1 = c + (1 - r1) / (2 * b)    
+        t1 = c + (1 - r1) / (2 * b)        
+
+        # Mask for different region
+        mask_left = x <= t0
+        mask_mid = (x > t0) & (x < t1)
+        mask_right = x >= t1
 
         # Initialize Jacobian with zero matrix
         jac = np.zeros((len(x), 5))
         
-        # creating mask for different region
-        mask_left = x <= t0
-        mask_mid = (x > t0) & (x < t1)
-        mask_right = x >= t1
-        
-        # calculating jac for different region
-        jac[mask_left,:] = AlexSigmoid.jac_left(x[mask_left],a,b,c,r0,r1)
-        jac[mask_mid,:] = AlexSigmoid.jac_mid(x[mask_mid],a,b,c,r0,r1)    
-        jac[mask_right,:] = AlexSigmoid.jac_right(x[mask_right],a,b,c,r0,r1)        
-        
+        xx = x[mask_left] - c
+        EE = np.exp(2 * b / r0 * (xx + 1 / (2 * b)))
+        jac[mask_left, 0] = r0 / (2 * np.e) * EE - 1
+        jac[mask_left, 1] = a * xx / np.e * EE
+        jac[mask_left, 2] = -a * b / np.e * EE
+        jac[mask_left, 3] = a / (2 * np.e) * (1 - (2 * b * xx + 1) / r0) * EE
+        jac[mask_left, 4] = 0
+
+        xx = x[mask_right] - c
+        EE = np.exp(-2 * b / r1 * (xx - 1 / (2 * b)))
+        jac[mask_right, 0] = -r1 / (2 * np.e) * EE
+        jac[mask_right, 1] = a * xx / np.e * EE
+        jac[mask_right, 2] = a * b / np.e * EE
+        jac[mask_right, 3] = 0
+        jac[mask_right, 4] = -a / (2 * np.e) * (1 + (2 * b * xx - 1) / r1) * EE
+
+        xx = x[mask_mid] - c
+        jac[mask_mid, 0] = b * xx - 0.5
+        jac[mask_mid, 1] = a * xx
+        jac[mask_mid, 2] = -a - b
+        jac[mask_mid, 3] = 0
+        jac[mask_mid, 4] = 0
+
         return jac
-
-    @staticmethod
-    def jac_left(x,a,b,c,r0,r1):
-        # Find the jacobian for x <= t0 region
-        c0 = (1 - 2 * b * (c - x)) / r0 - 1
-        exp = np.exp(c0)
-
-        # Calculate derivative for 5 variables
-        da = r0 * exp / 2.
-        db = a * (x - c) * exp
-        dc = -a * b * exp
-        dr0 = -a * exp * c0 /2.
-        dr1 = np.zeros_like(x)
-
-        return np.vstack((da,db,dc,dr0,dr1)).T
-
-    @staticmethod
-    def jac_mid(x,a,b,c,r0,r1):
-        # Find the jacobian for t0 < x < t1 region
-
-        # Calculate derivative for a,b,c,r0,r1
-        da = 0.5 + b * (x - c)
-        db = a * (x - c)
-        dc = -a * b * (np.zeros_like(x) + 1)
-        dr0 = np.zeros_like(x)
-        dr1 = np.zeros_like(x)
-
-        return np.vstack((da,db,dc,dr0,dr1)).T    
-    
-    @staticmethod
-    def jac_right(x,a,b,c,r0,r1):
-        # Find the jacobian for x > t1 region
-
-        c0 = (1 + 2 * b * (c - x)) / r1 - 1
-        exp = np.exp(c0)
-        # Calculate derivative for a,b,c,r0,r1
-        da = 1 - r1 * exp / 2.
-        db = a * (x - c) * exp
-        dc = - a * b * exp 
-        dr0 = np.zeros_like(x)
-        dr1 = a * exp * c0 / 2.
-
-        return np.vstack((da,db,dc,dr0,dr1)).T   

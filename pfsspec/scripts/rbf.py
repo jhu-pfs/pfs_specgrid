@@ -12,10 +12,10 @@ class Rbf(Script):
         self.rbf = None
 
     def add_subparsers(self, parser):
-        sps = parser.add_subparsers(dest='source')
+        sps = parser.add_subparsers(dest='type')
         for src in RBF_CONFIGURATIONS:
             ps = sps.add_parser(src)
-            spp = ps.add_subparsers(dest='rbf')
+            spp = ps.add_subparsers(dest='source')
             for rbf in RBF_CONFIGURATIONS[src]:
                 pp = spp.add_parser(rbf)
                 self.add_args(pp)
@@ -28,15 +28,16 @@ class Rbf(Script):
 
         parser.add_argument('--in', type=str, help="Input data path.\n")
         parser.add_argument('--out', type=str, help='Output data path.\n')
+        parser.add_argument('--params', type=str, help='Parameters grid, if different from input.\n')
 
     def create_rbf(self):
-        config = RBF_CONFIGURATIONS[self.args['source']][self.args['rbf']]['config']
-        self.rbf = RBF_CONFIGURATIONS[self.args['source']][self.args['rbf']]['class'](config)
+        config = RBF_CONFIGURATIONS[self.args['type']][self.args['source']]['config']
+        self.rbf = RBF_CONFIGURATIONS[self.args['type']][self.args['source']]['class'](config)
         self.rbf.args = self.args
         self.rbf.parse_args() 
 
     def open_data(self):
-        self.rbf.open_data(self.args['in'], self.outdir)
+        self.rbf.open_data(self.args['in'], self.outdir, self.args['params'])
 
     def save_data(self):
         self.rbf.save_data(self.outdir)

@@ -61,7 +61,7 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         parser.add_argument('--sample-mode', type=str, choices=['grid', 'random'], default='grid', help='Sampling mode\n')
         parser.add_argument('--sample-dist', type=str, choices=['uniform', 'beta'], default='uniform', help='Randomly sampled parameter distribution')
         parser.add_argument('--sample-count', type=int, default=None, help='Number of samples to be interpolated between models\n')
-        parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline'], default='grid', help='Type of interpolation\n')
+        parser.add_argument('--interp-mode', type=str, choices=['grid', 'linear', 'spline', 'rbf'], default='grid', help='Type of interpolation\n')
         parser.add_argument('--interp-param', type=str, default='random', help='Parameter direction of interpolation\n')
 
         parser.add_argument('--z', type=float, nargs='*', default=None, help='Radial velocity or distribution parameters')
@@ -248,6 +248,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
                 spec = self.grid.interpolate_model_linear(**params)
             elif self.interp_mode == 'spline':
                 spec = self.grid.interpolate_model_spline(free_param, **params)
+            elif self.interp_mode == 'rbf':
+                spec = self.grid.get_model(denormalize=True, **params)
             else:
                 raise NotImplementedError()
 
@@ -255,6 +257,8 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def get_gridpoint_model(self, i):
         # Get grid model
+        # TODO: when using PCA/RBF, we need the denormalized model here
+        raise NotImplementedError()
         idx = tuple(self.grid_index[:, i % self.grid_index.shape[1]])
         spec = self.grid.get_model_at(idx)
 

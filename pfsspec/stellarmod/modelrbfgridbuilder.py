@@ -8,48 +8,61 @@ from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagrid import PcaGrid
 from pfsspec.data.rbfgridbuilder import RbfGridBuilder
 from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.stellarmod.modelgridbuilder import ModelGridBuilder
 from pfsspec.util.array_filters import *
 
-class ModelRbfGridBuilder(RbfGridBuilder):
+class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
+
+    STEPS = ['fit', 'pca']
+
     def __init__(self, config, grid=None, orig=None):
-        super(ModelRbfGridBuilder, self).__init__(orig=orig)
+        RbfGridBuilder.__init__(self, orig=orig)
+        ModelGridBuilder.__init__(self, config, orig=orig)
 
         if isinstance(orig, ModelRbfGridBuilder):
-            self.config = config if config is not None else orig.config
+            self.step = orig.step
         else:
-            self.config = config
+            self.step = None
+
+    def add_args(self, parser):
+        RbfGridBuilder.add_args(self, parser)
+        ModelGridBuilder.add_args(self, parser)
+
+        parser.add_argument('--step', type=str, choices=ModelRbfGridBuilder.STEPS, help='RBF step to perform.\n')
+
+    def parse_args(self):
+        RbfGridBuilder.parse_args(self)
+        ModelGridBuilder.parse_args(self)
+
+        if 'step' in self.args and self.args['step'] is not None:
+            self.step = self.args['step']
 
     def create_input_grid(self):
         # It doesn't really matter if the input is already a PCA grid or just a direct
         # array because RBF interpolation is the same. On the other hand,
         # when we want to slice a PCA grid in wavelength, we have to load the
         # eigenvectors so this needs to be extended here.
-        config = self.config
-        if self.pca is not None and self.pca:
-            config = type(config)(pca=True)
-        grid = ModelGrid(config, ArrayGrid)
-        return grid
+        self.pca = (self.step == 'pca')
+        return ModelGridBuilder.create_input_grid(self)
+
+    def open_input_grid(self, input_path):
+        return ModelGridBuilder.open_input_grid(self, input_path)
 
     def create_output_grid(self):
         config = self.config
-        if self.pca is not None and self.pca:
+        if self.step == 'pca':
             config = type(config)(pca=True)
         grid = ModelGrid(config, RbfGrid)
         return grid
 
-    def open_input_grid(self, input_path):
-        fn = os.path.join(input_path, 'spectra') + '.h5'
-        self.input_grid = self.create_input_grid()
-        self.input_grid.load(fn, format='h5')
+    def open_output_grid(self, output_path):
+        return ModelGridBuilder.open_output_grid(self, output_path)
 
-        # Source indexes
-        if isinstance(self.input_grid.grid, PcaGrid):
-            index = self.input_grid.grid.grid.get_value_index_unsliced('flux')
-        else:
-            index = self.input_grid.grid.get_value_index_unsliced('flux')
-        self.input_grid_index = np.array(np.where(index))
-        if self.top is not None:
-            self.input_grid_index = self.input_grid_index[:, :min(self.top, self.input_grid_index.shape[1])]
+    def open_data(self, input_path, output_path, params_path=None):
+        return ModelGridBuilder.open_data(self, input_path, output_path, params_path=params_path)
+
+    def build_data_index(self):
+        return ModelGridBuilder.build_data_index(self)
 
     def open_output_grid(self, output_path):
         fn = os.path.join(output_path, 'spectra') + '.h5'
@@ -72,37 +85,69 @@ class ModelRbfGridBuilder(RbfGridBuilder):
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
 
-    def run(self):
-        self.output_grid.set_constants(self.input_grid.get_constants())
-        self.output_grid.set_wave(self.input_grid.get_wave())
+    def build_rbf(self, input_grid, output_grid, name):
+        if input_grid.has_value(name):
+            value = input_grid.get_value(name)
+            mask = input_grid.get_value_index(name)
+            axes = input_grid.get_axes()
 
-        # Copy eigv if PCA
-        if isinstance(self.input_grid.grid, PcaGrid):
-            for k in self.input_grid.grid.eigs:
-                if self.input_grid.grid.eigs[k] is not None:
-                    self.output_grid.grid.eigs[k] = self.input_grid.grid.eigs[k]
-                    self.output_grid.grid.eigv[k] = self.input_grid.grid.eigv[k][self.input_grid.wave_slice or slice(None)]
+            if self.padding:
+                value, axes, mask = pad_array(axes, value, mask=mask)
+                self.logger.info('Array `{}` padded to shape {}'.format(name, value.shape))
 
-            grid = self.input_grid.grid.grid
-            value_slice = None                       # Do not slice PCs
+            self.logger.info('Fitting RBF to array `{}`'.format(name))
+            rbf = self.fit_rbf(value, axes, mask=mask)
+            output_grid.set_value(name, rbf)
+
+    def copy_rbf(self, input_grid, output_grid, name):
+        self.logger.info('Copying RBF array `{}`'.format(name))
+        rbf = input_grid.values[name]
+        output_grid.set_value(name, rbf)
+
+    def run_step_fit(self):
+        # Calculate RBF interpolation of continuum fit parameters
+        # This is done parameter by parameter so continuum models which cannot
+        # be fitted everywhere are still interpolated to as many grid positions
+        # as possible
+
+        self.output_grid.set_constants(self.params_grid.get_constants())
+        self.output_grid.set_wave(self.params_grid.get_wave())
+
+        for name in self.continuum_model.get_params_names():
+            # TODO: can we run this with a PcaGrid output?
+            self.build_rbf(self.params_grid.grid, self.output_grid.grid, name)
+
+    def run_step_pca(self):
+        if self.params_grid is not None:
+            if self.rbf:
+                # Copy RBF interpolation of continuum parameters
+                for name in self.continuum_model.get_params_names():
+                    self.copy_rbf(self.params_grid.grid, self.output_grid.grid.grid, name)
+            else:
+                # Run interpolation of continuum parameters
+                pass
+            self.output_grid.set_constants(self.params_grid.get_constants())
+            self.output_grid.set_wave(self.input_grid.get_wave())
         else:
-            grid = self.input_grid.grid
-            value_slice = self.input_grid.wave_slice
+            # Run interpolation of continuum parameters taken from the PCA grid
+            raise NotImplementedError()
 
-        # Fit RBF
-        # TODO: can we do it in one run and use the same xi and distance matrix for all?
-        for name in grid.values:
-            if grid.has_value(name):              
-                value = grid.get_value(name, s=value_slice)
-                mask = grid.get_value_index(name)
-                axes = grid.get_axes()
+        # Calculate RBF interpolation of principal components
+        grid = self.input_grid.grid
+        for name in ['flux', 'cont']:
+            self.build_rbf(self.input_grid.grid.grid, self.output_grid.grid.grid, name)
 
-                if self.padding:
-                    value, axes, mask = pad_array(axes, value, mask=mask)
-                    self.logger.info('Array `{}` padded to shape {}'.format(name, value.shape))
+        # Copy eigenvalues and eigenvectors
+        for name in ['flux', 'cont']:
+            self.output_grid.grid.eigs[name] = self.input_grid.grid.eigs[name]
+            self.output_grid.grid.eigv[name] = self.input_grid.grid.eigv[name]
 
-                self.logger.info('Fitting RBF to array `{}`'.format(name))
-                rbf = self.fit_rbf(value, axes, mask=mask)
-                self.output_grid.grid.set_value(name, rbf)
+    def run(self):
+        if self.step == 'fit':
+            self.run_step_fit()
+        elif self.step == 'pca':
+            self.run_step_pca()
+        else:
+            raise NotImplementedError()
 
 #endregion

@@ -7,150 +7,62 @@ from pfsspec.parallel import SmartParallel
 from pfsspec.data.gridbuilder import GridBuilder
 from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.stellarmod.modelgrid import ModelGrid
+from pfsspec.stellarmod.modelgridbuilder import ModelGridBuilder
 
-class ModelGridFit(GridBuilder):
+class ModelGridFit(GridBuilder, ModelGridBuilder):
+    # Fit continuum models to stellar model spectra
 
-    STEPS = ['fit', 'smooth', 'norm']
+    STEPS = ['fit', 'fill', 'smooth', 'norm']
 
     def __init__(self, config, orig=None):
-        super(ModelGridFit, self).__init__(orig=orig)
+        GridBuilder.__init__(self, orig=orig)
+        ModelGridBuilder.__init__(self, config, orig=orig)
 
         if isinstance(orig, ModelGridFit):
-            self.params_grid = orig.params_grid
-            self.params_grid_index = None
-
-            self.config = config if config is not None else orig.config
             self.parallel = orig.parallel
             self.threads = orig.threads
-
             self.step = orig.step
-
-            self.continuum_model = orig.continuum_model
         else:
-            self.params_grid = None
-            self.params_grid_index = None
-
-            self.config = config
             self.parallel = True
             self.threads = multiprocessing.cpu_count() // 2
-
             self.step = None
 
-            self.continuum_model = self.config.create_continuum_model()
-
     def add_args(self, parser):
-        super(ModelGridFit, self).add_args(parser)
+        GridBuilder.add_args(self, parser)
+        ModelGridBuilder.add_args(self, parser)
 
-        parser.add_argument('--step', type=str, choices=ModelGridFit.STEPS, help='Fitting steps to perform.\n')
+        parser.add_argument('--step', type=str, choices=ModelGridFit.STEPS, help='Fitting step to perform.\n')
 
     def parse_args(self):
-        super(ModelGridFit, self).parse_args()
+        GridBuilder.parse_args(self)
+        ModelGridBuilder.parse_args(self)
+
         self.continuum_model.init_from_args(self.args)
 
         if 'step' in self.args and self.args['step'] is not None:
             self.step = self.args['step']
 
-    def create_params_grid(self):
-        return ModelGrid(self.config, ArrayGrid)
-
     def create_input_grid(self):
-        return ModelGrid(self.config, ArrayGrid)
-
-    def create_output_grid(self):
-        return ModelGrid(self.config, ArrayGrid)
-
-    def open_params_grid(self, params_path):
-        fn = os.path.join(params_path, 'spectra') + '.h5'
-        self.params_grid = self.create_params_grid()
-        self.params_grid.load(fn)
+        return ModelGridBuilder.create_input_grid(self)
 
     def open_input_grid(self, input_path):
-        fn = os.path.join(input_path, 'spectra') + '.h5'
-        self.input_grid = self.create_input_grid()
-        self.input_grid.load(fn)
+        return ModelGridBuilder.open_input_grid(self, input_path)
+
+    def create_output_grid(self):
+        return ModelGridBuilder.create_output_grid(self)
 
     def open_output_grid(self, output_path):
-        fn = os.path.join(output_path, 'spectra') + '.h5'
-        self.output_grid = self.create_output_grid()
+        return ModelGridBuilder.open_output_grid(self, output_path)
 
-        # Copy data from the input grid
-        g = self.input_grid or self.params_grid
-        self.output_grid.grid.set_axes(g.grid.get_axes())
-        self.output_grid.set_wave(g.get_wave())
-        self.output_grid.build_axis_indexes()
-
-        # Force creating output file for direct hdf5 writing
-        self.output_grid.save(fn, format='h5')
-        
-        # DEBUG
-        # self.output_grid.preload_arrays = True
-        # END DEGUB
-
-    def open_data(self, input_path, output_path, params_path):
-        if params_path is not None:
-            self.open_params_grid(params_path)
-            self.params_grid.init_from_args(self.args)
-            self.params_grid.build_axis_indexes()
-            self.grid_shape = self.params_grid.get_shape()
-
-        super(ModelGridFit, self).open_data(input_path, output_path)
+    def open_data(self, input_path, output_path, params_path=None):
+        return ModelGridBuilder.open_data(self, input_path, output_path, params_path=params_path)
 
     def build_data_index(self):
-        super(ModelGridFit, self).build_data_index()
-
-        # Source indexes, make sure that the params grid index and the input grid
-        # index are combined to avoid all holes in the grid.
-        # We have to do a bit of trickery here since params index and input index 
-        # can have different shapes, although they must slice down to the same
-        # shape.
-
-        if self.params_grid is not None:
-            params_index = self.params_grid.array_grid.get_value_index_unsliced('params')
-
-            if self.input_grid is not None and self.input_grid.array_grid.slice is not None:
-                params_slice = self.params_grid.array_grid.slice
-                input_slice = self.input_grid.array_grid.slice
-                
-                input_index = self.input_grid.array_grid.get_value_index_unsliced('flux')
-                
-                ii = input_index[input_slice or ()]
-                pi = params_index[params_slice or ()]
-                iis = ii.shape
-                pis = pi.shape
-
-                ii = ii.flatten() & pi.flatten()
-
-                input_index[input_slice or ()] = ii.reshape(iis)
-                params_index[params_slice or ()] = ii.reshape(pis)
-                
-                self.input_grid_index = np.array(np.where(input_index))
-
-            self.params_grid_index = np.array(np.where(params_index))
-
-            # Target indexes - this is already sliced down
-            index = self.params_grid.array_grid.get_value_index('params')
-            self.output_grid_index = np.array(np.where(params_index))
-
-    def verify_data_index(self):
-        # Make sure all data indices have the same shape
-        super(ModelGridFit, self).verify_data_index()
-        if self.params_grid is not None:
-            assert(self.params_grid_index.shape[-1] == self.output_grid_index.shape[-1])
-
-    def get_gridpoint_model(self, i):
-        input_idx = tuple(self.input_grid_index[:, i])
-        output_idx = tuple(self.output_grid_index[:, i])
-        spec = self.input_grid.get_model_at(input_idx)
-        return input_idx, output_idx, spec
-
-    def get_gridpoint_params(self, i):
-        params_idx = tuple(self.params_grid_index[:, i])
-        output_idx = tuple(self.output_grid_index[:, i])
-        params = self.params_grid.grid.get_value_at('params', params_idx)
-        return params_idx, output_idx, params
+        return ModelGridBuilder.build_data_index(self)
 
     def store_item(self, idx, spec, params):
-        self.output_grid.grid.set_value_at('params', idx, params, valid=True)
+        for k in params:
+            self.output_grid.grid.set_value_at(k, idx, params[k], valid=True)
 
         if self.step in ['norm']:
             self.output_grid.grid.set_value_at('flux', idx, spec.flux)
@@ -158,16 +70,10 @@ class ModelGridFit(GridBuilder):
 
     def process_item_fit(self, i):
         input_idx, output_idx, spec = self.get_gridpoint_model(i)
-
-        if not self.model_initialized:
-            self.continuum_model.init_wave(spec.wave)
-            self.model_initialized = True
-
         params = self.continuum_model.fit(spec)
         return i, input_idx, output_idx, spec, params
 
     def run_step_fit(self):
-        self.model_initialized = False
         output_initialized = False
         input_count = self.get_input_count()
 
@@ -176,40 +82,78 @@ class ModelGridFit(GridBuilder):
         with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
             for i, input_idx, output_idx, spec, params in p.map(self.process_item_fit, range(input_count)):
                 if not output_initialized:
-                    self.output_grid.grid.value_shapes['params'] =  params.shape
+                    # Determine the size of the output arrays and allocate them on
+                    # the disk before starting the processing.
+
+                    # We do not want to calculate and save the normalized spectra in
+                    # this step (because the fitted parameters might be smoothed first),
+                    # so set the output wave vector to a dummy value
                     self.output_grid.set_wave(np.array([0]))    # Dummy size
+
+                    # Shapes of the model parameters
+                    for k in params:
+                        self.output_grid.grid.value_shapes[k] = params[k].shape
+                    
                     self.output_grid.allocate_values()
                     self.output_grid.build_axis_indexes()
+
+                    # Reset wave vector
+                    self.output_grid.set_wave(spec.wave)
+
                     output_initialized = True
                 self.store_item(output_idx, spec, params)
                 t.update(1)
 
-        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants()
+        self.output_grid.grid.constants.update(self.continuum_model.get_constants())
 
-    def run_step_smooth(self):
-        params = self.params_grid.grid.get_value('params')
-
-        if self.params_grid.grid.has_value_index('params'):
-            mask = self.params_grid.grid.get_value_index('params')
-            params[~mask] = np.nan
-
+    def run_step_fill_smooth(self, fill=True, smooth=False):
+        # Initialize continuum model class and call smoothing. The class
+        # can decide which parameters to smooth and which to keep intact.
         self.continuum_model.init_wave(self.input_grid.wave)
-        smooth_params = self.continuum_model.smooth_params(params)
 
         # Allocate output grid
-        self.output_grid.grid.value_shapes['params'] = (params.shape[-1],)
-        self.output_grid.set_wave(np.array([0]))    # Dummy size
+        for name in self.continuum_model.get_params_names():
+            self.output_grid.grid.value_shapes[name] = self.params_grid.grid.value_shapes[name]
+        self.output_grid.set_wave(self.params_grid.wave)
         self.output_grid.allocate_values()
         self.output_grid.build_axis_indexes()
-
-        self.output_grid.grid.set_value('params', smooth_params)
-        self.output_grid.grid.value_indexes['params'] = mask
-
         self.output_grid.grid.set_constants(self.params_grid.grid.get_constants())
+
+        for name in self.continuum_model.get_params_names():
+            # Get original fit parameters from the input grid
+            params = self.params_grid.grid.get_value(name)
+
+            if self.params_grid.grid.has_value_index(name):
+                mask = self.params_grid.grid.get_value_index(name)
+            else:
+                mask = None
+
+            if fill:
+                if mask is not None:
+                    params[~mask] = np.nan
+                params = self.continuum_model.fill_params(name, params)
+            
+            if smooth:
+                params = self.continuum_model.smooth_params(name, params)
+
+            # Save data into the output grid. 
+            self.output_grid.grid.set_value(name, params, valid=mask)
+
+            # The original mask is kept so that we know which spectrum model were
+            # in the original data set and NaNs will mark the spectra that could not be fitted.
+            self.output_grid.grid.value_indexes[name] = mask
 
     def process_item_normalize(self, i):
         input_idx, output_idx, spec = self.get_gridpoint_model(i)
-        _, _, params = self.get_gridpoint_params(i)
+
+        if self.params_grid_index is not None:
+            # Parameters come from and array grid
+            # TODO: modify here to return dict of params
+            raise NotImplementedError()
+            _, _, params = self.get_gridpoint_params(i)
+        else:
+            # Parameters are interpolated from RBF
+            params = self.get_interpolated_params(**spec.get_params())
 
         self.continuum_model.normalize(spec, params)
         return i, input_idx, output_idx, spec, params
@@ -218,16 +162,13 @@ class ModelGridFit(GridBuilder):
         output_initialized = False
         input_count = self.get_input_count()
 
-        # Initialize model
-        self.continuum_model.init_wave(self.input_grid.get_wave())
-        self.output_grid.grid.constants['constants'] = self.continuum_model.get_constants()
-
-        # Normalize every model
+        # Normalize every spectrum
         t = tqdm(total=input_count)
         with SmartParallel(initializer=self.init_process, verbose=False, parallel=self.parallel, threads=self.threads) as p:
             for i, input_idx, output_idx, spec, params in p.map(self.process_item_normalize, range(input_count)):
                 if not output_initialized:
-                    self.output_grid.grid.value_shapes['params'] =  params.shape
+                    for k in params:
+                        self.output_grid.grid.value_shapes[k] = params[k].shape
                     self.output_grid.set_wave(self.continuum_model.wave)
                     self.output_grid.allocate_values()
                     self.output_grid.build_axis_indexes()
@@ -235,11 +176,15 @@ class ModelGridFit(GridBuilder):
                 self.store_item(output_idx, spec, params)
                 t.update(1)
 
+        self.output_grid.grid.constants.update(self.continuum_model.get_constants())
+
     def run(self):
         if self.step == 'fit':
             self.run_step_fit()
+        elif self.step == 'fill':
+            self.run_step_fill_smooth(fill=True, smooth=False)
         elif self.step == 'smooth':
-            self.run_step_smooth()
+            self.run_step_fill_smooth(fill=True, smooth=True)
         elif self.step == 'norm':
             self.run_step_normalize()
         else:

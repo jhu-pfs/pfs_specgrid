@@ -12,6 +12,9 @@ class ContinuumModel(PfsObject):
     def init_from_args(self, parser):
         pass
 
+    def get_params_names(self):
+        return []
+
     def get_constants(self):
         raise NotImplementedError()
 
@@ -19,6 +22,15 @@ class ContinuumModel(PfsObject):
         raise NotImplementedError()
 
     def init_wave(self, wave):
+        raise NotImplementedError()
+
+    def init_constants(self, grid):
+        raise NotImplementedError()
+
+    def init_values(self, grid):
+        raise NotImplementedError()
+
+    def allocate_values(self, grid):
         raise NotImplementedError()
 
     def fit(self, spec):

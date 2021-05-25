@@ -217,7 +217,7 @@ class Script():
                 raise Exception("Output directory doesn't exist, can't continue.")
         elif os.path.exists(dir):
             if len(os.listdir(dir)) != 0:
-                raise Exception('Output directory is not empty.')
+                raise Exception('Output directory is not empty: `{}`'.format(dir))
         else:
             self.logger.info('Creating output directory {}'.format(dir))
             os.makedirs(dir)
@@ -296,7 +296,7 @@ class Script():
         if self.logging_enabled:
             self.setup_logging()
         if self.debug:
-            np.seterr(all='raise')
+            np.seterr(divide='raise', over='raise', invalid='raise')
         if self.random_seed is not None:
             np.random.seed(self.random_seed)
 

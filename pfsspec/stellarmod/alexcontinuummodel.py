@@ -21,10 +21,9 @@ class AlexContinuumModelTrace():
         self.blended_control_points = {}
         self.blended_p0 = {}
         self.blended_params = {}
+        self.blended_chi2 = {}
         self.blended_fit = {}
         self.x1 = {}
-
-        self.fill_holes = False
 
 class AlexContinuumModel(ContinuumModel):
     # Fit the upper envelope of a stellar spectrum model. The theoretical continuum
@@ -106,14 +105,35 @@ class AlexContinuumModel(ContinuumModel):
         if 'smoothing_gamma' in args and args['smoothing_gamma'] is not None:
             self.smoothing_gamma = args['smoothing_gamma']
 
+    def get_params_names(self):
+        names = super(AlexContinuumModel, self).get_params_names()
+        names.append('legendre')
+        for i, _ in enumerate(self.blended_models):
+            names.append('blended_' + str(i))
+        return names
+
     def get_constants(self):
-        return np.array([])
+        return {}
 
     def set_constants(self, constants):
         pass
 
     def init_wave(self, wave):
         self.find_limits(wave)
+
+    def init_values(self, grid):
+        for name in self.get_params_names():
+            grid.init_value(name)
+
+    def allocate_values(self, grid):
+        k = 0
+        for i, m in enumerate(self.cont_models):
+            k += m.get_param_count()
+        grid.allocate_value('legendre', (k,))
+
+        for i, m in enumerate(self.blended_models):
+            k = m.get_param_count()
+            grid.allocate_value('blended_' + str(i), (k,))
 
 #region Utility functions
 
@@ -124,6 +144,8 @@ class AlexContinuumModel(ContinuumModel):
 #region Main entrypoints: fit, eval and normalize
 
     def fit(self, spec):
+        params = {}
+
         # Fit the spectrum and return the parameters
         log_flux = self.safe_log(spec.flux[self.wave_mask])
         log_cont = self.safe_log(spec.cont[self.wave_mask])
@@ -131,6 +153,7 @@ class AlexContinuumModel(ContinuumModel):
         # Fit continuum and normalize spectrum to fit blended lines as a next step
         try:
             cont_params = self.fit_continuum_all(log_flux, log_cont)
+            params.update(cont_params)
             model_cont = self.eval_continuum_all(cont_params)
         except Exception as e:
             raise e
@@ -142,10 +165,10 @@ class AlexContinuumModel(ContinuumModel):
         # Fit blended lines of the photoionization limits
         try:
             limit_params = self.fit_blended_all(norm_flux)
+            params.update(limit_params)
         except Exception as e:
             raise e
 
-        params = np.concatenate((cont_params, limit_params))
         return params
 
     def eval(self, params):
@@ -205,42 +228,30 @@ class AlexContinuumModel(ContinuumModel):
         spec.flux = flux
         spec.cont = cont
 
-    def smooth_params(self, params):
-        # Smooth the parameter grid
-        # Apply only to parameters of the blended region fits, not the
-        # Legendre coefficients
+    def fill_params(self, name, params):
+        # Fill in the holes in a parameter grid
 
-        k = 0
-        for m in self.cont_models:
-            k += m.get_param_count()
-        l = k
-        for m in self.blended_models:
-            l += m.get_param_count()
+        if name == 'legendre':
+            return params
+        else:
+            fill_params = np.full(params.shape, np.nan)
+            for i in range(params.shape[-1]):
+                fill_params[..., i] = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
+            return fill_params
 
-        # Create the output params grid with all nans
-        smooth_params = np.full(params.shape, np.nan)
-
-        # Copy Legendre polynomial coefficients as they are
-        smooth_params[..., :k] = params[..., :k]
-
-        # Smooth all blended region fit parameters one by one
-        for i in range(k, l):
-            # Fill in holes of the grid
-            if self.fill_holes:
-                fp = fill_holes_filter(params[..., i], fill_filter=np.nanmean, value_filter=np.nanmin)
-            else:
-                fp = params[..., i]
-
-            # Smooth the parameters.
-            shape = fp.shape
-            fp = fp.squeeze()
-            sp = anisotropic_diffusion(fp, 
+    def smooth_params(self, name, params):
+        # Smooth the parameters.
+        if name == 'legendre':
+            return params
+        else:
+            shape = params.shape
+            params = params.squeeze()
+            sp = anisotropic_diffusion(params, 
                                         niter=self.smoothing_iter,
                                         kappa=self.smoothing_kappa,
                                         gamma=self.smoothing_gamma)
-            smooth_params[..., i] = sp.reshape(shape)
-
-        return smooth_params
+            sp = sp.reshape(shape)
+            return sp
 
 #endregion            
 #region Limits and mask
@@ -286,7 +297,7 @@ class AlexContinuumModel(ContinuumModel):
         self.blended_models = []
         for i in range(len(self.blended_fit_masks)):
             # amplitude, slope, midpoint, inflexion points s0, s1
-            bounds = ([.0, 0., np.log(self.limit_wave[self.limit_map[i]]), 0., 0.], \
+            bounds = ([0.001, 0., np.log(self.limit_wave[self.limit_map[i]]), 0., 0.], \
                       [10., 1000, np.log(self.blended_bounds[i]), 1., 1.])
             m = AlexSigmoid(bounds=bounds)
             self.blended_models.append(m)
@@ -339,34 +350,18 @@ class AlexContinuumModel(ContinuumModel):
 #endregion
 #region Blended region fitting
 
-    def get_blended_params(self, params, i):
-        # Get blended parameters from the params array
-
-        # Sum up all continuum and preceeding blended region pieces
-        k = 0
-        for j in range(len(self.cont_models)):
-            k += self.cont_models[j].get_param_count()
-        for j in range(i):
-            k += self.blended_models[j].get_param_count()
-
-        # Current blended region model
-        kk = self.blended_models[i].get_param_count()
-        p = params[k:k + kk]
-        return p
-
     def fit_blended_all(self, norm_flux):
-        params = []
+        params = {}
         for i in range(len(self.limit_map)):
             pp = self.fit_blended(norm_flux, i)
-            params.append(pp)
-        params = np.concatenate(params, axis = 0)
+            params['blended_' + str(i)] = pp
         return params
         
     def eval_blended_all(self, params):
         # Evaluate model around the limits
         model = np.zeros_like(self.wave)
         for i in range(len(self.limit_map)):
-            p = self.get_blended_params(params, i)
+            p = params['blended_' + str(i)]
             flux, mask = self.eval_blended(p, i)
             model[mask] += flux
         return model
@@ -391,22 +386,26 @@ class AlexContinuumModel(ContinuumModel):
             x, y = self.get_blended_control_points(norm_flux, i)
 
             # Check if control points are good enough for a fit
-            if x is None or y is None:
+            if y.size <= 5:
                 raise Exception('No valid control points.')
 
             if self.trace is not None:
                 self.trace.blended_control_points[i] = (x, y)
 
             # Estimate the initial value of the parameters
-            p0 = model.find_p0(x, y)
+            good, p0 = model.find_p0(x, y)
             if self.trace is not None:
                 self.trace.blended_p0[i] = p0
         
-            pp = model.fit(x, y, w=None, p0=p0)
+            if good:
+                pp = model.fit(x, y, w=None, p0=p0)
+            else:
+                pp = p0
 
             if self.trace is not None:
                 self.trace.blended_fit[i] = True
                 self.trace.blended_params[i] = pp
+                self.trace.blended_chi2[i] = np.sum((y - model.eval(x, pp))**2)
 
             return pp
         except Exception as ex:
@@ -428,22 +427,14 @@ class AlexContinuumModel(ContinuumModel):
 
         x, y = self.log_wave[mask], norm_flux[mask]
 
-        # Find the maximum in intervals of dx
+        # Find the maximum in intervals of dx and determine the maximum hull
         x, y = self.get_max_interval(x, y, dx=dx)
-
-        # Determine the maximum hull
         x, y = self.get_max_hull(x, y)
-        if not validate_control_points(y):
-            return None, None
-
+          
         # Calculate the differential and drop the very steep part at the
         # beginning of the interval, as it may be a narrow line instead of a
         # blended region
         x, y = self.get_slope_filtered(x, y, cutoff=self.blended_slope_cutoff)
-        if not validate_control_points(y):
-            return None, None
-
-        # TODO: itt volt még a 0.001-es vágás
 
         return x, y
 
@@ -463,7 +454,6 @@ class AlexContinuumModel(ContinuumModel):
         mask = (dd < slope_cut)
         return x[mask], y[mask]
     
-
     def get_max_hull(self, x, y):
         # Get the maximum hull
         y_accumulated = np.maximum.accumulate(y)
@@ -502,7 +492,7 @@ class AlexContinuumModel(ContinuumModel):
             if k < i:
                 l += c
             u += c
-        p = params[l:u]
+        p = params['legendre'][l:u]
         return p
 
     def fit_continuum_all(self, log_flux, log_cont):
@@ -510,14 +500,13 @@ class AlexContinuumModel(ContinuumModel):
         for i in range(len(self.cont_models)):
             p = self.fit_continuum(log_flux, log_cont, i)
             params.append(p)
-        return np.concatenate(params)
+        return { 'legendre': np.concatenate(params)}
 
     def fit_continuum(self, log_flux, log_cont, i):
         mask = self.cont_fit_masks[i]
         x = self.log_wave[mask]
         y = log_cont[mask]
         model = self.cont_models[i]
-
         params = self.fit_model_simple(model, x, y)
         
         # Find the minimum difference between the model fitted to the continuum

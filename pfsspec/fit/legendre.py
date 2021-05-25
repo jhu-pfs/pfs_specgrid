@@ -21,4 +21,4 @@ class Legendre():
         return ll(x)
 
     def find_p0(self, x, y, w=None):
-        return None
+        return True, None

@@ -27,7 +27,7 @@ class ModelGrid(PfsObject):
         else:
             self.config = config
             self.grid = self.create_grid(grid_type)
-            self.continuum_model = self.config.create_continuum_model()
+            self.continuum_model = None
             self.wave = None
             self.wave_slice = None
 
@@ -49,19 +49,13 @@ class ModelGrid(PfsObject):
             raise NotImplementedError()
 
     def create_grid(self, grid_type):
-        grid = grid_type(self.config)
-
-        # Replace grid instance functions
-        # TODO: this is ugly, consider adding a config member to ArrayGrid
-        grid.is_value_valid = types.MethodType(self.config.get_is_value_valid_method(), grid)
-        grid.get_chunks = types.MethodType(self.config.get_get_chunks_method(), grid)
+        grid = grid_type(config=self.config)
 
         # Wrap into a PCA grid
         if self.config.pca is not None and self.config.pca:
             grid = PcaGrid(grid)
           
         self.config.init_axes(grid)
-        self.config.init_constants(grid)
         self.config.init_values(grid)
 
         return grid
@@ -69,12 +63,10 @@ class ModelGrid(PfsObject):
     def add_args(self, parser):
         parser.add_argument('--lambda', type=float, nargs='*', default=None, help='Limit on lambda.')
         self.grid.add_args(parser)
-        self.continuum_model.add_args(parser)
 
     def init_from_args(self, args):
         self.wave_slice = self.get_slice_from_args(args)
         self.grid.init_from_args(args)
-        self.continuum_model.init_from_args(args)
 
     def get_slice_from_args(self, args):
         # Slice along the wave axis only, other parameters are handled in ArrayGrid
@@ -112,13 +104,20 @@ class ModelGrid(PfsObject):
 
     def allocate_values(self):
         self.config.allocate_values(self.grid, self.wave)
+        self.continuum_model.allocate_values(self.grid)
+
+    def set_continuum_model(self, continuum_model):
+        self.continuum_model = continuum_model
+        self.continuum_model.init_values(self.grid)
 
     def load(self, filename, s=None, format=None):
         super(ModelGrid, self).load(filename=filename, s=s, format=format)
+        if self.config.normalized:
+            self.continuum_model = self.config.create_continuum_model()
+            self.continuum_model.init_wave(self.get_wave())
+            self.continuum_model.init_values(self.grid)
         self.grid.load(filename, s=s, format=format)
-        self.continuum_model = self.config.create_continuum_model()
-        self.continuum_model.init_wave(self.get_wave())
-
+        
     def save_items(self):
         self.grid.filename = self.filename
         self.grid.fileformat = self.fileformat
@@ -192,8 +191,10 @@ class ModelGrid(PfsObject):
         if self.grid.has_value('cont'):
             spec.cont = np.array(self.grid.get_value('cont', s=self.wave_slice, **kwargs), copy=True)
 
-        if denormalize and self.grid.has_value('params'):
-            params = self.grid.get_value('params', **kwargs)
+        if denormalize and self.continuum_model is not None:
+            params = {}
+            for name in self.continuum_model.get_params_names():
+                params[name] = self.grid.get_value(name, **kwargs)
             self.continuum_model.denormalize(spec, params)
 
         return spec
@@ -205,8 +206,10 @@ class ModelGrid(PfsObject):
             if self.grid.has_value('cont'):
                 spec.cont = np.array(self.grid.get_value_at('cont', idx, s=self.wave_slice), copy=True)
 
-            if denormalize and self.grid.has_value('params'):
-                params = self.grid.get_value_at('params', idx)
+            if denormalize and self.continuum_model is not None:
+                params = {}
+                for name in self.continuum_model.get_params_names():
+                    params[name] = self.grid.get_value_at(name, idx)
                 self.continuum_model.denormalize(spec, params)
             
             return spec

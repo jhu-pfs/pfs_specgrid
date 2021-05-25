@@ -6,8 +6,8 @@ from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumM
 from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
 
 class Bosz(ModelGridConfig):
-    def __init__(self, orig=None, pca=None):
-        super(Bosz, self).__init__(orig=orig, pca=pca)
+    def __init__(self, orig=None, normalized=False, pca=None):
+        super(Bosz, self).__init__(orig=orig, normalized=normalized, pca=pca)
 
         if isinstance(orig, Bosz):
             pass
@@ -25,12 +25,9 @@ class Bosz(ModelGridConfig):
 
         grid.build_axis_indexes()
 
-    def init_constants(self, grid):
-        super(Bosz, self).init_constants(grid)
-
     def init_values(self, grid):
         super(Bosz, self).init_values(grid)
-
+      
     def allocate_values(self, grid, wave):
         super(Bosz, self).allocate_values(grid, wave)
 
@@ -41,5 +38,4 @@ class Bosz(ModelGridConfig):
     def create_continuum_model(self):
         # model = LogChebyshevContinuumModel()
         model = AlexContinuumModel()
-
         return model
