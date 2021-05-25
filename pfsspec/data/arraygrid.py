@@ -285,9 +285,9 @@ class ArrayGrid(Grid):
         for name in values:
             self.set_value_at(name, idx, values[name], s)
 
-    def set_value(self, name, value, s=None, **kwargs):
+    def set_value(self, name, value, valid=None, s=None, **kwargs):
         idx = self.get_index(**kwargs)
-        self.set_value_at(name, idx, value, s)
+        self.set_value_at(name, idx, value=value, valid=valid, s=s)
 
     def set_value_at(self, name, idx, value, valid=None, s=None):
         self.ensure_lazy_load()

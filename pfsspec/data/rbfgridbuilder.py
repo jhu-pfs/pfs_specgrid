@@ -13,14 +13,12 @@ class RbfGridBuilder(GridBuilder):
         super(RbfGridBuilder, self).__init__(input_grid=input_grid, output_grid=output_grid, orig=orig)
 
         if isinstance(orig, RbfGridBuilder):
-            self.pca = orig.pca
             self.padding = orig.padding
             self.interpolation = orig.interpolation
             self.function = orig.function
             self.epsilon = orig.epsilon
             self.smoothing = orig.smoothing
         else:
-            self.pca = None
             self.padding = False
             self.interpolation = 'ijk'
             self.function = 'multiquadric'
@@ -29,7 +27,6 @@ class RbfGridBuilder(GridBuilder):
 
     def add_args(self, parser):
         super(RbfGridBuilder, self).add_args(parser)
-        parser.add_argument('--pca', action='store_true', help='Run on a PCA grid.')
         parser.add_argument('--padding', action='store_true', help='Pad array by one prior to RBF.\n')
         parser.add_argument('--interpolation', type=str, default='multiquadric', choices=['ijk', 'xyz'],
             help='Interpolation in array index or axis values.\n')
@@ -41,7 +38,6 @@ class RbfGridBuilder(GridBuilder):
 
     def parse_args(self):
         super(RbfGridBuilder, self).parse_args()
-        self.pca = self.get_arg('pca', self.pca)
         self.padding = self.get_arg('padding', self.padding)
         self.function = self.get_arg('function', self.function)
         self.epsilon = self.get_arg('epsilon', self.epsilon)

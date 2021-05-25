@@ -58,15 +58,7 @@ class GridBuilder(PfsObject):
         self.verify_data_index()
 
     def build_data_index(self):
-        # TODO: flux is hardcoded here, make generic
-
-        # Source indexes
-        index = self.input_grid.array_grid.get_value_index_unsliced('flux')
-        self.input_grid_index = np.array(np.where(index))
-
-        # Target indexes
-        index = self.input_grid.array_grid.get_value_index('flux')
-        self.output_grid_index = np.array(np.where(index))
+        raise NotImplementedError()
 
     def verify_data_index(self):
         # Make sure all data indices have the same shape
