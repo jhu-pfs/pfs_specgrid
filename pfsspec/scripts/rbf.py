@@ -53,6 +53,7 @@ class Rbf(Script):
         self.open_data()
 
     def run(self):
+        self.init_logging(self.outdir)
         self.rbf.run()
         self.save_data()
 
