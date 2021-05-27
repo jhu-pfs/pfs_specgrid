@@ -16,22 +16,16 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
 
         if isinstance(orig, ModelPcaGridBuilder):
             self.config = config if config is not None else orig.config
-            self.normalization = orig.normalization
         else:
             self.config = config
-            self.normalization = None
 
     def add_args(self, parser):
         PcaGridBuilder.add_args(self, parser)
         ModelGridBuilder.add_args(self, parser)
 
-        parser.add_argument('--normalization', type=str, default='none', choices=['none', 'max', 'planck'], help='Normalization method.\n')
-
     def parse_args(self):
         PcaGridBuilder.parse_args(self)
         ModelGridBuilder.parse_args(self)
-
-        self.normalization = self.get_arg('normalization', self.normalization)
     
     def create_input_grid(self):
         # Input should not be a PCA grid
@@ -63,29 +57,22 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
         idx = tuple(self.input_grid_index[:, i])
         spec = self.input_grid.get_model_at(idx)
 
-        if self.normalization is None or self.normalization == 'none':
-            pass
-        elif self.normalization == 'max':
-            spec.multiply(1 / spec.flux.max())
-        elif self.normalization == 'planck':
-            spec.normalize_by_T_eff()
-        else:
-            raise NotImplementedError()
-
         return spec.flux
 
     def run(self):
         super(ModelPcaGridBuilder, self).run()
 
         # Copy continuum fit parameters, if available
-        if self.params_grid is not None:
-            for name in self.params_grid.continuum_model.get_params_names():
-                params = self.params_grid.get_value_sliced(name)
-                index = self.params_grid.grid.get_value_index(name)
+        cmgrid = self.params_grid or self.input_grid
+        if cmgrid is not None:
+            for name in cmgrid.continuum_model.get_params_names():
+                params = cmgrid.get_value_sliced(name)
+                index = cmgrid.grid.get_value_index(name)
                 self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
                 self.output_grid.grid.grid.set_value(name, params)
                 self.output_grid.grid.grid.value_indexes[name] = index
         
+        # TODO: this is not used, verify if correct
         if self.input_grid.grid.has_constant('constants'):
             self.output_grid.grid.set_constant('constants', self.input_grid.grid.get_constant('constants'))
 

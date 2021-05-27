@@ -30,16 +30,20 @@ class ModelGridBuilder():
             self.pca = None
             self.rbf = None
             self.config = config
-            self.continuum_model = self.config.create_continuum_model()
+            self.continuum_model = None
 
     def add_args(self, parser):
+        self.config.add_args(parser)
         parser.add_argument('--pca', action='store_true', help='Run on a PCA input grid.')
         parser.add_argument('--rbf', action='store_true', help='Run on an RBF params grid.')
 
     def parse_args(self):
         self.pca = self.get_arg('pca', self.pca)
         self.rbf = self.get_arg('rbf', self.rbf)
-        self.continuum_model.init_from_args(self.args)
+        self.config.init_from_args(self.args)
+        self.continuum_model = self.config.create_continuum_model()
+        if self.continuum_model is not None:
+            self.continuum_model.init_from_args(self.args)
 
     def create_params_grid(self):
         if self.rbf is not None and self.rbf:
@@ -93,6 +97,9 @@ class ModelGridBuilder():
             self.grid_shape = self.params_grid.get_shape()
 
             # Initialize continuum model
+            if self.continuum_model is None:
+                self.continuum_model = self.params_grid.continuum_model
+
             if self.continuum_model.wave is None:
                 self.continuum_model.init_wave(self.params_grid.wave)
             
@@ -101,6 +108,12 @@ class ModelGridBuilder():
             # self.params_grid.set_continuum_model(self.continuum_model)
 
         GridBuilder.open_data(self, input_path, output_path)
+
+        if self.continuum_model is None:
+            self.continuum_model = self.input_grid.continuum_model
+        
+        if self.continuum_model.wave is None:
+            self.continuum_model.init_wave(self.input_grid.wave)
 
         # This has to happen after loading the input grid because params_index
         # is combined with the input index with logical and

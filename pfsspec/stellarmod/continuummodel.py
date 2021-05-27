@@ -6,6 +6,17 @@ class ContinuumModel(PfsObject):
     def __init__(self, orig=None):
         super(ContinuumModel, self).__init__()
 
+        if isinstance(orig, ContinuumModel):
+            self.wave = orig.wave
+            self.wave_mask = orig.wave_mask
+        else:
+            self.wave = None
+            self.wave_mask = None
+
+    @property
+    def name(self):
+        raise NotImplementedError()
+
     def add_args(self, parser):
         pass
 
@@ -16,21 +27,26 @@ class ContinuumModel(PfsObject):
         return []
 
     def get_constants(self):
-        raise NotImplementedError()
+        return {}
 
     def set_constants(self, constants):
-        raise NotImplementedError()
+        pass
 
     def init_wave(self, wave):
+        # Initialize the wave vector cache and masks, if necessary
         raise NotImplementedError()
 
     def init_constants(self, grid):
-        raise NotImplementedError()
+        # Initialize the constants in a grid necessary to store the fitted parameters
+        pass
 
     def init_values(self, grid):
-        raise NotImplementedError()
+        # Initialize the values in a grid necessary to store the fitted parameters
+        for name in self.get_params_names():
+            grid.init_value(name)
 
     def allocate_values(self, grid):
+        # Allocate the values in a grid necessary to store the fitted parameters
         raise NotImplementedError()
 
     def fit(self, spec):
@@ -45,7 +61,10 @@ class ContinuumModel(PfsObject):
     def denormalize(self, spec, params):
         raise NotImplementedError()
 
-    def smooth_params(self, params):
+    def fill_params(self, name, params):
+        raise NotImplementedError()
+
+    def smooth_params(self, name, params):
         raise NotImplementedError()
 
     def fit_model_simple(self, model, x, y, w=None, p0=None):

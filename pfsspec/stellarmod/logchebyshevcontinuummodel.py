@@ -27,6 +27,10 @@ class LogChebyshevContinuumModel(ContinuumModel):
             self.eval_masks = None
             self.eval_limits = None
 
+    @property
+    def name(self):
+        return "logchebyshev"
+
     def add_args(self, parser):
         super(LogChebyshevContinuumModel, self).add_args(parser)
 

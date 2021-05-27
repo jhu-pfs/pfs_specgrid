@@ -85,11 +85,11 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
 
-    def build_rbf(self, input_grid, output_grid, name, s=None):
-        if input_grid.has_value(name):
-            value = input_grid.get_value(name)[s or ()]
-            mask = input_grid.get_value_index(name)
-            axes = input_grid.get_axes()
+    def build_rbf(self, params_grid, output_grid, name, s=None):
+        if params_grid.has_value(name):
+            value = params_grid.get_value(name)[s or ()]
+            mask = params_grid.get_value_index(name)
+            axes = params_grid.get_axes()
 
             if self.padding:
                 value, axes, mask = pad_array(axes, value, mask=mask)
@@ -104,54 +104,78 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         rbf = input_grid.values[name]
         output_grid.set_value(name, rbf)
 
-    def run_step_fit(self):
-        if self.params_grid is not None:
-            self.run_step_fit_params()
-        else:
-            self.run_step_fit_flux()
+    def copy_wave(self, params_grid, output_grid):
+        output_grid.set_wave(params_grid.get_wave())
 
-    def run_step_fit_params(self):
+    def copy_constants(self, params_grid, output_grid):
+        output_grid.set_constants(params_grid.get_constants())
+
+    def fit_params(self, params_grid, output_grid):
         # Calculate RBF interpolation of continuum fit parameters
         # This is done parameter by parameter so continuum models which cannot
         # be fitted everywhere are still interpolated to as many grid positions
         # as possible
 
-        self.output_grid.set_constants(self.params_grid.get_constants())
-        self.output_grid.set_wave(self.params_grid.get_wave())
-
         for name in self.continuum_model.get_params_names():
             # TODO: can we run this with a PcaGrid output?
-            self.build_rbf(self.params_grid.grid, self.output_grid.grid, name)
+            self.build_rbf(params_grid.array_grid, output_grid.rbf_grid, name)
 
-    def run_step_fit_flux(self):
+    def copy_params(self, params_grid, output_grid):
+        # Copy RBF interpolation of continuum fit parameters from an existing grid
+
+        output_grid.set_constants(params_grid.get_constants())
+        output_grid.set_wave(params_grid.get_wave())
+
+        for name in self.continuum_model.get_params_names():
+            self.copy_rbf(params_grid.grid, output_grid.grid.grid, name)
+
+    def fit_flux(self, input_grid, output_grid):
         # Calculate RBF interpolation in the flux vector directly
 
         # The wave slice should apply to the last dimension of the flux grid
-        if self.input_grid.wave_slice is not None:
-            s = (Ellipsis, self.input_grid.wave_slice)
+        if input_grid.wave_slice is not None:
+            s = (Ellipsis, input_grid.wave_slice)
         else:
             s = None
 
-        self.output_grid.set_wave(self.input_grid.get_wave())
+        output_grid.set_wave(input_grid.get_wave())
 
         for name in ['flux', 'cont']:
-            if self.input_grid.grid.has_value(name):
-                self.build_rbf(self.input_grid.grid, self.output_grid.grid, name, s=s)
+            if input_grid.grid.has_value(name):
+                self.build_rbf(input_grid.array_grid, output_grid.rbf_grid, name, s=s)
+
+    def run_step_fit(self):
+        # Fit RBF to continuum parameters or the flux directly
+
+        if self.params_grid is not None:
+            self.copy_wave(self.params_grid, self.output_grid)
+            self.copy_constants(self.params_grid, self.output_grid)
+            self.fit_params(self.params_grid, self.output_grid)
+        else:
+            self.copy_wave(self.input_grid, self.output_grid)
+            self.fit_flux(self.input_grid, self.output_grid)
 
     def run_step_pca(self):
+        # Calculate the RBF interpolation of the principal components. Optionally,
+        # if a params grid is specified, copy the existing RBF interpolation of
+        # those to the output grid.
+
         if self.params_grid is not None:
+            self.copy_wave(self.input_grid, self.output_grid)
+            self.copy_constants(self.params_grid, self.output_grid)
+
             if self.rbf:
                 # Copy RBF interpolation of continuum parameters
-                for name in self.continuum_model.get_params_names():
-                    self.copy_rbf(self.params_grid.grid, self.output_grid.grid.grid, name)
+                self.copy_params(self.params_grid, self.output_grid)
             else:
                 # Run interpolation of continuum parameters
-                pass
-            self.output_grid.set_constants(self.params_grid.get_constants())
-            self.output_grid.set_wave(self.input_grid.get_wave())
+                self.fit_params(self.params_grid, self.output_grid)
         else:
             # Run interpolation of continuum parameters taken from the PCA grid
-            raise NotImplementedError()
+            self.copy_wave(self.input_grid, self.output_grid)
+            self.copy_constants(self.input_grid, self.output_grid)
+
+            self.fit_params(self.input_grid, self.output_grid)
 
         # Calculate RBF interpolation of principal components
         grid = self.input_grid.grid

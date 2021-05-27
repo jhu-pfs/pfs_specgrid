@@ -1,6 +1,5 @@
 import copy
 import numpy as np
-import pandas as pd
 import scipy as sp
 import logging
 
@@ -46,8 +45,6 @@ class AlexContinuumModel(ContinuumModel):
             self.wave_max = 14000
 
             # The wave vector is assumed to be constant for all spectra and cached
-            self.wave_mask = None
-            self.wave = None
             self.log_wave = None
 
             # Masks of continuum intervals
@@ -85,6 +82,10 @@ class AlexContinuumModel(ContinuumModel):
             self.smoothing_kappa = 50
             self.smoothing_gamma = 0.1
 
+    @property
+    def name(self):
+        return "alex"
+
     def add_args(self, parser):
         super(AlexContinuumModel, self).add_args(parser)
 
@@ -112,18 +113,8 @@ class AlexContinuumModel(ContinuumModel):
             names.append('blended_' + str(i))
         return names
 
-    def get_constants(self):
-        return {}
-
-    def set_constants(self, constants):
-        pass
-
     def init_wave(self, wave):
         self.find_limits(wave)
-
-    def init_values(self, grid):
-        for name in self.get_params_names():
-            grid.init_value(name)
 
     def allocate_values(self, grid):
         k = 0

@@ -37,8 +37,6 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
         GridBuilder.parse_args(self)
         ModelGridBuilder.parse_args(self)
 
-        self.continuum_model.init_from_args(self.args)
-
         if 'step' in self.args and self.args['step'] is not None:
             self.step = self.args['step']
 
@@ -98,7 +96,7 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
                     self.output_grid.build_axis_indexes()
 
                     # Reset wave vector
-                    self.output_grid.set_wave(spec.wave)
+                    self.output_grid.set_wave(self.continuum_model.wave)
 
                     output_initialized = True
                 self.store_item(output_idx, spec, params)
@@ -114,9 +112,15 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
         # Allocate output grid
         for name in self.continuum_model.get_params_names():
             self.output_grid.grid.value_shapes[name] = self.params_grid.grid.value_shapes[name]
-        self.output_grid.set_wave(self.params_grid.wave)
+        
+        # We do not save the continuum and flux at this step, so temporarily set
+        # the wave vector to a dummy value to avoid allocating large arrays
+        self.output_grid.set_wave(np.array([0]))
         self.output_grid.allocate_values()
         self.output_grid.build_axis_indexes()
+
+        # Set wave vector back to real value
+        self.output_grid.set_wave(self.params_grid.wave)
         self.output_grid.grid.set_constants(self.params_grid.grid.get_constants())
 
         for name in self.continuum_model.get_params_names():
@@ -146,7 +150,10 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
     def process_item_normalize(self, i):
         input_idx, output_idx, spec = self.get_gridpoint_model(i)
 
-        if self.params_grid_index is not None:
+        if self.params_grid is None:
+            # No fitted parameters are available, fit continuum now
+            _, _, _, _, params = self.process_item_fit(i)
+        elif self.params_grid_index is not None:
             # Parameters come from and array grid
             # TODO: modify here to return dict of params
             raise NotImplementedError()
@@ -161,6 +168,12 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
     def run_step_normalize(self):
         output_initialized = False
         input_count = self.get_input_count()
+
+        # By default, the parameters grid should have the same wave vector that
+        # comes out of continuum_model, hence we cannot use the wave_mask of the
+        # model to slice down the input grid. Update the continuum_model here to
+        # have the correct mask.
+        self.continuum_model.init_wave(self.input_grid.wave)
 
         # Normalize every spectrum
         t = tqdm(total=input_count)

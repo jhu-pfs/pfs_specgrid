@@ -2,20 +2,36 @@ import numpy as np
 
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
+from pfsspec.stellarmod.planckcontinuummodel import PlanckContinuumModel
 from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
-
 
 class ModelGridConfig():
     # Implements functions to initialize a model grid. Inherited classes should
     # implement grid-specific functionality in overridden functions.
 
+    CONTINUUM_MODEL_TYPES = {
+        'planck': PlanckContinuumModel,
+        'alex': AlexContinuumModel,
+        'logchebyshev': LogChebyshevContinuumModel,
+    }
+
     def __init__(self, normalized=False, pca=False, orig=None):
         if isinstance(orig, ModelGridConfig):
+            self.continuum_model_type = orig.continuum_model_type
             self.normalized = normalized if normalized is not None else orig.normalized
             self.pca = pca if pca is not None else orig.pca
         else:
+            self.continuum_model_type = None
             self.normalized = normalized
             self.pca = pca
+
+    def add_args(self, parser):
+        choices = [k for k in ModelGridConfig.CONTINUUM_MODEL_TYPES.keys()]
+        parser.add_argument('--continuum-model', type=str, choices=choices, help='Continuum model.\n')
+
+    def init_from_args(self, args):
+        if 'continuum_model' in args and args['continuum_model'] is not None:
+            self.continuum_model_type = ModelGridConfig.CONTINUUM_MODEL_TYPES[args['continuum_model']]
 
     def init_axes(self, grid):
         grid.init_axis('Fe_H')
@@ -37,7 +53,11 @@ class ModelGridConfig():
         return ModelSpectrum()
 
     def create_continuum_model(self):
-        return None
+        if self.continuum_model_type is not None:
+            model = self.continuum_model_type()
+            return model
+        else:
+            return None
 
     def is_value_valid(self, grid, name, value):
         return np.logical_not(np.any(np.isnan(value), axis=-1)) & ((value.max(axis=-1) != 0) | (value.min(axis=-1) != 0))

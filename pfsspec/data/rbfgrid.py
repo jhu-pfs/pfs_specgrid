@@ -28,6 +28,10 @@ class RbfGrid(Grid):
     def array_grid(self):
         return None
 
+    @property
+    def rbf_grid(self):
+        return self
+
     def init_value(self, name, shape=None, **kwargs):
         if shape is None:
             self.values[name] = None
@@ -96,7 +100,7 @@ class RbfGrid(Grid):
         if self.preload_arrays:
             return name in self.values and self.values[name] is not None
         else:
-            return name in self.values and self.has_item(name + '_rbf_xi')
+            return name in self.values and self.has_item(name + '/rbf/xi')
 
     def set_values(self, values, s=None, **kwargs):
         for k in values:

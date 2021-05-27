@@ -2,8 +2,6 @@ import numpy as np
 
 from pfsspec.stellarmod.modelgridconfig import ModelGridConfig
 from pfsspec.stellarmod.boszspectrum import BoszSpectrum
-from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
-from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
 
 class Bosz(ModelGridConfig):
     def __init__(self, orig=None, normalized=False, pca=None):
@@ -13,6 +11,12 @@ class Bosz(ModelGridConfig):
             pass
         else:
             pass
+
+    def add_args(self, parser):
+        super(Bosz, self).add_args(parser)
+
+    def init_from_args(self, args):
+        super(Bosz, self).init_from_args(args)
 
     def init_axes(self, grid):
         grid.init_axis('Fe_H', np.arange(-2.5, 1.0, 0.25))
@@ -34,8 +38,3 @@ class Bosz(ModelGridConfig):
     def create_spectrum(self):
         spec = BoszSpectrum()
         return spec
-
-    def create_continuum_model(self):
-        # model = LogChebyshevContinuumModel()
-        model = AlexContinuumModel()
-        return model

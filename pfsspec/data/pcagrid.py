@@ -34,6 +34,10 @@ class PcaGrid(PfsObject):
     def array_grid(self):
         return self.grid.array_grid
 
+    @property
+    def rbf_grid(self):
+        return self.grid.rbf_grid
+
     def init_from_args(self, args):
         self.grid.init_from_args(args)
 

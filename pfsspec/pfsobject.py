@@ -392,7 +392,8 @@ class PfsObject():
     def has_item(self, name):
         if self.fileformat == 'h5':
             with h5py.File(self.filename, 'r') as f:
-                return name in f
+                g, name = self.get_hdf5_group(f, name, create=False)
+                return (g is not None) and (name in g)
         else:
             raise NotImplementedError()
 

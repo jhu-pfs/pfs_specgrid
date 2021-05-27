@@ -41,12 +41,11 @@ class ModelGrid(PfsObject):
 
     @property
     def array_grid(self):
-        if isinstance(self.grid, ArrayGrid):
-            return self.grid
-        elif isinstance(self.grid, (PcaGrid, RbfGrid)):
-            return self.grid.array_grid
-        else:
-            raise NotImplementedError()
+        return self.grid.array_grid
+
+    @property
+    def rbf_grid(self):
+        return self.grid.rbf_grid
 
     def create_grid(self, grid_type):
         grid = grid_type(config=self.config)
@@ -124,9 +123,17 @@ class ModelGrid(PfsObject):
         self.grid.save_items()
 
         self.save_item('wave', self.wave)
+        if self.continuum_model is not None:
+            self.save_item('continuum_model', self.continuum_model.name)
 
     def load_items(self, s=None):
         self.wave = self.load_item('wave', np.ndarray)
+
+        name = self.load_item('continuum_model', str)
+        if name is not None:
+            self.config.continuum_model_type = self.config.CONTINUUM_MODEL_TYPES[name]
+            self.continuum_model = self.config.create_continuum_model()
+            self.continuum_model.init_wave(self.wave)
 
     def get_wave(self):
         return self.wave[self.wave_slice or slice(None)]
@@ -192,9 +199,15 @@ class ModelGrid(PfsObject):
             spec.cont = np.array(self.grid.get_value('cont', s=self.wave_slice, **kwargs), copy=True)
 
         if denormalize and self.continuum_model is not None:
+            # Get the continuum parameters. This means interpolation,
+            # in case the parameters are given with an RBF. Also allow
+            # skipping parameters for those continuum models which
+            # are calculated from the grid parameters (i.e. Planck)
             params = {}
             for name in self.continuum_model.get_params_names():
-                params[name] = self.grid.get_value(name, **kwargs)
+                if self.grid.has_value(name):
+                    params[name] = self.grid.get_value(name, **kwargs)
+
             self.continuum_model.denormalize(spec, params)
 
         return spec
