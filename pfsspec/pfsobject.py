@@ -400,10 +400,11 @@ class PfsObject():
     def get_item_shape(self, name):
         if self.fileformat == 'h5':
             with h5py.File(self.filename, 'r') as f:
-                if name in f.keys():
-                    return f[name].shape
-                else:
+                g, name = self.get_hdf5_group(f, name, create=False)
+                if (g is None) or (name not in g):
                     return None
+                else:
+                    return g[name].shape
         else:
             raise NotImplementedError()
 

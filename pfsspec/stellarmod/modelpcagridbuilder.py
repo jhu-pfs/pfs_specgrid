@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from pfsspec.physics import Physics
 from pfsspec.data.arraygrid import ArrayGrid
+from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagridbuilder import PcaGridBuilder
 from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridbuilder import ModelGridBuilder
@@ -62,15 +63,31 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
     def run(self):
         super(ModelPcaGridBuilder, self).run()
 
-        # Copy continuum fit parameters, if available
+        # Copy continuum fit parameters, if possible. The input continuum fit parameters
+        # can be either in an ArrayGrid or an RbfGrid. Copying is only possible when the
+        # input is an ArrayGrid since output is always an ArrayGrid.
         cmgrid = self.params_grid or self.input_grid
         if cmgrid is not None:
-            for name in cmgrid.continuum_model.get_params_names():
-                params = cmgrid.get_value_sliced(name)
-                index = cmgrid.grid.get_value_index(name)
-                self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
-                self.output_grid.grid.grid.set_value(name, params)
-                self.output_grid.grid.grid.value_indexes[name] = index
+            if isinstance(cmgrid.grid, ArrayGrid):
+                for name in cmgrid.continuum_model.get_params_names():
+                    index = cmgrid.grid.get_value_index(name)
+                    params = cmgrid.get_value_sliced(name)
+                    self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
+                    self.output_grid.grid.grid.set_value(name, params)
+                    self.output_grid.grid.grid.value_indexes[name] = index
+            elif isinstance(cmgrid.grid, RbfGrid):
+                # Interpolate the values from the RBF grid and save them as an array grid
+                for name in cmgrid.continuum_model.get_params_names():
+                    points = self.output_grid.array_grid.get_grid_points(self.output_grid.get_axes(), interpolation='xyz')
+                    gridpoints = np.meshgrid(*[v for k, v in points.items()], indexing='ij')
+                    gridpoints = { k: v for k, v in zip(points.keys(), gridpoints) }
+                    params = cmgrid.rbf_grid.get_value(name, **gridpoints)
+
+                    self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
+                    self.output_grid.grid.grid.set_value(name, params)
+                    self.output_grid.grid.grid.value_indexes[name] = np.full(params.shape[:-1], True)
+            else:
+                raise NotImplementedError("Cannot copy continuum fit parameters.")
         
         # TODO: this is not used, verify if correct
         if self.input_grid.grid.has_constant('constants'):

@@ -219,3 +219,18 @@ class ModelGridBuilder():
             params[name] = p
 
         return params
+
+    def copy_value(self, input_grid, output_grid, name):
+        self.logger.info('Copying value array `{}`'.format(name))
+        raise NotImplementedError()
+
+    def copy_rbf(self, input_grid, output_grid, name):
+        self.logger.info('Copying RBF array `{}`'.format(name))
+        rbf = input_grid.values[name]
+        output_grid.set_value(name, rbf)
+
+    def copy_wave(self, params_grid, output_grid):
+        output_grid.set_wave(params_grid.get_wave())
+
+    def copy_constants(self, params_grid, output_grid):
+        output_grid.set_constants(params_grid.get_constants())
