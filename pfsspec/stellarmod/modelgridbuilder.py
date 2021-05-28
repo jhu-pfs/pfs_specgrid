@@ -112,7 +112,7 @@ class ModelGridBuilder():
         if self.continuum_model is None:
             self.continuum_model = self.input_grid.continuum_model
         
-        if self.continuum_model.wave is None:
+        if self.continuum_model is not None and self.continuum_model.wave is None:
             self.continuum_model.init_wave(self.input_grid.wave)
 
         # This has to happen after loading the input grid because params_index
@@ -120,10 +120,9 @@ class ModelGridBuilder():
         if self.params_grid is not None:
             self.build_params_index()
 
-        # Initialize continuum model, if it still isn't
-        if self.continuum_model.wave is None:
-            self.continuum_model.init_wave(self.input_grid.get_wave())
-        self.output_grid.set_continuum_model(self.continuum_model)          
+        # Set continuum model of the output grid
+        if self.continuum_model is not None:
+            self.output_grid.set_continuum_model(self.continuum_model)          
         
         # Force creating output file for direct hdf5 writing
         fn = os.path.join(output_path, 'spectra') + '.h5'

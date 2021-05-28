@@ -134,6 +134,7 @@ class ModelGrid(PfsObject):
             self.config.continuum_model_type = self.config.CONTINUUM_MODEL_TYPES[name]
             self.continuum_model = self.config.create_continuum_model()
             self.continuum_model.init_wave(self.wave)
+            self.continuum_model.init_values(self.grid)
 
     def get_wave(self):
         return self.wave[self.wave_slice or slice(None)]
