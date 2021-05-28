@@ -119,7 +119,7 @@ class RbfGrid(Grid):
     def get_value_at(self, name, idx, s=None):
         idx = Grid.rectify_index(idx)
         value = self.values[name](*idx)
-        return value[s or slice(None)]
+        return value[s or ()]
 
     def get_value(self, name, s=None, **kwargs):
         idx = self.get_index(**kwargs)
