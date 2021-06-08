@@ -1,6 +1,6 @@
 import numpy as np
 from test.test_base import TestBase
-from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel, AlexContinuumModelTrace
+from pfsspec.stellarmod.continuummodels.alex import Alex, AlexContinuumModelTrace
 
 class TestAlexContinuumModel(TestBase):
     def get_test_grid(self, args):
@@ -18,7 +18,7 @@ class TestAlexContinuumModel(TestBase):
         args = {}
         grid = self.get_test_grid(args)
         trace = AlexContinuumModelTrace()
-        model = AlexContinuumModel(trace)
+        model = Alex(trace)
         model.find_limits(grid.wave)
         self.assertEqual(3, len(model.blended_fit_masks))
 
@@ -27,7 +27,7 @@ class TestAlexContinuumModel(TestBase):
         grid = self.get_test_grid(args)
         spec = grid.get_nearest_model(Fe_H=0., T_eff=3800, log_g=1, C_M=0, O_M=0)
         trace = AlexContinuumModelTrace()
-        model = AlexContinuumModel(trace)
+        model = Alex(trace)
         model.init_wave(spec.wave)
         params = model.fit(spec)
         self.assertEqual((36,), params.shape)
@@ -37,7 +37,7 @@ class TestAlexContinuumModel(TestBase):
         grid = self.get_test_grid(args)
         spec = grid.get_nearest_model(Fe_H=0., T_eff=4500, log_g=4, C_M=0, O_M=0)
         trace = AlexContinuumModelTrace()
-        model = AlexContinuumModel(trace)
+        model = Alex(trace)
         model.init_wave(spec.wave)
         params = model.fit(spec)
         cont = model.eval(params)
@@ -47,7 +47,7 @@ class TestAlexContinuumModel(TestBase):
         grid = self.get_test_grid(args)
         spec = grid.get_nearest_model(Fe_H=0., T_eff=4500, log_g=4, C_M=0, O_M=0)
         trace = AlexContinuumModelTrace()
-        model = AlexContinuumModel(trace)
+        model = Alex(trace)
         model.init_wave(spec.wave)
         params = model.fit(spec)
         model.normalize(spec, params)
@@ -57,7 +57,7 @@ class TestAlexContinuumModel(TestBase):
         grid = self.get_test_grid(args)
         spec = grid.get_nearest_model(Fe_H=0., T_eff=4500, log_g=4, C_M=0, O_M=0)
         trace = AlexContinuumModelTrace()
-        model = AlexContinuumModel(trace)
+        model = Alex(trace)
         model.init_wave(spec.wave)
         params = model.fit(spec)
         model.normalize(spec, params)

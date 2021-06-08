@@ -4,10 +4,10 @@ import scipy as sp
 import logging
 
 from pfsspec.physics import Physics
-from pfsspec.stellarmod.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
 from pfsspec.util.array_filters import *
 
-class PlanckContinuumModel(ContinuumModel):
+class Planck(ContinuumModel):
     # Normalize stellar models with the Planck curve associated with
     # the effective temperature.
     
@@ -17,9 +17,9 @@ class PlanckContinuumModel(ContinuumModel):
     # the luminosity is necessary.
 
     def __init__(self, orig=None):
-        super(PlanckContinuumModel, self).__init__(orig=orig)
+        super(Planck, self).__init__(orig=orig)
 
-        if isinstance(orig, PlanckContinuumModel):
+        if isinstance(orig, Planck):
             pass
         else:
             pass
@@ -29,7 +29,7 @@ class PlanckContinuumModel(ContinuumModel):
         return "planck"
 
     def get_params_names(self):
-        names = super(PlanckContinuumModel, self).get_params_names()
+        names = super(Planck, self).get_params_names()
         names.append('planck')
         return names
 

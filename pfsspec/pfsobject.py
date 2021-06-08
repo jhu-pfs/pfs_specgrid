@@ -357,11 +357,13 @@ class PfsObject():
                                     elif isinstance(s[i], slice):
                                         ii.append(s[i])
                                 data[idx] = g[name][tuple(ii)]
-                        return data
                     elif s is not None:
-                        return g[name][s]
+                        data = g[name][s]
                     else:
-                        return g[name][:]
+                        data = g[name][:]
+                    if not isinstance(data, np.ndarray):
+                        data = np.ndarray(data)
+                    return data
                 else:
                     return None
         elif type == np.float or type == np.int:

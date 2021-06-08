@@ -197,16 +197,13 @@ class ModelGridBuilder():
 
     def get_gridpoint_params(self, i):
         # Get all parameters of the continuum model at a gridpoint
-
-        # TODO: return all params as a dict
-        raise NotImplementedError()
-
         params_idx = tuple(self.params_grid_index[:, i])
         output_idx = tuple(self.output_grid_index[:, i])
 
-        # TODO: rewrite to get all params of the continuum model
-        params = self.params_grid.grid.get_value_at('params', params_idx)
-        
+        params = {}
+        for name in self.continuum_model.get_params_names():
+            params[name] = self.params_grid.grid.get_value_at(name, params_idx)
+
         return params_idx, output_idx, params
 
     def get_interpolated_params(self, **kwargs):

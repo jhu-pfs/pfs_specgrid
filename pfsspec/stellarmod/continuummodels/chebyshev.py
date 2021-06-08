@@ -1,11 +1,11 @@
 import numpy as np
 
 from pfsspec.physics import Physics
-from pfsspec.stellarmod.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
 
-class LogChebyshevContinuumModel(ContinuumModel):
+class Chebyshev(ContinuumModel):
     def __init__(self, orig=None):
-        if isinstance(orig, LogChebyshevContinuumModel):
+        if isinstance(orig, Chebyshev):
             self.photo_limits = orig.photo_limits
 
             self.chebyshev_degrees = orig.chebyshev_degrees
@@ -29,13 +29,13 @@ class LogChebyshevContinuumModel(ContinuumModel):
 
     @property
     def name(self):
-        return "logchebyshev"
+        return "chebyshev"
 
     def add_args(self, parser):
-        super(LogChebyshevContinuumModel, self).add_args(parser)
+        super(Chebyshev, self).add_args(parser)
 
     def init_from_args(self, args):
-        super(LogChebyshevContinuumModel, self).init_from_args(args)
+        super(Chebyshev, self).init_from_args(args)
 
     def get_constants(self, wave):
         self.find_limits(wave, self.limits_dlambda)

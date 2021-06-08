@@ -154,9 +154,7 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
             # No fitted parameters are available, fit continuum now
             _, _, _, _, params = self.process_item_fit(i)
         elif self.params_grid_index is not None:
-            # Parameters come from and array grid
-            # TODO: modify here to return dict of params
-            raise NotImplementedError()
+            # Parameters come from an array grid
             _, _, params = self.get_gridpoint_params(i)
         else:
             # Parameters are interpolated from RBF

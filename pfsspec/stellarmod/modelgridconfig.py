@@ -1,18 +1,20 @@
 import numpy as np
 
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
-from pfsspec.stellarmod.logchebyshevcontinuummodel import LogChebyshevContinuumModel
-from pfsspec.stellarmod.planckcontinuummodel import PlanckContinuumModel
-from pfsspec.stellarmod.alexcontinuummodel import AlexContinuumModel
+from pfsspec.stellarmod.continuummodels.chebyshev import Chebyshev
+from pfsspec.stellarmod.continuummodels.planck import Planck
+from pfsspec.stellarmod.continuummodels.alex import Alex
+from pfsspec.stellarmod.continuummodels.log import Log
 
 class ModelGridConfig():
     # Implements functions to initialize a model grid. Inherited classes should
     # implement grid-specific functionality in overridden functions.
 
     CONTINUUM_MODEL_TYPES = {
-        'planck': PlanckContinuumModel,
-        'alex': AlexContinuumModel,
-        'logchebyshev': LogChebyshevContinuumModel,
+        'planck': Planck,
+        'alex': Alex,
+        'chebyshev': Chebyshev,
+        'log': Log,
     }
 
     def __init__(self, normalized=False, pca=False, orig=None):

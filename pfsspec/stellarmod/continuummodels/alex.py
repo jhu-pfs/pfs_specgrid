@@ -4,7 +4,7 @@ import scipy as sp
 import logging
 
 from pfsspec.physics import Physics
-from pfsspec.stellarmod.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
 from pfsspec.util.array_filters import *
 
 from pfsspec.fit.legendre import Legendre
@@ -24,7 +24,7 @@ class AlexContinuumModelTrace():
         self.blended_fit = {}
         self.x1 = {}
 
-class AlexContinuumModel(ContinuumModel):
+class Alex(ContinuumModel):
     # Fit the upper envelope of a stellar spectrum model. The theoretical continuum
     # is first fitted with Lengendre polinomials between the Hzdrogen photoionization
     # limits, then the model is normalized and the remaining blended line regions
@@ -32,12 +32,12 @@ class AlexContinuumModel(ContinuumModel):
     # from the continuum.
 
     def __init__(self, orig=None, trace=None):
-        super(AlexContinuumModel, self).__init__(orig=orig)
+        super(Alex, self).__init__(orig=orig)
 
         # Trace certain variables for debugging purposes
         self.trace = trace
 
-        if isinstance(orig, AlexContinuumModel):
+        if isinstance(orig, Alex):
             pass
         else:
             # Global wavelength limits that we can fit
@@ -87,7 +87,7 @@ class AlexContinuumModel(ContinuumModel):
         return "alex"
 
     def add_args(self, parser):
-        super(AlexContinuumModel, self).add_args(parser)
+        super(Alex, self).add_args(parser)
 
         parser.add_argument('--smoothing-iter', type=int, help='Smoothing iterations.\n')
         parser.add_argument('--smoothing-option', type=int, help='Smoothing kernel function.\n')
@@ -95,7 +95,7 @@ class AlexContinuumModel(ContinuumModel):
         parser.add_argument('--smoothing-gamma', type=float, help='Smoothing gamma.\n')
 
     def init_from_args(self, args):
-        super(AlexContinuumModel, self).init_from_args(args)
+        super(Alex, self).init_from_args(args)
 
         if 'smoothing_iter' in args and args['smoothing_iter'] is not None:
             self.smoothing_iter = args['smoothing_iter']
@@ -107,7 +107,7 @@ class AlexContinuumModel(ContinuumModel):
             self.smoothing_gamma = args['smoothing_gamma']
 
     def get_params_names(self):
-        names = super(AlexContinuumModel, self).get_params_names()
+        names = super(Alex, self).get_params_names()
         names.append('legendre')
         for i, _ in enumerate(self.blended_models):
             names.append('blended_' + str(i))
