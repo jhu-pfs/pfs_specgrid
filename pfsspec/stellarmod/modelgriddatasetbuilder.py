@@ -21,8 +21,11 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.interp_param = orig.interp_param
             self.use_cont = orig.use_cont
 
+            self.z_dist = orig.z_dist
             self.z = orig.z
+            self.mag_dist = orig.mag_dist
             self.mag = orig.mag
+            self.ext_dist = orig.ext_dist
             self.ext = orig.ext
 
             self.target_zenith_angle = orig.target_zenith_angle
@@ -40,8 +43,11 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             self.interp_param = None
             self.use_cont = True  # Load model continuum
 
+            self.z_dist = None
             self.z = None
+            self.mag_dist = None
             self.mag = None
+            self.ext_dist = None
             self.ext = None
 
             self.target_zenith_angle = None
@@ -96,9 +102,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         self.mag = self.get_arg('mag', self.mag, args)
         self.ext = self.get_arg('ext', self.ext, args)
 
-        self.z_dist = self.get_arg('z_dist', self.z, args)
-        self.mag_dist = self.get_arg('mag_dist', self.z, args)
-        self.ext_dist = self.get_arg('ext_dist', self.z, args)
+        self.z_dist = self.get_arg('z_dist', self.z_dist, args)
+        self.mag_dist = self.get_arg('mag_dist', self.mag_dist, args)
+        self.ext_dist = self.get_arg('ext_dist', self.ext_dist, args)
 
         # Do not initialize random distributions here because they should
         # use the random state of the worker sub-process to get independent
