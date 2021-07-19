@@ -18,12 +18,14 @@ class RbfGridBuilder(GridBuilder):
             self.function = orig.function
             self.epsilon = orig.epsilon
             self.smoothing = orig.smoothing
+            self.method = orig.method
         else:
             self.padding = False
             self.interpolation = 'ijk'
             self.function = 'multiquadric'
             self.epsilon = None
             self.smoothing = 0.0
+            self.method = 'solve'
 
     def add_args(self, parser):
         super(RbfGridBuilder, self).add_args(parser)
@@ -35,6 +37,7 @@ class RbfGridBuilder(GridBuilder):
             help='RBF kernel function.\n')
         parser.add_argument('--epsilon', type=float, help='Adjustable constant for Gaussian and multiquadric.\n')
         parser.add_argument('--smoothing', type=float, help='RBF smoothing coeff.\n')
+        parser.add_argument('--method', type=str, default='solve', choices=['solve', 'nnls'])
 
     def parse_args(self):
         super(RbfGridBuilder, self).parse_args()
@@ -42,8 +45,9 @@ class RbfGridBuilder(GridBuilder):
         self.function = self.get_arg('function', self.function)
         self.epsilon = self.get_arg('epsilon', self.epsilon)
         self.smoothing = self.get_arg('smoothing', self.smoothing)
+        self.method = self.get_arg('method', self.method)
 
-    def fit_rbf(self, value, axes, mask=None):
+    def fit_rbf(self, value, axes, mask=None, method=None, function=None, epsilon=None):
         """Returns the Radial Base Function interpolation of a grid slice.
 
         Args:
@@ -53,6 +57,7 @@ class RbfGridBuilder(GridBuilder):
             function (str): Basis function, see RBF documentation.
             epsilon (number): See RBF documentation.
             smooth (number): See RBF documentation.
+            method (string): use solve or nnls to fit data
         """
 
         # Since we must have the same number of grid points as unmasked elements,
@@ -95,6 +100,8 @@ class RbfGridBuilder(GridBuilder):
             mode = 'N-D'
 
         rbf = Rbf()
-        rbf.fit(*points, value, function=self.function, epsilon=self.epsilon, smooth=self.smoothing, mode=mode)
+        rbf.fit(*points, value, function=function or self.function,
+            epsilon=epsilon or self.epsilon, smooth=self.smoothing,
+            mode=mode, method=method or self.method)
 
         return rbf

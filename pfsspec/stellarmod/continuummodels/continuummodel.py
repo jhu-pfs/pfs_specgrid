@@ -23,7 +23,7 @@ class ContinuumModel(PfsObject):
     def init_from_args(self, parser):
         pass
 
-    def get_params_names(self):
+    def get_model_parameters(self):
         return []
 
     def get_constants(self):
@@ -42,8 +42,8 @@ class ContinuumModel(PfsObject):
 
     def init_values(self, grid):
         # Initialize the values in a grid necessary to store the fitted parameters
-        for name in self.get_params_names():
-            grid.init_value(name)
+        for p in self.get_model_parameters():
+            grid.init_value(p.name)
 
     def allocate_values(self, grid):
         # Allocate the values in a grid necessary to store the fitted parameters

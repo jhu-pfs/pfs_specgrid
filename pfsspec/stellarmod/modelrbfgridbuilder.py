@@ -88,7 +88,9 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         self.output_grid.filename = fn
         self.output_grid.fileformat = 'h5'
 
-    def build_rbf(self, params_grid, output_grid, name, s=None):
+    def build_rbf(self, params_grid, output_grid, name,
+        method=None, function=None, epsilon=None, s=None):
+
         value = params_grid.get_value(name)[s or ()]
         mask = params_grid.get_value_index(name)
         axes = params_grid.get_axes()
@@ -97,8 +99,9 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
             value, axes, mask = pad_array(axes, value, mask=mask)
             self.logger.info('Array `{}` padded to shape {}'.format(name, value.shape))
 
-        self.logger.info('Fitting RBF to array `{}`'.format(name))
-        rbf = self.fit_rbf(value, axes, mask=mask)
+        self.logger.info('Fitting RBF to array `{}` using {} with {} and eps={}'.format(name, method, function, epsilon))
+        rbf = self.fit_rbf(value, axes, mask=mask, 
+            method=method, function=function, epsilon=epsilon)
         output_grid.set_value(name, rbf)
 
     def fit_params(self, params_grid, output_grid):
@@ -107,10 +110,11 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         # be fitted everywhere are still interpolated to as many grid positions
         # as possible
 
-        for name in params_grid.continuum_model.get_params_names():
+        for p in params_grid.continuum_model.get_model_parameters():
             # TODO: can we run this with a PcaGrid output?
-            if params_grid.array_grid.has_value(name):
-                self.build_rbf(params_grid.array_grid, output_grid.rbf_grid, name)
+            if params_grid.array_grid.has_value(p.name):
+                self.build_rbf(params_grid.array_grid, output_grid.rbf_grid,
+                p.name, method=p.rbf_method, function=p.rbf_function, epsilon=p.rbf_epsilon)
 
     def copy_params(self, params_grid, output_grid):
         # Copy RBF interpolation of continuum fit parameters from an existing grid
@@ -118,8 +122,8 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         output_grid.set_constants(params_grid.get_constants())
         output_grid.set_wave(params_grid.get_wave())
 
-        for name in self.continuum_model.get_params_names():
-            self.copy_rbf(params_grid.grid, output_grid.grid.grid, name)
+        for p in self.continuum_model.get_model_parameters():
+            self.copy_rbf(params_grid.grid, output_grid.grid.grid, p.name)
 
     def fit_flux(self, input_grid, output_grid):
         # Calculate RBF interpolation in the flux vector directly
@@ -181,7 +185,7 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         # Calculate RBF interpolation of principal components
         grid = self.input_grid.grid
         for name in ['flux', 'cont']:
-            if self.input_grid.has_value(name):
+            if self.input_grid.grid.has_value(name):
                 self.build_rbf(self.input_grid.grid.grid, self.output_grid.grid.grid, name)
 
         # Copy eigenvalues and eigenvectors

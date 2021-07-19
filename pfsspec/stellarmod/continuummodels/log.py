@@ -4,6 +4,7 @@ import scipy as sp
 import logging
 
 from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.modelparameter import ModelParameter
 
 class Log(ContinuumModel):
     # Simply take the logarithm of the flux
@@ -20,10 +21,10 @@ class Log(ContinuumModel):
     def name(self):
         return "log"
 
-    def get_params_names(self):
-        names = super(Log, self).get_params_names()
-        names.append('log')
-        return names
+    def get_model_parameters(self):
+        params = super(Log, self).get_model_parameters()
+        params.append(ModelParameter(name='log'))
+        return params
 
     def init_wave(self, wave):
         self.wave = wave
@@ -57,3 +58,5 @@ class Log(ContinuumModel):
         spec.flux = np.exp(spec.flux + n)
         if spec.cont is not None:
             spec.cont = np.exp(spec.cont + n)
+        else:
+            spec.cont = np.exp(n)

@@ -5,6 +5,7 @@ import logging
 
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.modelparameter import ModelParameter
 from pfsspec.util.array_filters import *
 
 from pfsspec.fit.legendre import Legendre
@@ -106,12 +107,13 @@ class Alex(ContinuumModel):
         if 'smoothing_gamma' in args and args['smoothing_gamma'] is not None:
             self.smoothing_gamma = args['smoothing_gamma']
 
-    def get_params_names(self):
-        names = super(Alex, self).get_params_names()
-        names.append('legendre')
+    def get_model_parameters(self):
+        params = super(Alex, self).get_model_parameters()
+        params.append(ModelParameter(name='legendre'))
         for i, _ in enumerate(self.blended_models):
-            names.append('blended_' + str(i))
-        return names
+            params.append(ModelParameter(name='blended_' + str(i), 
+                rbf_method='nnls', rbf_function='gaussian', rbf_epsilon=1.0))
+        return params
 
     def init_wave(self, wave):
         self.find_limits(wave)
@@ -130,6 +132,9 @@ class Alex(ContinuumModel):
 
     def safe_log(self, x):
         return np.log(np.where(x <= 1, 1, x))
+
+    def safe_exp(self, x):
+        return np.exp(np.where(x < 100, x, np.nan))
 
 #endregion
 #region Main entrypoints: fit, eval and normalize
@@ -203,12 +208,12 @@ class Alex(ContinuumModel):
 
         model_cont = self.eval_continuum_all(params=params)
         if spec.cont is not None:
-            cont = np.exp(spec.cont + model_cont)
+            cont = self.safe_exp(spec.cont + model_cont)
         else:
-            cont = None
+            cont = self.safe_exp(model_cont)
 
         model_blended = self.eval_blended_all(params)
-        flux = np.exp(spec.flux + model_cont + model_blended)
+        flux = self.safe_exp(spec.flux + model_cont + model_blended)
 
         if self.trace is not None:
             self.trace.model_cont = model_cont
@@ -293,7 +298,10 @@ class Alex(ContinuumModel):
             m = AlexSigmoid(bounds=bounds)
             self.blended_models.append(m)
 
-        mask = (self.wave > 3000) & (self.wave < 3006) 
+        # Determine the step size quantum for certain operations
+        wl = max(3000.0, self.wave.min())
+        dwl = 6.0
+        mask = (self.wave > wl) & (self.wave < wl + dwl) 
         dx = int(len(self.wave[mask]))
 
         # TODO: what is this exactly?

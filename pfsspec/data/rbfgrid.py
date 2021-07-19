@@ -147,6 +147,7 @@ class RbfGrid(Grid):
                 self.logger.info('Saving RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
                 self.save_item('{}/rbf/xi'.format(name), self.values[name].xi)
                 self.save_item('{}/rbf/nodes'.format(name), self.values[name].nodes)
+                self.save_item('{}/rbf/c'.format(name), self.values[name].c)
                 self.save_item('{}/rbf/function'.format(name), self.values[name].function)
                 self.save_item('{}/rbf/epsilon'.format(name), self.values[name].epsilon)
                 self.logger.info('Saved RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))
@@ -155,10 +156,10 @@ class RbfGrid(Grid):
         super(RbfGrid, self).load_items(s=s)
         self.load_values(s=s)
 
-    def load_rbf(self, xi, nodes, function='multiquadric', epsilon=None):
+    def load_rbf(self, xi, nodes, c, function='multiquadric', epsilon=None):
         # TODO: bring out kernel function name as parameter or save into hdf5
         rbf = Rbf()
-        rbf.load(nodes, xi, function=function, epsilon=epsilon, mode='N-D')
+        rbf.load(nodes, xi, c, function=function, epsilon=epsilon, mode='N-D')
         return rbf
 
     def load_values(self, s=None):
@@ -170,20 +171,27 @@ class RbfGrid(Grid):
             self.logger.info('Loading RBF "{}" of size {}'.format(name, s))
             xi = self.load_item('{}/rbf/xi'.format(name), np.ndarray)
             nodes = self.load_item('{}/rbf/nodes'.format(name), np.ndarray)
+            c = self.load_item('{}/rbf/c'.format(name), np.ndarray)
             function = self.load_item('{}/rbf/function'.format(name), str)
             epsilon = self.load_item('{}/rbf/epsilon'.format(name), float)
             if xi is not None and nodes is not None:
                 # TODO: save function name to hdf5 and load back from there
-                self.values[name] = self.load_rbf(xi, nodes, function=function, epsilon=epsilon)
+                self.values[name] = self.load_rbf(xi, nodes, c, function=function, epsilon=epsilon)
                 self.logger.info('Loaded RBF "{}" of size {}'.format(name, s))
             else:
                 self.values[name] = None
                 self.logger.info('Skipped loading RBF "{}" of size {}'.format(name, s))
             
     def set_object_params(self, obj, idx=None, **kwargs):
+        # idx is squeezed
         if idx is not None:
-            for i, p in enumerate(self.axes):
-                setattr(obj, p, float(self.axes[p].ip_to_value(idx[i])))
+            i = 0
+            for p in self.axes:
+                if self.axes[p].values.shape[0] > 1:
+                    setattr(obj, p, float(self.axes[p].ip_to_value(idx[i])))
+                    i += 1
+                else:
+                    setattr(obj, p, float(self.axes[p].values[0]))
         if kwargs is not None:
             for p in kwargs:
                 setattr(obj, p, float(kwargs[p]))

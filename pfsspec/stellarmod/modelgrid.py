@@ -205,9 +205,9 @@ class ModelGrid(PfsObject):
             # skipping parameters for those continuum models which
             # are calculated from the grid parameters (i.e. Planck)
             params = {}
-            for name in self.continuum_model.get_params_names():
-                if self.grid.has_value(name):
-                    params[name] = self.grid.get_value(name, **kwargs)
+            for p in self.continuum_model.get_model_parameters():
+                if self.grid.has_value(p.name):
+                    params[p.name] = self.grid.get_value(p.name, **kwargs)
 
             self.continuum_model.denormalize(spec, params)
 
@@ -222,8 +222,8 @@ class ModelGrid(PfsObject):
 
             if denormalize and self.continuum_model is not None:
                 params = {}
-                for name in self.continuum_model.get_params_names():
-                    params[name] = self.grid.get_value_at(name, idx)
+                for p in self.continuum_model.get_model_parameters():
+                    params[p.name] = self.grid.get_value_at(p.name, idx)
                 self.continuum_model.denormalize(spec, params)
             
             return spec

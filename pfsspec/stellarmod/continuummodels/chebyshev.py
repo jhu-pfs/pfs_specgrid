@@ -149,3 +149,5 @@ class Chebyshev(ContinuumModel):
         spec.flux = 10**(spec.flux + norm + model)
         if spec.cont is not None:
             spec.cont = 10**(spec.cont + norm)
+        else:
+            spec.cont = 10**norm

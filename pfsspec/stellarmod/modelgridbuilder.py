@@ -101,7 +101,7 @@ class ModelGridBuilder():
                 self.continuum_model = self.params_grid.continuum_model
 
             if self.continuum_model.wave is None:
-                self.continuum_model.init_wave(self.params_grid.wave)
+                self.continuum_model.init_wave(self.params_grid.get_wave())
             
             # TODO: do we need this here? This should come from the grid config
             #       when normalized=True
@@ -113,7 +113,7 @@ class ModelGridBuilder():
             self.continuum_model = self.input_grid.continuum_model
         
         if self.continuum_model is not None and self.continuum_model.wave is None:
-            self.continuum_model.init_wave(self.input_grid.wave)
+            self.continuum_model.init_wave(self.input_grid.get_wave())
 
         # This has to happen after loading the input grid because params_index
         # is combined with the input index with logical and
@@ -144,8 +144,8 @@ class ModelGridBuilder():
         if isinstance(self.params_grid.grid, ArrayGrid):
             params_index = None
 
-            for name in self.continuum_model.get_params_names():
-                pi, _ = self.get_params_index(name)
+            for p in self.continuum_model.get_model_parameters():
+                pi, _ = self.get_params_index(p.name)
                 params_index = pi if params_index is None else params_index & pi
 
             params_index = np.array(np.where(params_index))
@@ -201,8 +201,8 @@ class ModelGridBuilder():
         output_idx = tuple(self.output_grid_index[:, i])
 
         params = {}
-        for name in self.continuum_model.get_params_names():
-            params[name] = self.params_grid.grid.get_value_at(name, params_idx)
+        for p in self.continuum_model.get_model_parameters():
+            params[p.name] = self.params_grid.grid.get_value_at(p.name, params_idx)
 
         return params_idx, output_idx, params
 
@@ -210,9 +210,9 @@ class ModelGridBuilder():
         # Interpolate the params grid to a location defined by kwargs
 
         params = {}
-        for name in self.continuum_model.get_params_names():
-            p = self.params_grid.grid.get_value(name, **kwargs)
-            params[name] = p
+        for p in self.continuum_model.get_model_parameters():
+            v = self.params_grid.grid.get_value(p.name, **kwargs)
+            params[p.name] = v
 
         return params
 

@@ -90,7 +90,7 @@ class AlexSigmoid():
         # If the amplitude is zero, return an all zero vector, even if other
         # parameters are nan. This is necessary to handle the case of very
         # small amplitude blended regions.
-        if a == 0.0:
+        if a == 0.0 or b <= 0 or r0 <= 0 or r1 <= 0:
             return np.zeros(x.shape)
         else:
             x0 = c - 1 / (2 * b)

@@ -5,6 +5,7 @@ import logging
 
 from pfsspec.physics import Physics
 from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
+from pfsspec.stellarmod.continuummodels.modelparameter import ModelParameter
 from pfsspec.util.array_filters import *
 
 class Planck(ContinuumModel):
@@ -28,10 +29,10 @@ class Planck(ContinuumModel):
     def name(self):
         return "planck"
 
-    def get_params_names(self):
-        names = super(Planck, self).get_params_names()
-        names.append('planck')
-        return names
+    def get_model_parameters(self):
+        params = super(Planck, self).get_model_parameters()
+        params.append(ModelParameter(name='planck'))
+        return params
 
     def init_wave(self, wave):
         self.wave = wave
@@ -65,4 +66,6 @@ class Planck(ContinuumModel):
         spec.flux = np.exp(spec.flux + n)
         if spec.cont is not None:
             spec.cont = np.exp(spec.cont + n)
+        else:
+            spec.cont = np.exp(n)
 

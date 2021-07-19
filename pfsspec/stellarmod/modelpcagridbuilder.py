@@ -69,23 +69,23 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
         cmgrid = self.params_grid or self.input_grid
         if cmgrid is not None:
             if isinstance(cmgrid.grid, ArrayGrid):
-                for name in cmgrid.continuum_model.get_params_names():
-                    index = cmgrid.grid.get_value_index(name)
-                    params = cmgrid.get_value_sliced(name)
-                    self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
-                    self.output_grid.grid.grid.set_value(name, params)
-                    self.output_grid.grid.grid.value_indexes[name] = index
+                for p in cmgrid.continuum_model.get_model_parameters():
+                    index = cmgrid.grid.get_value_index(p.name)
+                    params = cmgrid.get_value_sliced(p.name)
+                    self.output_grid.grid.grid.allocate_value(p.name, shape=(params.shape[-1],))
+                    self.output_grid.grid.grid.set_value(p.name, params)
+                    self.output_grid.grid.grid.value_indexes[p.name] = index
             elif isinstance(cmgrid.grid, RbfGrid):
                 # Interpolate the values from the RBF grid and save them as an array grid
-                for name in cmgrid.continuum_model.get_params_names():
+                for p in cmgrid.continuum_model.get_model_parameters():
                     points = self.output_grid.array_grid.get_grid_points(self.output_grid.get_axes(), interpolation='xyz')
                     gridpoints = np.meshgrid(*[v for k, v in points.items()], indexing='ij')
                     gridpoints = { k: v for k, v in zip(points.keys(), gridpoints) }
-                    params = cmgrid.rbf_grid.get_value(name, **gridpoints)
+                    params = cmgrid.rbf_grid.get_value(p.name, **gridpoints)
 
-                    self.output_grid.grid.grid.allocate_value(name, shape=(params.shape[-1],))
-                    self.output_grid.grid.grid.set_value(name, params)
-                    self.output_grid.grid.grid.value_indexes[name] = np.full(params.shape[:-1], True)
+                    self.output_grid.grid.grid.allocate_value(p.name, shape=(params.shape[-1],))
+                    self.output_grid.grid.grid.set_value(p.name, params)
+                    self.output_grid.grid.grid.value_indexes[p.name] = np.full(params.shape[:-1], True)
             else:
                 raise NotImplementedError("Cannot copy continuum fit parameters.")
         

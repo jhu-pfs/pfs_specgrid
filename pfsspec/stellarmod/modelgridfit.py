@@ -110,8 +110,8 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
         self.continuum_model.init_wave(self.input_grid.wave)
 
         # Allocate output grid
-        for name in self.continuum_model.get_params_names():
-            self.output_grid.grid.value_shapes[name] = self.params_grid.grid.value_shapes[name]
+        for p in self.continuum_model.get_model_parameters():
+            self.output_grid.grid.value_shapes[p.name] = self.params_grid.grid.value_shapes[p.name]
         
         # We do not save the continuum and flux at this step, so temporarily set
         # the wave vector to a dummy value to avoid allocating large arrays
@@ -123,29 +123,29 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
         self.output_grid.set_wave(self.params_grid.wave)
         self.output_grid.grid.set_constants(self.params_grid.grid.get_constants())
 
-        for name in self.continuum_model.get_params_names():
+        for p in self.continuum_model.get_model_parameters():
             # Get original fit parameters from the input grid
-            params = self.params_grid.grid.get_value(name)
+            params = self.params_grid.grid.get_value(p.name)
 
-            if self.params_grid.grid.has_value_index(name):
-                mask = self.params_grid.grid.get_value_index(name)
+            if self.params_grid.grid.has_value_index(p.name):
+                mask = self.params_grid.grid.get_value_index(p.name)
             else:
                 mask = None
 
             if fill:
                 if mask is not None:
                     params[~mask] = np.nan
-                params = self.continuum_model.fill_params(name, params)
+                params = self.continuum_model.fill_params(p.name, params)
             
             if smooth:
-                params = self.continuum_model.smooth_params(name, params)
+                params = self.continuum_model.smooth_params(p.name, params)
 
             # Save data into the output grid. 
-            self.output_grid.grid.set_value(name, params, valid=mask)
+            self.output_grid.grid.set_value(p.name, params, valid=mask)
 
             # The original mask is kept so that we know which spectrum model were
             # in the original data set and NaNs will mark the spectra that could not be fitted.
-            self.output_grid.grid.value_indexes[name] = mask
+            self.output_grid.grid.value_indexes[p.name] = mask
 
     def process_item_normalize(self, i):
         input_idx, output_idx, spec = self.get_gridpoint_model(i)
@@ -171,7 +171,7 @@ class ModelGridFit(GridBuilder, ModelGridBuilder):
         # comes out of continuum_model, hence we cannot use the wave_mask of the
         # model to slice down the input grid. Update the continuum_model here to
         # have the correct mask.
-        self.continuum_model.init_wave(self.input_grid.wave)
+        self.continuum_model.init_wave(self.input_grid.get_wave())
 
         # Normalize every spectrum
         t = tqdm(total=input_count)
