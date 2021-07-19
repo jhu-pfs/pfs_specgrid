@@ -159,6 +159,10 @@ class DatasetAugmenter(KerasDataAugmenter):
             self.input_count = self.dataset.shape[0]
             self.chunk_count = np.int32(np.ceil(self.input_count / self.chunk_size))
             self.batch_count = np.int32(np.ceil(self.input_count / self.batch_size))
+
+            # Override partition count if chunk_count is too small
+            if self.partitions > self.chunk_count:
+                raise Exception('Training set is too small, please reduce thread count from {}.'.format(self.partitions))
             
             # Shuffle chunks
             ci = np.arange(self.chunk_count)
