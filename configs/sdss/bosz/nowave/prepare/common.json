@@ -1,7 +1,7 @@
 {   
     "dataset": "bosz",
     "pipeline": "sdss",
-    "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_5000",
+    "in": "${PFSSPEC_DATA}/import/stellar/rbf/bosz_5000/rbf_4",
     "model_res": 5000.0,
     "sample_mode": "random",
     "sample_dist": "beta",
@@ -22,8 +22,8 @@
         0.0
     ],
     "T_eff": [
-        3800.0,
-        4100.0
+        3500.0,
+        5000.0
     ],
     "log_g": [
         1.0,

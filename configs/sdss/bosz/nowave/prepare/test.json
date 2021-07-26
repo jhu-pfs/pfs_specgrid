@@ -4,13 +4,13 @@
         "./configs/sdss/bosz/nowave/inst_sdss.json"
     ],
 
-    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/test_T_eff_100k",
+    "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/test_100k",
     "sample_mode": "random",
     "sample_dist": "uniform",
     "sample_count": 100000,
 
-    "interp_mode": "spline",
-    "interp_param": "T_eff",
+    "interp_mode": "rbf",
+    "interp_param": "random",
     
     "z_dist": "normal",
     "z": [

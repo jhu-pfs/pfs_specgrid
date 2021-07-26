@@ -7,7 +7,7 @@
     "out": "${PFSSPEC_DATA}/train/sdss_stellar_model/dataset/bosz/nowave/train_1M",
     "sample_count": 1000000,
 
-    "interp_mode": "spline",
+    "interp_mode": "rbf",
     "interp_param": "random",
     
     "z_dist": "normal",
