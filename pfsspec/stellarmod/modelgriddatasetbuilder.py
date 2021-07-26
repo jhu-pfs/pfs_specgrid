@@ -139,17 +139,21 @@ class ModelGridDatasetBuilder(DatasetBuilder):
 
     def get_spectrum_count(self):
         if self.match_params is not None:
-            return self.match_params.shape[0]
+            count = self.match_params.shape[0]
         elif self.sample_mode == 'grid':
             # Pysical parameter grid of the models
             count = self.grid.get_model_count(use_limits=True)
             # Observational parameters grid
             count *= self.get_grid_axis_count()
-            return count
         elif self.sample_mode == 'random':
-            return self.sample_count
+            count = self.sample_count
         else:
             raise NotImplementedError()
+
+        if self.top is not None:
+            count = min(count, self.top)
+
+        return count
 
     def get_wave_count(self):
         return self.pipeline.get_wave_count()
@@ -160,15 +164,15 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         spec = None
         while spec is None:
             if self.sample_mode == 'grid':
-                spec, axes = self.get_gridpoint_model(i)
+                spec, params = self.get_gridpoint_model(i)
             elif self.match_params is not None or self.sample_mode == 'random':
-                spec, axes = self.get_interpolated_model(i)
+                spec, params = self.get_interpolated_model(i)
             else:
                 raise NotImplementedError()
 
             try:
                 spec.id = i
-                self.pipeline.run(spec, **axes)
+                self.pipeline.run(spec, **params)
                 return spec
             except Exception as e:
                 self.logger.exception(e)
@@ -262,17 +266,30 @@ class ModelGridDatasetBuilder(DatasetBuilder):
         return spec, params
 
     def get_gridpoint_model(self, i):
+        # Use existing params or draw new ones
+        if self.match_params is not None:
+            params, free_param = self.get_params(i)
+        else:
+            params, free_param = self.draw_random_params()
+
         # Get grid model
-        # TODO: when using PCA/RBF, we need the denormalized model here
-        raise NotImplementedError()
+        # When using PCA/RBF, we need the denormalized model here
         idx = tuple(self.grid_index[:, i % self.grid_index.shape[1]])
-        spec = self.grid.get_model_at(idx)
+        spec = self.grid.get_model_at(idx, denormalize=True)
 
-        # TODO: fix this call, must pass i as parameter?
-        raise NotImplementedError()
-        params = spec.get_params()
+        # Grid models have fixed params so we copy everything from the input and
+        # output axes and keep everything else randomized
+        # When generating models on a grid, we can generate additional grid dimension
+        # for parameters such as magnitude or redshift.
 
-        # Append grid params
+        # Append input grid params
+        grid_axes = self.grid.get_axes()
+        j = 0
+        for p in grid_axes:
+            params[p] = grid_axes[p].values[self.grid_index[j, i % self.grid_index.shape[1]]]
+            j += 1
+
+        # Append output grid params
         i = i // self.grid_index.shape[1]
         j = 0
         for p in self.axes:
