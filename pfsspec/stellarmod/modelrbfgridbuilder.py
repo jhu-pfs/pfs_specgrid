@@ -81,8 +81,8 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
             self.output_grid.set_axes(orig_axes)
 
         # DEBUG
-        self.output_grid.preload_arrays = True
-        self.output_grid.grid.preload_arrays = True
+        # self.output_grid.preload_arrays = True
+        # self.output_grid.grid.preload_arrays = True
         # END DEBUG
 
         self.output_grid.filename = fn

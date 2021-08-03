@@ -74,6 +74,13 @@ class RbfGridBuilder(GridBuilder):
             
         m = m.flatten()
 
+        if self.top is not None:
+            c = np.cumsum(m)
+            t = np.where(c == self.top)
+            if t[0].shape[0] > 0:
+                t = t[0][0]
+                m[t + 1:] = False
+
         # Flatten slice along axis dimensions
         sh = 1
         for i in range(len(axes)):
