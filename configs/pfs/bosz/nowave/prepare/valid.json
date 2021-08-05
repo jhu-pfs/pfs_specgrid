@@ -1,6 +1,6 @@
 {
     "config": [
-        "./configs/prepare/bosz/nowave/common.json"
+        "./configs/pfs/bosz/nowave/prepare/common.json"
     ],
 
     "out": "${PFSSPEC_DATA}/train/pfs_stellar_model/dataset/bosz/nowave/valid_100k",
