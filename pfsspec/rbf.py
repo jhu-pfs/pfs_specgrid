@@ -1,7 +1,12 @@
 import numpy as np
+import numexpr as ne
 from scipy.interpolate import Rbf as SciPyRbf
-from scipy.optimize import nnls
+from pynnls.nnls import nnls
+from pynnls.tntnn import TntNN, tntnn
+from fnnls import fnnls
 from scipy import linalg
+from sklearn.metrics import pairwise_distances
+from pfsspec.util.timer import Timer
 
 class Rbf(SciPyRbf):
     # This is a modified version of the original SciPy RBF that supports
@@ -9,6 +14,31 @@ class Rbf(SciPyRbf):
 
     def __init__(self):
         pass
+
+    def _numexpr_multiquadric(self, r):
+        eps = self.epsilon
+        return ne.evaluate('sqrt((1.0/eps*r)**2+1)')
+
+    def _numexpr_inverse_multiquadric(self, r):
+        eps = self.epsilon
+        return ne.evaluate('1.0/sqrt((1.0/eps*r)**2+1)')
+
+    def _numexpr_gaussian(self, r):
+        eps = self.epsilon
+        return ne.evaluate('exp(-(1.0/eps*r**2))')
+
+    def _numexpr_linear(self, r):
+        return r
+
+    def _numexpr_cubic(self, r):
+        return ne.evaluate('r**3')
+
+    def _numexpr_quintic(self, r):
+        return ne.evaluate('r**5')
+
+    def _numexpr_thin_plate(self, r):
+        raise NotImplementedError()
+        #return xlogy(r**2, r)
 
     def fit(self, *args, **kwargs):
         # `args` can be a variable number of arrays; we flatten them and store
@@ -57,6 +87,36 @@ class Rbf(SciPyRbf):
         edges = edges[np.nonzero(edges)]
         return np.power(np.prod(edges) / self.N, 1.0 / edges.size)
 
+    def _init_function(self, r):
+        # Try with numexpr of fall back to scipy implementation
+        if isinstance(self.function, str):
+            self.function = self.function.lower()
+            _mapped = {'inverse': 'inverse_multiquadric',
+                       'inverse multiquadric': 'inverse_multiquadric',
+                       'thin-plate': 'thin_plate'}
+            if self.function in _mapped:
+                self.function = _mapped[self.function]
+
+            func_name = "_numexpr_" + self.function
+            if hasattr(self, func_name):
+                self._function = getattr(self, func_name)
+                a0 = self._function(r)
+                return a0
+        
+        super(Rbf, self)._init_function(r)
+
+    def calculate_kernel_matrix(self):
+        # Calculate pairwise distance and evaluate kernel in parallel
+
+        with Timer('Calculating distance matrix...'):
+            r = pairwise_distances(self.xi.T, metric=self.norm, n_jobs=-1)
+
+        with Timer('Evaluating kernel...'):
+            s = 1.0 / self.epsilon
+            A = self._init_function(r)
+
+        return A
+
     def calculate_weights(self):
         if self.epsilon is None:
             self.epsilon = self.get_epsilon()
@@ -64,29 +124,39 @@ class Rbf(SciPyRbf):
         if not all([x.size == self.di.shape[0] for x in self.xi]):
             raise ValueError("All arrays must be equal length.")
 
+        A = self.calculate_kernel_matrix()
+
         if self.method == 'solve':
             self.c = np.zeros_like(self.di[0, :])
-            if self._target_dim > 1:  # If we have more than one target dimension,
-                # we first factorize the matrix
-                self.nodes = np.zeros((self.N, self._target_dim), dtype=self.di.dtype)
-                lu, piv = linalg.lu_factor(self.A)
-                for i in range(self._target_dim):
-                    self.nodes[:, i] = linalg.lu_solve((lu, piv), self.di[:, i])
+            if self._target_dim > 1:  
+                # If we have more than one target dimension,
+                # we first factorize the matrix then solve for each variable of di
+             
+                with Timer('Solving RBF with numpy.linalg.lu_factor...'):
+                    lu, piv = linalg.lu_factor(A)
+                    self.nodes = np.zeros((self.N, self._target_dim), dtype=self.di.dtype)
+                    for i in range(self._target_dim):
+                        self.nodes[:, i] = linalg.lu_solve((lu, piv), self.di[:, i])
             else:
-                self.nodes = linalg.solve(self.A, self.di)
+                with Timer('Solving RBF with numpy.linalg.solve...'):
+                    self.nodes = linalg.solve(A, self.di)
         elif self.method == 'nnls':
             self.c = np.min(self.di, axis=0)
             A = self.A
             di = self.di - self.c
             if self._target_dim > 1:
                 self.nodes = np.zeros((self.N, self._target_dim), dtype=self.di.dtype)
-                for i in range(self._target_dim):
-                    n, _ = nnls(A, di[:, i])
-                    self.nodes[:, i] = n
+                with Timer('Solving RBF with scipy.optimize.nnls...'):
+                    for i in range(self._target_dim):
+                        n, _ = nnls(A, di[:, i])
+                        self.nodes[:, i] = n  
             else:
-                self.nodes, _ = nnls(A, di)
+                with Timer('Solving RBF with scipy.optimize.nnls...'):
+                    self.nodes, _ = nnls(A, di)
         else:
             raise ValueError("Method has to be solve or nnls.")
+
+        pass
             
     def load(self, nodes, xi, c=0.0, **kwargs):
         # `args` can be a variable number of arrays; we flatten them and store
