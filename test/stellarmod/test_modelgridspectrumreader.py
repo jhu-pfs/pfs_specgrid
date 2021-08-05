@@ -1,14 +1,14 @@
 import numpy as np
 from test.test_base import TestBase
 
-from pfsspec.stellarmod.modelarraygrid import ModelGModelArrayGridrid
+from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.data.gridaxis import GridAxis
-from pfsspec.stellarmod.modelgridspectrumreader import ModelGridSpectrumReader
+from pfsspec.stellarmod.modelgridreader import ModelGridReader
 
 # TODO: rewrite this to use customized configuration instead of an overloaded
 #       grid class.
 
-class TestGrid(ModelArrayGrid):
+class TestGrid(ModelGrid):
     def __init__(self):
         super(TestGrid, self).__init__(use_cont=True)
 
@@ -16,7 +16,7 @@ class TestGrid(ModelArrayGrid):
         self.axes['T_eff'] = GridAxis('T_eff', np.array([1, 2]))
         self.axes['log_g'] = GridAxis('log_g', np.array([0, 5.5, 0.5]))
 
-class TestGridReader(ModelGridSpectrumReader):
+class TestGridReader(ModelGridReader):
     def process_item(self, i):
         print(i)
 

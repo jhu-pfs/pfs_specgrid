@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 from test.test_base import TestBase
-from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
+from pfsspec.stellarmod.modelgrid import ModelGrid
 
 class TestBoszModelGrid(TestBase):
     def get_grid(self):

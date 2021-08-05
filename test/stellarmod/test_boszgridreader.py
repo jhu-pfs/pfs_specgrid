@@ -3,7 +3,7 @@ import os
 
 from pfsspec.stellarmod.boszspectrumreader import BoszSpectrumReader
 from pfsspec.stellarmod.boszgridreader import BoszGridReader
-from pfsspec.stellarmod.boszmodelgrid import BoszModelGrid
+from pfsspec.stellarmod.modelgrid import ModelGrid
 
 class TestBoszGridReader(TestBase):
     def test_read_grid_bosz(self):
