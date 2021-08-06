@@ -1,19 +1,22 @@
 import numpy as np
 import numexpr as ne
-from scipy.interpolate import Rbf as SciPyRbf
-from pynnls.nnls import nnls
-from pynnls.tntnn import TntNN, tntnn
-from fnnls import fnnls
 from scipy import linalg
 from sklearn.metrics import pairwise_distances
+
+from pfsspec.util.linalg.nnls import nnls as nnls
+# from pfsspec.util.linalg.tntnn import tntnn
+
+from pfsspec.util.name import func_fullname
 from pfsspec.util.timer import Timer
 
-class Rbf(SciPyRbf):
+class Rbf():
     # This is a modified version of the original SciPy RBF that supports
-    # saving and loading state
+    # saving and loading state and uses parallel kernel evaluation
 
     def __init__(self):
-        pass
+        self.xi = None
+        self.r = None
+        self.A = None
 
     def _numexpr_multiquadric(self, r):
         eps = self.epsilon
@@ -46,12 +49,12 @@ class Rbf(SciPyRbf):
         # plus a 1-D array `di` for the values.
         # All arrays must have the same number of elements
 
-        self.read_kwargs(**kwargs)
-        self.read_args(*args)
+        self._read_kwargs(**kwargs)
+        self._read_args(*args)
 
-        self.calculate_weights()
+        self._calculate_weights()
 
-    def read_kwargs(self, **kwargs):
+    def _read_kwargs(self, **kwargs):
         self.mode = kwargs.pop('mode', '1-D')
         self.method = kwargs.pop('method', 'solve')
         self.norm = kwargs.pop('norm', 'euclidean')
@@ -64,7 +67,7 @@ class Rbf(SciPyRbf):
         for item, value in kwargs.items():
             setattr(self, item, value)
 
-    def read_args(self, *args, **kwargs):
+    def _read_args(self, *args, **kwargs):
         self.xi = np.asarray([np.asarray(a, dtype=np.float_).flatten()
                               for a in args[:-1]])
         self.N = self.xi.shape[-1]
@@ -78,7 +81,7 @@ class Rbf(SciPyRbf):
         else:
             raise ValueError("Mode has to be 1-D or N-D.")
 
-    def get_epsilon(self):
+    def _get_epsilon(self):
         # default epsilon is the "the average distance between nodes" based
         # on a bounding hypercube
         ximax = np.amax(self.xi, axis=1)
@@ -103,13 +106,20 @@ class Rbf(SciPyRbf):
                 a0 = self._function(r)
                 return a0
         
-        super(Rbf, self)._init_function(r)
+        # TODO: implement _init_function of original RBF to evaluate custom kernels
+        raise NotImplementedError()
+        #super(Rbf, self)._init_function(r)
 
-    def calculate_kernel_matrix(self):
-        # Calculate pairwise distance and evaluate kernel in parallel
+    def _calculate_distance_matrix(self, x1, x2=None):
+        # Calculate pairwise distance
 
         with Timer('Calculating distance matrix...'):
-            r = pairwise_distances(self.xi.T, metric=self.norm, n_jobs=-1)
+            r = pairwise_distances(x1, Y=x2, metric=self.norm, n_jobs=-1)
+
+        return r
+
+    def _calculate_kernel_matrix(self, r):
+        # Evaluate kernel over the distance matrix in parallel
 
         with Timer('Evaluating kernel...'):
             s = 1.0 / self.epsilon
@@ -117,44 +127,52 @@ class Rbf(SciPyRbf):
 
         return A
 
-    def calculate_weights(self):
+    def _calculate_weights(self):
         if self.epsilon is None:
-            self.epsilon = self.get_epsilon()
+            self.epsilon = self._get_epsilon()
 
         if not all([x.size == self.di.shape[0] for x in self.xi]):
             raise ValueError("All arrays must be equal length.")
 
-        A = self.calculate_kernel_matrix()
+        if self.r is None:
+            self.r = self._calculate_distance_matrix(self.xi.T)
+
+        if self.A is None:
+            self.A = self._calculate_kernel_matrix(self.r)
+
+        A = self.A
 
         if self.method == 'solve':
-            self.c = np.zeros_like(self.di[0, :])
+            # TODO: delete, no offseting self.c = np.zeros_like(self.di[0, :])
+            self.c = np.mean(self.di, axis=0)
+            di = self.di - self.c
             if self._target_dim > 1:  
                 # If we have more than one target dimension,
                 # we first factorize the matrix then solve for each variable of di
              
-                with Timer('Solving RBF with numpy.linalg.lu_factor...'):
+                with Timer('Solving RBF of size {} with numpy.linalg.lu_factor...'.format(A.shape)):
                     lu, piv = linalg.lu_factor(A)
-                    self.nodes = np.zeros((self.N, self._target_dim), dtype=self.di.dtype)
+                    self.nodes = np.zeros((self.N, self._target_dim), dtype=di.dtype)
                     for i in range(self._target_dim):
-                        self.nodes[:, i] = linalg.lu_solve((lu, piv), self.di[:, i])
+                        self.nodes[:, i] = linalg.lu_solve((lu, piv), di[:, i])
             else:
-                with Timer('Solving RBF with numpy.linalg.solve...'):
-                    self.nodes = linalg.solve(A, self.di)
+                with Timer('Solving RBF if size {} with numpy.linalg.solve...'.format(A.shape)):
+                    self.nodes = linalg.solve(A, di)
         elif self.method == 'nnls':
             self.c = np.min(self.di, axis=0)
             A = self.A
             di = self.di - self.c
             if self._target_dim > 1:
                 self.nodes = np.zeros((self.N, self._target_dim), dtype=self.di.dtype)
-                with Timer('Solving RBF with scipy.optimize.nnls...'):
+                with Timer('Solving RBF of shape {} with {}...'.format(A.shape, func_fullname(nnls))):
                     for i in range(self._target_dim):
-                        n, _ = nnls(A, di[:, i])
+                        n = nnls(A, di[:, i])
                         self.nodes[:, i] = n  
             else:
-                with Timer('Solving RBF with scipy.optimize.nnls...'):
-                    self.nodes, _ = nnls(A, di)
+                with Timer('Solving RBF of shape {} with {}...'.format(A.shape, func_fullname(nnls))):
+                    self.nodes = nnls(A, di)
         else:
-            raise ValueError("Method has to be solve or nnls.")
+            raise ValueError('Method has to be `solve` or `nnls`.')
 
         pass
             
@@ -164,7 +182,7 @@ class Rbf(SciPyRbf):
         # plus a 1-D array `di` for the values.
         # All arrays must have the same number of elements
 
-        self.read_kwargs(**kwargs)
+        self._read_kwargs(**kwargs)
 
         self.xi = xi
         self.N = self.xi.shape[-1]
@@ -179,12 +197,26 @@ class Rbf(SciPyRbf):
             raise ValueError("Mode has to be 1-D or N-D.")
 
         if self.epsilon is None:
-            self.epsilon = self.get_epsilon()
+            self.epsilon = self._get_epsilon()
 
         # This is a dummy call to initialize the basis function
         self._init_function(np.array([0.0, 1.0]))
 
-    def __call__(self, *args):
-        y = super(Rbf, self).__call__(*args)
+    def eval(self, *args):
+        args = [np.asarray(x) for x in args]
+        if not all([x.shape == y.shape for x in args for y in args]):
+            raise ValueError("Array lengths must be equal")
+        if self._target_dim > 1:
+            shp = args[0].shape + (self._target_dim,)
+        else:
+            shp = args[0].shape
+        xa = np.asarray([a.flatten() for a in args], dtype=np.float_)
+
+        r = self._calculate_distance_matrix(xa.T, self.xi.T)
+
+        y = np.dot(self._function(r), self.nodes).reshape(shp)
         y += self.c
         return y
+
+    def __call__(self, *args):
+        return self.eval(*args)

@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from pfsspec.rbf import Rbf
+from pfsspec.util.interp.rbf import Rbf
 from pfsspec.data.grid import Grid
 from pfsspec.data.gridaxis import GridAxis
 

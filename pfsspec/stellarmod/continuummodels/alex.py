@@ -109,10 +109,16 @@ class Alex(ContinuumModel):
 
     def get_model_parameters(self):
         params = super(Alex, self).get_model_parameters()
-        params.append(ModelParameter(name='legendre'))
+        params.append(ModelParameter(name='legendre',
+                rbf_method='solve',
+                rbf_function='multiquadric',
+                rbf_epsilon=None))
         for i, _ in enumerate(self.blended_models):
-            params.append(ModelParameter(name='blended_' + str(i), 
-                rbf_method='nnls', rbf_function='gaussian', rbf_epsilon=1.0))
+            params.append(ModelParameter(
+                name='blended_' + str(i), 
+                rbf_method='solve',
+                rbf_function='gaussian',
+                rbf_epsilon=1.0))
         return params
 
     def init_wave(self, wave):

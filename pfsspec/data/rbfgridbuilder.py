@@ -5,7 +5,7 @@ import time
 from tqdm import tqdm
 
 from pfsspec.data.gridbuilder import GridBuilder
-from pfsspec.rbf import Rbf
+from pfsspec.util.interp.rbf import Rbf
 from pfsspec.data.arraygrid import ArrayGrid
 
 class RbfGridBuilder(GridBuilder):
@@ -90,7 +90,7 @@ class RbfGridBuilder(GridBuilder):
 
         # Get the grid points along each axis. Padding must be False here because
         # we don't want to shift the grid indexes to calculate the RBF, otherwise the
-        # index would need to be stored in the file to know it is a padded grid.
+        # index would need to be stored in the file to know if it is a padded grid.
         points = ArrayGrid.get_grid_points(axes, padding=False, squeeze=True, interpolation=self.interpolation)
         
         # Generate the grid from the axis points and apply the mask.
