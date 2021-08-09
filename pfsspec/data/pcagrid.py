@@ -152,12 +152,13 @@ class PcaGrid(PfsObject):
         idx = self.get_index(**kwargs)
         return self.get_value_at(name, idx, s=s)
 
-    def get_values_at(self, idx, s=None):
-        return {name: self.get_value_at(name, idx, s) for name in self.values}
+    def get_values_at(self, idx, s=None, names=None):
+        names = names or self.values.keys()
+        return {name: self.get_value_at(name, idx, s) for name in names}
 
-    def get_values(self, s=None, **kwargs):
+    def get_values(self, s=None, names=None, **kwargs):
         idx = self.get_index(**kwargs)
-        return self.get_values_at(idx, s)
+        return self.get_values_at(idx, s, names=names)
 
     def save_items(self):
         self.grid.filename = self.filename

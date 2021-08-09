@@ -14,6 +14,7 @@ class RbfGridBuilder(GridBuilder):
 
         if isinstance(orig, RbfGridBuilder):
             self.padding = orig.padding
+            self.fill = orig.fill
             self.interpolation = orig.interpolation
             self.function = orig.function
             self.epsilon = orig.epsilon
@@ -21,6 +22,7 @@ class RbfGridBuilder(GridBuilder):
             self.method = orig.method
         else:
             self.padding = False
+            self.fill = True
             self.interpolation = 'ijk'
             self.function = 'multiquadric'
             self.epsilon = None
@@ -30,6 +32,7 @@ class RbfGridBuilder(GridBuilder):
     def add_args(self, parser):
         super(RbfGridBuilder, self).add_args(parser)
         parser.add_argument('--padding', action='store_true', help='Pad array by one prior to RBF.\n')
+        parser.add_argument('--fill', action='store_true', help='Fill in masked points.\n')
         parser.add_argument('--interpolation', type=str, default='multiquadric', choices=['ijk', 'xyz'],
             help='Interpolation in array index or axis values.\n')
         parser.add_argument('--function', type=str, default='multiquadric', 
@@ -42,6 +45,7 @@ class RbfGridBuilder(GridBuilder):
     def parse_args(self):
         super(RbfGridBuilder, self).parse_args()
         self.padding = self.get_arg('padding', self.padding)
+        self.fill = self.get_arg('fill', self.fill)
         self.function = self.get_arg('function', self.function)
         self.epsilon = self.get_arg('epsilon', self.epsilon)
         self.smoothing = self.get_arg('smoothing', self.smoothing)
@@ -91,12 +95,12 @@ class RbfGridBuilder(GridBuilder):
         # Get the grid points along each axis. Padding must be False here because
         # we don't want to shift the grid indexes to calculate the RBF, otherwise the
         # index would need to be stored in the file to know if it is a padded grid.
-        points = ArrayGrid.get_grid_points(axes, padding=False, squeeze=True, interpolation=self.interpolation)
+        all_points = ArrayGrid.get_grid_points(axes, padding=False, squeeze=True, interpolation=self.interpolation)
         
         # Generate the grid from the axis points and apply the mask.
-        points = np.meshgrid(*[points[p] for p in points], indexing='ij')
-        points = [p.flatten() for p in points]
-        points = [p[m] for p in points]
+        all_points = np.meshgrid(*[all_points[p] for p in all_points], indexing='ij')
+        all_points = [p.flatten() for p in all_points]
+        points = [p[m] for p in all_points]
 
         # points: list of arrays of shape of (unmasked_count,), for each non-contracted axis
         # value: shape: (unmasked_count, value_dim)
@@ -110,5 +114,18 @@ class RbfGridBuilder(GridBuilder):
         rbf.fit(*points, value, function=function or self.function,
             epsilon=epsilon or self.epsilon, smooth=self.smoothing,
             mode=mode, method=method or self.method)
+
+        if self.fill:
+            # Fill in the results with zeros at masked grid points so that
+            # the resulting RBF grids of the same size can be constructed at the end
+
+            rbf.xi = np.stack(all_points, axis=0)
+            
+            nodes = np.zeros((rbf.xi.shape[1], rbf.nodes.shape[1]), dtype=rbf.nodes.dtype)
+            nodes[m, :] = rbf.nodes
+            rbf.nodes = nodes
+
+            rbf.r = None
+            rbf.A = None
 
         return rbf

@@ -136,6 +136,12 @@ class ModelGrid(PfsObject):
             self.continuum_model.init_wave(self.wave)
             self.continuum_model.init_values(self.grid)
 
+    def get_nearest_index(self, **kwargs):
+        return self.grid.get_nearest_index(**kwargs)
+
+    def get_index(self, **kwargs):
+        return self.grid.get_index(**kwargs)
+
     def get_wave(self):
         return self.wave[self.wave_slice or slice(None)]
 
@@ -193,6 +199,16 @@ class ModelGrid(PfsObject):
         spec.wave = self.get_wave()
         return spec
 
+    def get_continuum_parameters(self, **kwargs):
+        names = [p.name for p in self.continuum_model.get_model_parameters()]
+        params = self.grid.get_values(names=names, **kwargs)
+        return params
+
+    def get_continuum_parameters_at(self, idx):
+        names = [p.name for p in self.continuum_model.get_model_parameters()]
+        params = self.grid.get_values_at(idx, names=names)
+        return params
+
     def get_model(self, denormalize=False, **kwargs):
         spec = self.get_parameterized_spectrum(s=self.wave_slice, **kwargs)
         spec.flux = np.array(self.grid.get_value('flux', s=self.wave_slice, **kwargs), copy=True)
@@ -204,11 +220,7 @@ class ModelGrid(PfsObject):
             # in case the parameters are given with an RBF. Also allow
             # skipping parameters for those continuum models which
             # are calculated from the grid parameters (i.e. Planck)
-            params = {}
-            for p in self.continuum_model.get_model_parameters():
-                if self.grid.has_value(p.name):
-                    params[p.name] = self.grid.get_value(p.name, **kwargs)
-
+            params = self.get_continuum_parameters(**kwargs)
             self.continuum_model.denormalize(spec, params)
 
         return spec
@@ -221,9 +233,7 @@ class ModelGrid(PfsObject):
                 spec.cont = np.array(self.grid.get_value_at('cont', idx, s=self.wave_slice), copy=True)
 
             if denormalize and self.continuum_model is not None:
-                params = {}
-                for p in self.continuum_model.get_model_parameters():
-                    params[p.name] = self.grid.get_value_at(p.name, idx)
+                params = self.get_continuum_parameters_at(idx)
                 self.continuum_model.denormalize(spec, params)
             
             return spec

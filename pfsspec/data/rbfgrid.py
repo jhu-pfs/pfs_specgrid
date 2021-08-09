@@ -125,12 +125,30 @@ class RbfGrid(Grid):
         idx = self.get_index(**kwargs)
         return self.get_value_at(name, idx, s=s)
 
-    def get_values_at(self, idx, s=None):
-        return {name: self.get_value_at(name, idx, s) for name in self.values}
+    def get_values_at(self, idx, s=None, names=None):
+        # Return all values interpolated to idx. This function is optimized for
+        # RBF grids where the distance matrix computation is expensive.
+        idx = Grid.rectify_index(idx)
+        names = names or self.values.keys()
+        
+        # We can potentially reuse the distance/kernel matrix if the grid points
+        # and the kernels are the same
+        values = {}
+        A = None
+        prev = None
+        for name in names:
+            if prev is None or not prev.is_compatible(self.values[name]):
+                prev = self.values[name]
+                y, A = self.values[name].eval(*idx)
+            else:
+                y, A = self.values[name].eval(*idx, A=A)
+            values[name] = y
 
-    def get_values(self, s=None, **kwargs):
+        return values
+
+    def get_values(self, s=None, names=None, **kwargs):
         idx = self.get_index(**kwargs)
-        return self.get_values_at(idx, s)
+        return self.get_values_at(idx, s, names=names)
 
     def save_items(self):
         super(RbfGrid, self).save_items()
@@ -141,7 +159,6 @@ class RbfGrid(Grid):
         # TODO: this is a little bit redundant here because we store the xi values
         #       for each RBF. The coordinates are supposed to be the same for
         #       all data values.
-        # TODO: save RBF parameters like function, etc.
         for name in self.values:
             if self.values[name] is not None:
                 self.logger.info('Saving RBF "{}" of size {}'.format(name, self.values[name].nodes.shape))

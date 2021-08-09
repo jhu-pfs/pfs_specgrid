@@ -13,6 +13,7 @@ from pfsspec.util.array_filters import *
 
 class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
 
+    # TODO: add step for flux and use that in place of --flux
     STEPS = ['fit', 'pca']
 
     def __init__(self, config, grid=None, orig=None):
@@ -108,7 +109,8 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         # Calculate RBF interpolation of continuum fit parameters
         # This is done parameter by parameter so continuum models which cannot
         # be fitted everywhere are still interpolated to as many grid positions
-        # as possible
+        # as possible. Unfortunately, because of this, we cannot reuse the RBF
+        # distance and kernel matrix.
 
         for p in params_grid.continuum_model.get_model_parameters():
             # TODO: can we run this with a PcaGrid output?

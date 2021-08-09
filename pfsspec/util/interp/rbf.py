@@ -2,6 +2,7 @@ import numpy as np
 import numexpr as ne
 from scipy import linalg
 from sklearn.metrics import pairwise_distances
+from scipy.special import xlogy
 
 from pfsspec.util.linalg.nnls import nnls as nnls
 # from pfsspec.util.linalg.tntnn import tntnn
@@ -11,12 +12,38 @@ from pfsspec.util.timer import Timer
 
 class Rbf():
     # This is a modified version of the original SciPy RBF that supports
-    # saving and loading state and uses parallel kernel evaluation
+    # saving and loading state and uses parallel kernel evaluation.
+    # Parallel execution is only suitable for the computation of the kernel
+    # matrix when fitting the data. Interpolation is much faster, hence
+    # starting up the thread pool is not worth it.
 
     def __init__(self):
         self.xi = None
         self.r = None
         self.A = None
+
+    # Available radial basis functions that can be selected as strings;
+    # they all start with _h_ (self._init_function relies on that)
+    def _h_multiquadric(self, r):
+        return np.sqrt((1.0/self.epsilon*r)**2 + 1)
+
+    def _h_inverse_multiquadric(self, r):
+        return 1.0/np.sqrt((1.0/self.epsilon*r)**2 + 1)
+
+    def _h_gaussian(self, r):
+        return np.exp(-(1.0/self.epsilon*r)**2)
+
+    def _h_linear(self, r):
+        return r
+
+    def _h_cubic(self, r):
+        return r**3
+
+    def _h_quintic(self, r):
+        return r**5
+
+    def _h_thin_plate(self, r):
+        return xlogy(r**2, r)
 
     def _numexpr_multiquadric(self, r):
         eps = self.epsilon
@@ -90,7 +117,7 @@ class Rbf():
         edges = edges[np.nonzero(edges)]
         return np.power(np.prod(edges) / self.N, 1.0 / edges.size)
 
-    def _init_function(self, r):
+    def _init_function(self, r, n_jobs=-1):
         # Try with numexpr of fall back to scipy implementation
         if isinstance(self.function, str):
             self.function = self.function.lower()
@@ -100,7 +127,9 @@ class Rbf():
             if self.function in _mapped:
                 self.function = _mapped[self.function]
 
-            func_name = "_numexpr_" + self.function
+            # Test various function implementations
+            prefix = '_numexpr_' if n_jobs != 1 else '_h_'
+            func_name = prefix + self.function
             if hasattr(self, func_name):
                 self._function = getattr(self, func_name)
                 a0 = self._function(r)
@@ -110,20 +139,20 @@ class Rbf():
         raise NotImplementedError()
         #super(Rbf, self)._init_function(r)
 
-    def _calculate_distance_matrix(self, x1, x2=None):
-        # Calculate pairwise distance
+    def _calculate_distance_matrix(self, x1, x2=None, n_jobs=1):
+        # Calculate pairwise distance using the parallel routine from
+        # scikit-learn
 
         with Timer('Calculating distance matrix...'):
-            r = pairwise_distances(x1, Y=x2, metric=self.norm, n_jobs=-1)
+            r = pairwise_distances(x1, Y=x2, metric=self.norm, n_jobs=n_jobs)
 
         return r
 
-    def _calculate_kernel_matrix(self, r):
+    def _calculate_kernel_matrix(self, r, n_jobs):
         # Evaluate kernel over the distance matrix in parallel
 
         with Timer('Evaluating kernel...'):
-            s = 1.0 / self.epsilon
-            A = self._init_function(r)
+            A = self._init_function(r, n_jobs=n_jobs)
 
         return A
 
@@ -135,7 +164,8 @@ class Rbf():
             raise ValueError("All arrays must be equal length.")
 
         if self.r is None:
-            self.r = self._calculate_distance_matrix(self.xi.T)
+            # This is a big matrix, use parallel threads to calculate
+            self.r = self._calculate_distance_matrix(self.xi.T, n_jobs=-1)
 
         if self.A is None:
             self.A = self._calculate_kernel_matrix(self.r)
@@ -175,6 +205,14 @@ class Rbf():
             raise ValueError('Method has to be `solve` or `nnls`.')
 
         pass
+
+    def is_compatible(self, other):
+        # Does a quick compatibility between two RBF grids to see
+        # if the kernel matrix can be reused for interpolation.
+        return self.xi.shape == other.xi.shape and \
+            self.function == other.function and \
+            self.epsilon == other.epsilon and \
+            self.smooth == other.smooth
             
     def load(self, nodes, xi, c=0.0, **kwargs):
         # `args` can be a variable number of arrays; we flatten them and store
@@ -202,7 +240,7 @@ class Rbf():
         # This is a dummy call to initialize the basis function
         self._init_function(np.array([0.0, 1.0]))
 
-    def eval(self, *args):
+    def eval(self, *args, A=None, n_jobs=1):
         args = [np.asarray(x) for x in args]
         if not all([x.shape == y.shape for x in args for y in args]):
             raise ValueError("Array lengths must be equal")
@@ -212,11 +250,17 @@ class Rbf():
             shp = args[0].shape
         xa = np.asarray([a.flatten() for a in args], dtype=np.float_)
 
-        r = self._calculate_distance_matrix(xa.T, self.xi.T)
+        if A is None:
+            # This is a small computation, use a single thread to avoid
+            # firing up the thread pool
+            r = self._calculate_distance_matrix(xa.T, self.xi.T, n_jobs=n_jobs)
+            A = self._calculate_kernel_matrix(r, n_jobs=n_jobs)
+            del r
 
-        y = np.dot(self._function(r), self.nodes).reshape(shp)
+        y = np.dot(A, self.nodes).reshape(shp)
         y += self.c
-        return y
+        return y, A
 
     def __call__(self, *args):
-        return self.eval(*args)
+        y, _ = self.eval(*args)
+        return y
