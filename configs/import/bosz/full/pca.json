@@ -1,4 +1,5 @@
 {
+    "pca_method": "svd",
     "svd_method": "trsvd",
     "svd_truncate": 1000
 }
