@@ -68,6 +68,7 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
         # input is an ArrayGrid since output is always an ArrayGrid.
         cmgrid = self.params_grid or self.input_grid
         if cmgrid is not None:
+            self.logger.info('Copying continuum parameters from input grid.')
             if isinstance(cmgrid.grid, ArrayGrid):
                 for p in cmgrid.continuum_model.get_model_parameters():
                     index = cmgrid.grid.get_value_index(p.name)
@@ -76,6 +77,7 @@ class ModelPcaGridBuilder(PcaGridBuilder, ModelGridBuilder):
                     self.output_grid.grid.grid.set_value(p.name, params)
                     self.output_grid.grid.grid.value_indexes[p.name] = index
             elif isinstance(cmgrid.grid, RbfGrid):
+                self.logger.info('Interpolating continuum parameters from input RBF grid.')
                 # Interpolate the values from the RBF grid and save them as an array grid
                 for p in cmgrid.continuum_model.get_model_parameters():
                     points = self.output_grid.array_grid.get_grid_points(self.output_grid.get_axes(), interpolation='xyz')
