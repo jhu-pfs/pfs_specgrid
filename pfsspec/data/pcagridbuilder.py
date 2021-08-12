@@ -90,13 +90,13 @@ class PcaGridBuilder(GridBuilder):
                 self.V = Vh.T
             elif self.svd_method == 'trsvd':
                 svd = TruncatedSVD(n_components=self.svd_truncate)
-                svd.fit(self.X)
+                svd.fit(self.X)                          # shape: (items, dim)
                 self.S = svd.singular_values_            # shape: (truncate,)
                 self.V = svd.components_.T               # shape: (dim, truncate)
 
     def run_pca_cov(self):
         with Timer('Calculating covariance matrix...', logging.INFO):
-            self.C = np.matmul(self.X.transpose(), self.X)
+            self.C = np.matmul(self.X.T, self.X)        # shape: (dim, dim)
         self.logger.info('Allocated {} bytes for covariance matrix.'.format(self.C.size * self.C.itemsize))
 
         # Compute the SVD of the covariance matrix
@@ -112,8 +112,8 @@ class PcaGridBuilder(GridBuilder):
 
     def run_dual_pca(self):
         with Timer('Calculating X X^T matrix...', logging.INFO):
-            self.C = np.matmul(self.X, self.X.T)
-        self.logger.info('Allocated {} bytes for X X^T matrix.'.format(self.C.size * self.C.itemsize))
+            self.D = np.matmul(self.X, self.X.T)        # shape: (items, items)
+        self.logger.info('Allocated {} bytes for X X^T matrix.'.format(self.D.size * self.D.itemsize))
 
         with Timer('Computing SVD with method `{}`, truncated at {}...'.format(self.svd_method, self.svd_truncate), logging.INFO):
             if self.svd_method == 'svd' or self.svd_truncate is None:

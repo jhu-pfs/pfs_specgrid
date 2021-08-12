@@ -25,10 +25,10 @@ shift 2
 
 while (( "$#" )); do
     case "$1" in
-        --debug)
-            PYTHON_DEBUG=1
-            shift
-            ;;
+        # --debug)
+        #     PYTHON_DEBUG=1
+        #     shift
+        #     ;;
         --config)
             CONFIGDIR="$2"
             shift 2
@@ -56,26 +56,29 @@ while (( "$#" )); do
     esac
 done
 
+echo "Using configuration directory $CONFIGDIR"
+echo "Using output directory $OUTDIR"
+
 if [[ -d "$OUTDIR/fit" ]]; then
     echo "Skipping fitting upper envelope."
 else
     echo "Fitting upper envelope..."
     ./scripts/fit.sh $TYPE $SOURCE \
-        --config "$CONFIGDIR/common.json" \
+        --config "$CONFIGDIR/common.json" "$CONFIGDIR/fit.json" \
         --in "$INDIR" --out "$OUTDIR/fit" \
         --step fit $PARAMS
 fi
 
-if [[ -d "$OUTDIR/fill" ]]; then
-    echo "Skipping filling in holes / smoothing."
-else
-    echo "Filling in holes / smoothing..."
-    ./scripts/fit.sh $TYPE $SOURCE \
-        --config "$CONFIGDIR/common.json" \
-        --in "$INDIR" --out "$OUTDIR/fill" \
-        --params "$OUTDIR/fit" \
-        --step fill $PARAMS
-fi
+# if [[ -d "$OUTDIR/fill" ]]; then
+#     echo "Skipping filling in holes / smoothing."
+# else
+#     echo "Filling in holes / smoothing..."
+#     ./scripts/fit.sh $TYPE $SOURCE \
+#         --config "$CONFIGDIR/common.json" \
+#         --in "$INDIR" --out "$OUTDIR/fill" \
+#         --params "$OUTDIR/fit" \
+#         --step fill $PARAMS
+# fi
 
 if [[ -d "$OUTDIR/fitrbf" ]]; then
     echo "Skipping RBF on continuum parameters."
@@ -84,7 +87,7 @@ else
     ./scripts/rbf.sh $TYPE $SOURCE \
         --config "$CONFIGDIR/common.json" "$CONFIGDIR/rbf.json" \
         --in "$INDIR" --out "$OUTDIR/fitrbf" \
-        --params "$OUTDIR/fill" \
+        --params "$OUTDIR/fit" \
         --step fit $PARAMS
 fi
 

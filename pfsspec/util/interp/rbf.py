@@ -148,7 +148,7 @@ class Rbf():
 
         return r
 
-    def _calculate_kernel_matrix(self, r, n_jobs):
+    def _calculate_kernel_matrix(self, r, n_jobs=-1):
         # Evaluate kernel over the distance matrix in parallel
 
         with Timer('Evaluating kernel...'):
@@ -168,7 +168,7 @@ class Rbf():
             self.r = self._calculate_distance_matrix(self.xi.T, n_jobs=-1)
 
         if self.A is None:
-            self.A = self._calculate_kernel_matrix(self.r)
+            self.A = self._calculate_kernel_matrix(self.r, n_jobs=-1)
 
         A = self.A
 
