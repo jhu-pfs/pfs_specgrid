@@ -32,7 +32,8 @@ class RbfGridBuilder(GridBuilder):
     def add_args(self, parser):
         super(RbfGridBuilder, self).add_args(parser)
         parser.add_argument('--padding', action='store_true', help='Pad array by one prior to RBF.\n')
-        parser.add_argument('--fill', action='store_true', help='Fill in masked points.\n')
+        parser.add_argument('--fill', dest='fill', action='store_true', help='Fill in masked points.\n')
+        parser.add_argument('--no-fill', dest='fill', action='store_false', help='Do not fill in masked points.\n')
         parser.add_argument('--interpolation', type=str, default='multiquadric', choices=['ijk', 'xyz'],
             help='Interpolation in array index or axis values.\n')
         parser.add_argument('--function', type=str, default='multiquadric', 
