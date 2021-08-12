@@ -1,8 +1,0 @@
-{
-    "in": "${PFSSPEC_DATA}/import/stellar/grid/bosz_5000",
-    "lambda": [3000, 14000],
-    "Fe_H": null,
-    "T_eff": [3500, 6500],
-    "log_g": null,
-    "continuum_model": "alex"
-}
