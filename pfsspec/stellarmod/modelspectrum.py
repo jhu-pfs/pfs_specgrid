@@ -1,8 +1,10 @@
 import numpy as np
 
-from pfsspec.obsmod.stellarspectrum import StellarSpectrum
+from pfsspec.common.stellarspectrum import StellarSpectrum
 
 class ModelSpectrum(StellarSpectrum):
+    # TODO: Make StellarSpectrum a mixin
+
     def __init__(self, orig=None):
         super(ModelSpectrum, self).__init__(orig=orig)
         

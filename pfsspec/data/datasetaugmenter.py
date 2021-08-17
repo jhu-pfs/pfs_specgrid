@@ -1,7 +1,7 @@
 import numpy as np
 
 import pfsspec.util as util
-from pfsspec.obsmod.spectrum import Spectrum
+from pfsspec.common.spectrum import Spectrum
 from pfsspec.ml.dnn.keras.kerasdataaugmenter import KerasDataAugmenter
 
 class DatasetAugmenter(KerasDataAugmenter):

@@ -5,7 +5,7 @@ import numpy as np
 import pysynphot, pysynphot.binning, pysynphot.spectrum, pysynphot.reddening
 
 import pfsspec.util as util
-from pfsspec.obsmod.spectrum import Spectrum
+from pfsspec.common.spectrum import Spectrum
 
 class KuruczAugmenter():
     def __init__(self, orig=None):
