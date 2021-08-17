@@ -1,6 +1,6 @@
 import numpy as np
 
-from pfsspec.physics import Physics
+from pfsspec.util.physics import Physics
 from pfsspec.stellarmod.continuummodels.continuummodel import ContinuumModel
 
 class Chebyshev(ContinuumModel):

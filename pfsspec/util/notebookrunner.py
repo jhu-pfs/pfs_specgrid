@@ -8,7 +8,7 @@ from nbconvert.preprocessors import ClearOutputPreprocessor, ClearMetadataPrepro
 from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
 from nbconvert import HTMLExporter
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 
 class NotebookRunner(PfsObject):
     def __init__(self, orig=None):

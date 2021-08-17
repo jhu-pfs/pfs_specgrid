@@ -1,7 +1,7 @@
 import os
 from test.test_base import TestBase
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 
 class HelperObject(PfsObject):
     def __init__(self):

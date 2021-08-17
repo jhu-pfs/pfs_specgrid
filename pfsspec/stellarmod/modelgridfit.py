@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import multiprocessing
 
-from pfsspec.parallel import SmartParallel
+from pfsspec.util.parallel import SmartParallel
 from pfsspec.data.gridbuilder import GridBuilder
 from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.stellarmod.modelgrid import ModelGrid

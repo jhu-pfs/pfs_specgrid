@@ -3,7 +3,7 @@ import numbers
 import numpy as np
 from collections import Iterable
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 from pfsspec.data.gridaxis import GridAxis
 
 class Grid(PfsObject):

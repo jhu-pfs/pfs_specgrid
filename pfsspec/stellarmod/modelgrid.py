@@ -6,7 +6,7 @@ from random import choice
 from scipy.interpolate import RegularGridInterpolator, CubicSpline
 from scipy.interpolate import interp1d, interpn
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagrid import PcaGrid

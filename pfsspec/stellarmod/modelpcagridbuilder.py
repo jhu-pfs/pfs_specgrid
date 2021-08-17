@@ -3,7 +3,7 @@ import numpy as np
 import time
 from tqdm import tqdm
 
-from pfsspec.physics import Physics
+from pfsspec.util.physics import Physics
 from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.data.pcagridbuilder import PcaGridBuilder

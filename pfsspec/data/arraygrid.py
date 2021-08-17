@@ -7,7 +7,7 @@ from scipy.interpolate import LinearNDInterpolator, RegularGridInterpolator, Cub
 from scipy.interpolate import interp1d, interpn
 
 from pfsspec.util.interp.rbf import Rbf
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 from pfsspec.data.grid import Grid
 from pfsspec.data.gridaxis import GridAxis
 

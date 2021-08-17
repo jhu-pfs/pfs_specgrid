@@ -3,7 +3,7 @@ import numpy as np
 import time
 from tqdm import tqdm
 
-from pfsspec.pfsobject import PfsObject
+from pfsspec.common.pfsobject import PfsObject
 
 class GridBuilder(PfsObject):
     def __init__(self, input_grid=None, output_grid=None, orig=None):

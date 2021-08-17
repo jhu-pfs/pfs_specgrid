@@ -11,7 +11,7 @@ import socket
 from collections.abc import Iterable
 
 import pfsspec.util as util
-from pfsspec.notebookrunner import NotebookRunner
+from pfsspec.util.notebookrunner import NotebookRunner
 
 class Script():
     def __init__(self, logging_enabled=True):

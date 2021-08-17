@@ -4,7 +4,7 @@ import math
 import numpy as np
 
 from pfsspec.data.spectrumreader import SpectrumReader
-from pfsspec.physics import Physics
+from pfsspec.util.physics import Physics
 from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 
