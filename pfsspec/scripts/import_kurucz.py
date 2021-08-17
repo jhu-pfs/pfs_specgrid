@@ -8,6 +8,7 @@ from pfsspec.stellarmod.kuruczgridreader import KuruczGridReader
 from pfsspec.stellarmod.kuruczspectrumreader import KuruczSpectrumReader
 
 class ImportKurucz(Import):
+    # TODO: Convert into an import module
     def __init__(self):
         super(ImportKurucz, self).__init__()
 

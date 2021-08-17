@@ -11,6 +11,7 @@ from pfsspec.stellarmod.boszatmgridreader import BoszAtmGridReader
 from pfsspec.stellarmod.boszatmgrid import BoszAtmGrid
 
 class ImportBoszAtm(Import):
+    # TODO: Convert into an import module
     def __init__(self):
         super(ImportBoszAtm, self).__init__()
 

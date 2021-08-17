@@ -9,6 +9,7 @@ from pfsspec.obsmod.pcapsf import PcaPsf
 from pfsspec.obsmod.gausspsf import GaussPsf
 
 class ImportPsf(Import):
+    # TODO: convert into an import module
     # TODO: take these values from the detector config
     NPIX = 4096
     NARM = 3
