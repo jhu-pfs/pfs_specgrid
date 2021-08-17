@@ -2,7 +2,8 @@ from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.data.rbfgrid import RbfGrid
 from pfsspec.surveys.sdssdatasetbuilder import SdssDatasetBuilder
 from pfsspec.stellarmod.modelgriddatasetbuilder import ModelGridDatasetBuilder
-from pfsspec.surveys.survey import Survey
+from pfsspec.data.survey import Survey
+from pfsspec.surveys.sdssseguesurveyreader import SdssSegueSurveyReader
 from pfsspec.stellarmod.bosz import Bosz
 from pfsspec.stellarmod.boszgridreader import BoszGridReader
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
@@ -18,6 +19,9 @@ from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
 IMPORT_CONFIGURATIONS = {
     'grid': {
         'bosz': BoszGridReader
+    },
+    'survey': {
+        'segue': SdssSegueSurveyReader
     }
 }
 FIT_CONFIGURATIONS = {
