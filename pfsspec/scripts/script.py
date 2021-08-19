@@ -17,7 +17,7 @@ class Script():
     def __init__(self, logging_enabled=True):
 
         # Spawning worker processes is slower but might help with deadlocks
-        # multiprocessing.set_start_method("spawn")
+        # multiprocessing.set_start_method("fork")
 
         self.parser = None
         self.args = None

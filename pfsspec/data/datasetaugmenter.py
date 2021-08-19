@@ -36,12 +36,12 @@ class DatasetAugmenter(KerasDataAugmenter):
             self.aug_offset = orig.aug_offset
             self.aug_scale = orig.aug_scale
             self.mask_data = orig.mask_data
-            self.mask_random = orig.mask_random
-            self.mask_value = orig.mask_value
+            self.mask_random = orig.mask_random         # Random mask parameters
+            self.mask_substitute = orig.mask_substitute
             self.lowsnr = orig.lowsnr
-            self.lowsnr_value = orig.lowsnr_value
-            self.extreme = orig.extreme
-            self.extreme_value = orig.extreme_value
+            self.lowsnr_substitute = orig.lowsnr_substitute
+            self.outlier = orig.outlier
+            self.outlier_substitute = orig.outlier_substitute
 
             self.include_wave = orig.include_wave
         else:
@@ -62,11 +62,11 @@ class DatasetAugmenter(KerasDataAugmenter):
             self.aug_scale = None
             self.mask_data = False
             self.mask_random = None
-            self.mask_value = [0]
+            self.mask_substitute = [0]
             self.lowsnr = None
-            self.lowsnr_value = [0.0, 1.0]
-            self.extreme = None
-            self.extreme_value = [0.0, 1.0]
+            self.lowsnr_substitute = [0.0, 1.0]
+            self.outlier = None
+            self.outlier_substitute = [0.0, 1.0]
 
             self.include_wave = False
 
@@ -98,8 +98,8 @@ class DatasetAugmenter(KerasDataAugmenter):
         parser.add_argument('--mask-value', type=float, nargs="*", default=[0], help='Use mask value.\n')
         parser.add_argument('--lowsnr', type=float, help='Pixels that are considered low SNR.\n')
         parser.add_argument('--lowsnr-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize noisy bins that are below snr.\n')
-        parser.add_argument('--extreme', type=float, help='Pixels that are considered extreme values.\n')
-        parser.add_argument('--extreme-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize extreme value bins.\n')
+        parser.add_argument('--outlier', type=float, help='Pixels that are considered outlier values.\n')
+        parser.add_argument('--outlier-value', type=float, nargs="*", default=[0.0, 1.0], help='Randomize outlier value bins.\n')
 
         parser.add_argument('--include-wave', action='store_true', help='Include wave vector in training.\n')
 
@@ -119,12 +119,12 @@ class DatasetAugmenter(KerasDataAugmenter):
 
         self.mask_data = util.get_arg('mask_data', self.mask_data, args)
         self.mask_random = util.get_arg('mask_random', self.mask_random, args)
-        self.mask_value = util.get_arg('mask_value', self.mask_value, args)
+        self.mask_substitute = util.get_arg('mask_substitute', self.mask_substitute, args)
 
         self.lowsnr = util.get_arg('lowsnr', self.lowsnr, args)
-        self.lowsnr_value = util.get_arg('lowsnr_value', self.lowsnr_value, args)
-        self.extreme = util.get_arg('extreme', self.extreme, args)
-        self.extreme_value = util.get_arg('extreme_value', self.extreme_value, args)
+        self.lowsnr_substitute = util.get_arg('lowsnr_substitute', self.lowsnr_substitute, args)
+        self.outlier = util.get_arg('outlier', self.outlier, args)
+        self.outlier_substitute = util.get_arg('outlier_substitute', self.outlier_substitute, args)
 
         self.include_wave = self.get_arg('include_wave', self.include_wave, args)
 
@@ -234,10 +234,8 @@ class DatasetAugmenter(KerasDataAugmenter):
 
 
 
+    ## TODO: Move everything below to some spectroscopy-specific class
 
-
-
-    # TODO: these should go to a SpectrumAugmenter auxilliary class
 
     def noise_scheduler_linear_onestep(self):
         break_point = int(0.5 * self.total_epochs)
@@ -267,7 +265,7 @@ class DatasetAugmenter(KerasDataAugmenter):
     def generate_random_mask(self, chunk_id, idx, flux, mask):
         # Generate random mask. First pick the number of masked intervals, then
         # generate the central wavelength of each and the normally distributed length.
-        if self.mask_random is not None and self.mask_value is not None:
+        if self.mask_random is not None and self.mask_substitute is not None:
             # TODO: what if wave is not a constant vector?
             wl = self.dataset.get_wave(idx, self.chunk_size, chunk_id)
             max_n = int(self.mask_random[0])
@@ -322,44 +320,44 @@ class DatasetAugmenter(KerasDataAugmenter):
 
         return flux
 
-    def apply_mask(self, flux, error, mask):
-        # Set masked pixels to mask_value
-        if self.mask_value is not None and mask is not None:
-            if len(self.mask_value) == 0:
-                flux[mask] = self.mask_value[0]
+    def substitute_mask(self, flux, error, mask):
+        # Set masked pixels to mask_substitute or uniform if two values are specified
+        if self.mask_substitute is not None and mask is not None:
+            if len(self.mask_substitute) == 0:
+                flux[mask] = self.mask_substitute[0]
             else:
-                flux[mask] = np.random.uniform(*self.mask_value, size=np.sum(mask))
+                flux[mask] = np.random.uniform(*self.mask_substitute, size=np.sum(mask))
 
         return flux
 
-    def cut_lowsnr(self, flux, error):
+    def substitute_lowsnr(self, flux, error):
         # Mask out points where noise is too high
-        if self.lowsnr is not None and self.lowsnr_value is not None and error is not None:
+        if self.lowsnr is not None and self.lowsnr_substitute is not None and error is not None:
             mask = (error == 0.0) 
             mask[~mask] |= (np.abs(flux[~mask] / error[~mask]) < self.lowsnr)
-            if len(self.lowsnr_value) == 1:
-                flux[mask] = self.lowsnr_value[0]
+            if len(self.lowsnr_substitute) == 1:
+                flux[mask] = self.lowsnr_substitute[0]
             else:
-                flux[mask] = np.random.uniform(*self.lowsnr_value, size=np.sum(mask))
+                flux[mask] = np.random.uniform(*self.lowsnr_substitute, size=np.sum(mask))
 
         return flux
 
-    def cut_extreme(self, flux, error):
-        # Mask out extreme values of flux
+    def substitute_outlier(self, flux, error):
+        # Mask out extreme outlier values of flux
         mask = None
-        if self.extreme is not None:
-            if len(self.extreme) == 2:
-                mask = (flux < self.extreme[0]) | (self.extreme[1] < flux)
-            elif len(self.extreme) == 1:
-                mask = (np.abs(flux) > self.extreme[0])
+        if self.outlier is not None:
+            if len(self.outlier) == 2:
+                mask = (flux < self.outlier[0]) | (self.outlier[1] < flux)
+            elif len(self.outlier) == 1:
+                mask = (np.abs(flux) > self.outlier[0])
             else:
                 raise NotImplementedError()
 
-        if self.extreme_value is not None and mask is not None:
-            if len(self.extreme_value) == 1:
-                flux[mask] = self.extreme_value[0]
+        if self.outlier_substitute is not None and mask is not None:
+            if len(self.outlier_substitute) == 1:
+                flux[mask] = self.outlier_substitute[0]
             else:
-                flux[mask] = np.random.uniform(*self.extreme_value, size=np.sum(mask))
+                flux[mask] = np.random.uniform(*self.outlier_substitute, size=np.sum(mask))
 
         return flux
 

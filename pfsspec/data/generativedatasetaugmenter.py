@@ -24,7 +24,7 @@ class GenerativeDatasetAugmenter(DatasetAugmenter):
         return super(GenerativeDatasetAugmenter, self).scale_input(values)
 
     def rescale_input(self, input):
-        values = input * self.coeff
+        values = input * self.coeffs
         return super(GenerativeDatasetAugmenter, self).rescale_input(values)
 
     def augment_batch(self, chunk_id, idx):

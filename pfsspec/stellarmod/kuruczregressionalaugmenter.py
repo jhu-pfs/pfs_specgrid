@@ -40,8 +40,8 @@ class KuruczRegressionalAugmenter(RegressionalDatasetAugmenter, KuruczAugmenter)
         flux, error = self.generate_noise(chunk_id, idx, flux)
         flux = self.augment_flux(chunk_id, idx, flux)
 
-        flux = self.cut_lowsnr(flux, error)
-        flux = self.cut_extreme(flux, error)
-        flux = self.apply_mask(flux, error, mask)
+        flux = self.substitute_lowsnr(flux, error)
+        flux = self.substitute_outlier(flux, error)
+        flux = self.substitute_mask(flux, error, mask)
 
         return flux, labels, weight
