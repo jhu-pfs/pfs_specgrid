@@ -40,7 +40,7 @@ class Import(Script):
         self.importer.parallel = self.threads != 1
         self.importer.threads = self.threads
         self.importer.resume = self.resume
-        self.importer.parse_args(self.args)
+        self.importer.init_from_args(self.args)
 
     def open_data(self):
         self.importer.open_data(self.args['in'], self.outdir)
@@ -59,6 +59,9 @@ class Import(Script):
         self.init_logging(self.outdir)
         self.importer.run()
         self.importer.save_data()
+
+    def finish(self):
+        self.importer.execute_notebooks(self)
 
 def main():
     script = Import()

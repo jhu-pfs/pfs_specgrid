@@ -15,6 +15,7 @@ from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
 from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
+from pfsspec.etc.etcpcapsfimporter import EtcPcaPsfImporter
 
 IMPORT_CONFIGURATIONS = {
     'grid': {
@@ -22,6 +23,9 @@ IMPORT_CONFIGURATIONS = {
     },
     'survey': {
         'segue': SdssSegueSurveyReader
+    },
+    'psf': {
+        'etc': EtcPcaPsfImporter
     }
 }
 FIT_CONFIGURATIONS = {

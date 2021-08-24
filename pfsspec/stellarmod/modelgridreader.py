@@ -22,8 +22,8 @@ class ModelGridReader(GridReader):
         parser.add_argument("--lambda", type=float, nargs=2, default=None, help="Wavelength limits.\n")
         parser.add_argument("--resolution", type=int, default=None, help="Resolution.\n")
 
-    def parse_args(self, args):
-        super(ModelGridReader, self).parse_args(args)
+    def init_from_args(self, args):
+        super(ModelGridReader, self).init_from_args(args)
 
         self.wave = self.get_arg('lambda', self.wave, args)
         self.resolution = self.get_arg('resolution', self.resolution, args)

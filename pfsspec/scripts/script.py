@@ -304,9 +304,6 @@ class Script():
         raise NotImplementedError()
 
     def finish(self):
-        self.execute_notebooks()
-
-    def execute_notebooks(self):
         pass
 
     def execute_notebook(self, notebook_name, output_notebook_name=None, output_html=True, parameters={}, kernel='python3', outdir=None):

@@ -5,9 +5,9 @@ from tqdm import tqdm
 import multiprocessing
 
 from pfsspec.util.parallel import SmartParallel
-from pfsspec.common.pfsobject import PfsObject
+from pfsspec.data.importer import Importer
 
-class GridReader(PfsObject):
+class GridReader(Importer):
     class EnumAxesGenerator():
         def __init__(self, grid=None, top=None, resume=False):
             self.grid = grid
@@ -100,7 +100,9 @@ class GridReader(PfsObject):
         parser.add_argument('--top', type=int, default=None, help='Limit number of results')
         parser.add_argument('--preload-arrays', action='store_true', help='Preload arrays, do not use to save memory\n')
 
-    def parse_args(self, args):
+    def init_from_args(self, args):
+        super(GridReader, self).init_from_args(args)
+        
         self.top = self.get_arg('top', self.top, args)
         self.preload_arrays = self.get_arg('preload_arrays', self.preload_arrays, args)
 

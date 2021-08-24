@@ -388,7 +388,7 @@ class Spectrum(PfsObject):
         by a function passed as a parameter.
         """
 
-        # Get a test kernel from the middle of the wavelengt range to have its size
+        # Get a test kernel from the middle of the wavelength range to have its size
         kernel = kernel_func(wave[wave.shape[0] // 2], size=size)
 
         # Start and end of convolution
