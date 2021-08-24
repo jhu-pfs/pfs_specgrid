@@ -1,14 +1,14 @@
 import numpy as np
 
-from pfsspec.data.generativedatasetaugmenter import GenerativeDatasetAugmenter
+from pfsspec.ml.dnn.generativedatasetaugmenter import GenerativeDatasetAugmenter
 
-class KuruczGenerativeAugmenter(GenerativeDatasetAugmenter):
+class ModelSpectrumGenerativeAugmenter(GenerativeDatasetAugmenter):
     def __init__(self, orig=None):
-        super(KuruczGenerativeAugmenter, self).__init__(orig=orig)
+        super(ModelSpectrumGenerativeAugmenter, self).__init__(orig=orig)
 
     @classmethod
     def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
-        d = super(KuruczGenerativeAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
+        d = super(ModelSpectrumGenerativeAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
                                                                batch_size=batch_size,
                                                                shuffle=shuffle,
                                                                chunk_size=chunk_size,
@@ -16,7 +16,7 @@ class KuruczGenerativeAugmenter(GenerativeDatasetAugmenter):
         return d
 
     def augment_batch(self, chunk_id, idx):
-        labels, flux, weight = super(KuruczGenerativeAugmenter, self).augment_batch(chunk_id, idx)
+        labels, flux, weight = super(ModelSpectrumGenerativeAugmenter, self).augment_batch(chunk_id, idx)
 
         # Add minimal Gaussian noise on output
         # output *= np.random.normal(1, 0.01, output.shape)

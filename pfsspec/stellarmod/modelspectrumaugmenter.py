@@ -7,9 +7,9 @@ import pysynphot, pysynphot.binning, pysynphot.spectrum, pysynphot.reddening
 import pfsspec.util as util
 from pfsspec.common.spectrum import Spectrum
 
-class KuruczAugmenter():
+class ModelSpectrumAugmenter():
     def __init__(self, orig=None):
-        if isinstance(orig, KuruczAugmenter):
+        if isinstance(orig, ModelSpectrumAugmenter):
             self.calib_bias = orig.calib_bias
             self.calib_bias_count = orig.calib_bias_count
             self.calib_bias_bandwidth = orig.calib_bias_bandwidth
