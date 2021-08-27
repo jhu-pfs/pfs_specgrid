@@ -2,6 +2,7 @@ import os
 import numpy as np
 import time
 from tqdm import tqdm
+import multiprocessing
 
 from pfsspec.common.pfsobject import PfsObject
 
@@ -10,6 +11,9 @@ class GridBuilder(PfsObject):
         super(GridBuilder, self).__init__()
 
         if isinstance(orig, GridBuilder):
+            self.parallel = orig.parallel
+            self.threads = orig.threads
+
             self.input_grid = input_grid if input_grid is not None else orig.input_grid
             self.output_grid = output_grid if output_grid is not None else orig.output_grid
             self.input_grid_index = None
@@ -18,6 +22,9 @@ class GridBuilder(PfsObject):
 
             self.top = orig.top
         else:
+            self.parallel = True
+            self.threads = multiprocessing.cpu_count() // 2
+
             self.input_grid = input_grid
             self.output_grid = output_grid
             self.input_grid_index = None

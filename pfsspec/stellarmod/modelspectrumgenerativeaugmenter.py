@@ -7,12 +7,12 @@ class ModelSpectrumGenerativeAugmenter(GenerativeDatasetAugmenter):
         super(ModelSpectrumGenerativeAugmenter, self).__init__(orig=orig)
 
     @classmethod
-    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=None, shuffle=None, chunk_size=None, seed=None):
+    def from_dataset(cls, dataset, labels, coeffs, weight=None, batch_size=None, shuffle=None, chunk_size=None, random_seed=None):
         d = super(ModelSpectrumGenerativeAugmenter, cls).from_dataset(dataset, labels, coeffs, weight,
                                                                batch_size=batch_size,
                                                                shuffle=shuffle,
                                                                chunk_size=chunk_size,
-                                                               seed=seed)
+                                                               random_seed=random_seed)
         return d
 
     def augment_batch(self, chunk_id, idx):

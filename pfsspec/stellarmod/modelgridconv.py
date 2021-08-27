@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from tqdm import tqdm
-import multiprocessing
 
 from pfsspec.util.parallel import SmartParallel
 from pfsspec.data.gridbuilder import GridBuilder
@@ -9,32 +8,28 @@ from pfsspec.data.arraygrid import ArrayGrid
 from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridbuilder import ModelGridBuilder
 
-class ModelGridFit(GridBuilder, ModelGridBuilder):
+class ModelGridConv(GridBuilder, ModelGridBuilder):
     # Fit continuum models to stellar model spectra
-
-    STEPS = ['fit', 'fill', 'smooth', 'norm']
 
     def __init__(self, config, orig=None):
         GridBuilder.__init__(self, orig=orig)
         ModelGridBuilder.__init__(self, config, orig=orig)
 
-        if isinstance(orig, ModelGridFit):
-            self.step = orig.step
+        if isinstance(orig, ModelGridConv):
+            pass
         else:
-            self.step = None
+            pass
 
     def add_args(self, parser):
         GridBuilder.add_args(self, parser)
         ModelGridBuilder.add_args(self, parser)
 
-        parser.add_argument('--step', type=str, choices=ModelGridFit.STEPS, help='Fitting step to perform.\n')
+        parser.add_argument('--res', type=float, default=None, help='Input resolution.')
+        parser.add_argument('--')
 
     def parse_args(self):
         GridBuilder.parse_args(self)
         ModelGridBuilder.parse_args(self)
-
-        if 'step' in self.args and self.args['step'] is not None:
-            self.step = self.args['step']
 
     def create_input_grid(self):
         return ModelGridBuilder.create_input_grid(self)

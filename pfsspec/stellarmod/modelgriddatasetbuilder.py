@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import logging
 
+from pfsspec.util.dist import *
 from pfsspec.data.gridaxis import GridAxis
 from pfsspec.data.datasetbuilder import DatasetBuilder
 from pfsspec.stellarmod.modeldataset import ModelDataset
@@ -188,20 +189,6 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             free_param = params['interp_param']
         return params, free_param
 
-    def get_random_dist(self, dist):
-        if dist is None:
-            return None
-        elif dist == 'normal':
-            return self.random_state.normal
-        elif dist == 'uniform':
-            return self.random_state.uniform
-        elif dist == 'lognormal':
-            return self.random_state.lognormal
-        elif dist == 'beta':
-            return self.random_state.beta
-        else:
-            raise NotImplementedError()
-
     def draw_random_param(self, params, name, values, random_func):
         if values is not None and len(values) == 1:
             params[name] = values[0]
@@ -230,9 +217,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             free_param = self.interp_param
 
         # Draw observational parameters
-        self.draw_random_param(params, 'redshift', self.z, self.get_random_dist(self.z_dist))
-        self.draw_random_param(params, 'mag', self.mag, self.get_random_dist(self.mag_dist))
-        self.draw_random_param(params, 'extinction', self.ext, self.get_random_dist(self.ext_dist))
+        self.draw_random_param(params, 'redshift', self.z, get_random_dist(self.z_dist))
+        self.draw_random_param(params, 'mag', self.mag, get_random_dist(self.mag_dist))
+        self.draw_random_param(params, 'extinction', self.ext, get_random_dist(self.ext_dist))
 
         # TODO: Do we want non-uniform here?
         self.draw_random_param(params, 'target_zenith_angle', self.target_zenith_angle, self.random_state.uniform)

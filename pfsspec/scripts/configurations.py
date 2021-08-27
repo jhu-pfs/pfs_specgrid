@@ -9,10 +9,13 @@ from pfsspec.stellarmod.boszgridreader import BoszGridReader
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
+from pfsspec.obsmod.gausspsf import GaussPsf
+from pfsspec.obsmod.pcapsf import PcaPsf
 from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
 from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
+from pfsspec.stellarmod.modelgridconv import ModelGridConv
 from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
 from pfsspec.etc.etcpcapsfimporter import EtcPcaPsfImporter
@@ -28,6 +31,20 @@ IMPORT_CONFIGURATIONS = {
         'etc': EtcPcaPsfImporter
     }
 }
+
+CONV_CONFIGURATIONS = {
+    'grid': {
+        'bosz': {
+            'class': ModelGridConv,
+            'config': Bosz()
+        }
+    }
+}
+
+PSF_CONFIGURATIONS = {
+    'gauss': GaussPsf
+}
+
 FIT_CONFIGURATIONS = {
     'grid': {
         'bosz': {
