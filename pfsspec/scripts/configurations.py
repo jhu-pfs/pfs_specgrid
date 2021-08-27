@@ -6,6 +6,10 @@ from pfsspec.data.survey import Survey
 from pfsspec.surveys.sdssseguesurveyreader import SdssSegueSurveyReader
 from pfsspec.stellarmod.bosz import Bosz
 from pfsspec.stellarmod.boszgridreader import BoszGridReader
+#### I added in phoenix
+from pfsspec.stellarmod.phoenix import Phoenix
+from pfsspec.stellarmod.phoenixgridreader import PhoenixGridReader
+
 from pfsspec.stellarmod.kuruczgrid import KuruczGrid
 from pfsspec.pipelines.sdssbasicpipeline import SdssBasicPipeline
 from pfsspec.pipelines.stellarmodelpipeline import StellarModelPipeline
@@ -20,10 +24,14 @@ from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
 from pfsspec.etc.etcpcapsfimporter import EtcPcaPsfImporter
 
+from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 IMPORT_CONFIGURATIONS = {
     'grid': {
         'bosz': BoszGridReader
     },
+        'grid': {
+        'phoenix': PhoenixGridReader
+        },
     'survey': {
         'segue': SdssSegueSurveyReader
     },
@@ -51,6 +59,12 @@ FIT_CONFIGURATIONS = {
             'class': ModelGridFit,
             'config': Bosz()
         }
+    },
+        'grid': {
+        'phoenix': {
+            'class': ModelGridFit,
+            'config': Phoenix()
+        }
     }
 }
 
@@ -60,6 +74,12 @@ PCA_CONFIGURATIONS = {
             'class': ModelPcaGridBuilder,
             'config': Bosz()
         }
+    },
+        'grid': {
+        'bosz': {
+            'class': ModelPcaGridBuilder,
+            'config': Phoenix()
+        }
     }
 }
 
@@ -68,6 +88,12 @@ RBF_CONFIGURATIONS = {
         'bosz': {
             'class': ModelRbfGridBuilder,
             'config': Bosz()
+        }
+    },
+    'grid': {
+        'bosz': {
+            'class': ModelRbfGridBuilder,
+            'config': Phoenix()
         }
     }
 }
@@ -111,6 +137,18 @@ PREPARE_CONFIGURATIONS = {
         'bosz-rbf': {
             'builder': ModelGridDatasetBuilder,
             'config': Bosz(pca=True),
+            'grid': RbfGrid,
+            'pipelines': MODEL_PIPELINE_TYPES
+        },
+        'phoenix': {
+            'builder': ModelGridDatasetBuilder,
+            'config': Phoenix(),
+            'grid': ArrayGrid,
+            'pipelines': MODEL_PIPELINE_TYPES
+        },
+        'phoenix-rbf': {
+            'builder': ModelGridDatasetBuilder,
+            'config': Phoenix(pca=True),
             'grid': RbfGrid,
             'pipelines': MODEL_PIPELINE_TYPES
         }
