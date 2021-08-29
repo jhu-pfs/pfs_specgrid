@@ -7,7 +7,8 @@ from pfsspec.stellarmod.phoenixspectrum import PhoenixSpectrum
     
 class Phoenix(ModelGridConfig):
     def __init__(self, orig=None, normalized=False, pca=None):
-        super(Phoenix, self).__init__(orig=orig,normalized=normalized, pca=pca) #added normalised
+        super(Phoenix, self).__init__(orig=orig, normalized=normalized, pca=pca)
+
         if isinstance(orig, Phoenix):
             pass
         else:
@@ -21,12 +22,10 @@ class Phoenix(ModelGridConfig):
         
     def init_axes(self, grid):
         grid.init_axis('Fe_H', np.hstack((np.arange(-4.0, -2.0, 1),
-                                             np.arange(-2.0, 1.5, 0.50))))
+                                          np.arange(-2.0, 1.5, 0.50))))
         grid.init_axis('T_eff', np.hstack((np.arange(2300.0, 7000.0, 100.0),
-                                             np.arange(7000.0, 12200.0, 200.0))))
+                                           np.arange(7000.0, 12200.0, 200.0))))
         grid.init_axis('log_g', np.arange(0, 6.5, 0.5))
-        #grid.init_axis('C_M', np.arange(-0.75, 0.75, 0.25))
-        #grid.init_axis('O_M', np.arange(-0.25, 0.75, 0.25))
 
         grid.build_axis_indexes()
 

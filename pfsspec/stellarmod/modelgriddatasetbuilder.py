@@ -217,9 +217,9 @@ class ModelGridDatasetBuilder(DatasetBuilder):
             free_param = self.interp_param
 
         # Draw observational parameters
-        self.draw_random_param(params, 'redshift', self.z, get_random_dist(self.z_dist))
-        self.draw_random_param(params, 'mag', self.mag, get_random_dist(self.mag_dist))
-        self.draw_random_param(params, 'extinction', self.ext, get_random_dist(self.ext_dist))
+        self.draw_random_param(params, 'redshift', self.z, get_random_dist(self.z_dist, self.random_state))
+        self.draw_random_param(params, 'mag', self.mag, get_random_dist(self.mag_dist, self.random_state))
+        self.draw_random_param(params, 'extinction', self.ext, get_random_dist(self.ext_dist, self.random_state))
 
         # TODO: Do we want non-uniform here?
         self.draw_random_param(params, 'target_zenith_angle', self.target_zenith_angle, self.random_state.uniform)

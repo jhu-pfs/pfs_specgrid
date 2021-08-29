@@ -19,7 +19,6 @@ from pfsspec.obsmod.pfsobservation import PfsObservation
 from pfsspec.obsmod.simpleobservation import SimpleObservation
 from pfsspec.stellarmod.modelgrid import ModelGrid
 from pfsspec.stellarmod.modelgridfit import ModelGridFit
-from pfsspec.stellarmod.modelgridconv import ModelGridConv
 from pfsspec.stellarmod.modelpcagridbuilder import ModelPcaGridBuilder
 from pfsspec.stellarmod.modelrbfgridbuilder import ModelRbfGridBuilder
 from pfsspec.etc.etcpcapsfimporter import EtcPcaPsfImporter
@@ -27,25 +26,14 @@ from pfsspec.etc.etcpcapsfimporter import EtcPcaPsfImporter
 from pfsspec.stellarmod.modelspectrum import ModelSpectrum
 IMPORT_CONFIGURATIONS = {
     'grid': {
-        'bosz': BoszGridReader
-    },
-        'grid': {
+        'bosz': BoszGridReader,
         'phoenix': PhoenixGridReader
-        },
+    },
     'survey': {
         'segue': SdssSegueSurveyReader
     },
     'psf': {
         'etc': EtcPcaPsfImporter
-    }
-}
-
-CONV_CONFIGURATIONS = {
-    'grid': {
-        'bosz': {
-            'class': ModelGridConv,
-            'config': Bosz()
-        }
     }
 }
 
@@ -58,9 +46,7 @@ FIT_CONFIGURATIONS = {
         'bosz': {
             'class': ModelGridFit,
             'config': Bosz()
-        }
-    },
-        'grid': {
+        },
         'phoenix': {
             'class': ModelGridFit,
             'config': Phoenix()
@@ -73,10 +59,8 @@ PCA_CONFIGURATIONS = {
         'bosz': {
             'class': ModelPcaGridBuilder,
             'config': Bosz()
-        }
-    },
-        'grid': {
-        'bosz': {
+        },
+        'phoenix': {
             'class': ModelPcaGridBuilder,
             'config': Phoenix()
         }
@@ -88,10 +72,8 @@ RBF_CONFIGURATIONS = {
         'bosz': {
             'class': ModelRbfGridBuilder,
             'config': Bosz()
-        }
-    },
-    'grid': {
-        'bosz': {
+        },
+        'phoenix': {
             'class': ModelRbfGridBuilder,
             'config': Phoenix()
         }

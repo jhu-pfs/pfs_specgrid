@@ -62,7 +62,7 @@ class PcaGridBuilder(GridBuilder):
 
         # Build the data matrix
         self.X = np.empty(data_shape)
-        self.logger.info('Allocated {} bytes for data matrix.'.format(self.X.size * self.X.itemsize))
+        self.logger.info('Allocated {} bytes for data matrix of shape {}.'.format(self.X.size * self.X.itemsize, self.X.shape))
         with Timer('Assembling data matrix...', logging.INFO):
             for i in tqdm(range(vector_count)):
                 v = self.get_vector(i)

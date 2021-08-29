@@ -149,16 +149,22 @@ class Grid(PfsObject):
         return tuple(idx)
 
     def set_object_params(self, obj, idx=None, **kwargs):
-        if idx is not None:
-            for i, p in enumerate(self.axes):
-                setattr(obj, p, float(self.axes[p].values[idx[i]]))
         if kwargs is not None:
-            for p in kwargs:
-                if hasattr(obj, p):
-                    if isinstance(kwargs[p], numbers.Number):
-                        setattr(obj, p, float(kwargs[p]))
-                    else:
-                        setattr(obj, p, kwargs[p])
+            self.set_object_params_kwargs(obj, **kwargs)
 
+        if idx is not None:
+            self.set_object_params_idx(obj, idx)
+    
+    def set_object_params_kwargs(self, obj, **kwargs):
+        for p in kwargs:
+            if p in self.axes and hasattr(obj, p):
+                if isinstance(kwargs[p], numbers.Number):
+                    setattr(obj, p, float(kwargs[p]))
+                else:
+                    setattr(obj, p, kwargs[p])
+
+    def set_object_params_idx(self, obj, idx):
+        for i, p in enumerate(self.axes):
+            setattr(obj, p, float(self.axes[p].values[idx[i]]))
 
 #endregion

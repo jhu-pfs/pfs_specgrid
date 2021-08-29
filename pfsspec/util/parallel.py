@@ -123,6 +123,8 @@ class SmartParallel():
         self.manager = None
         self.pool = None
         self.pool_results = None
+        self.queue_in = None
+        self.queue_out = None
         self.initializer = initializer
         self.verbose = verbose
         self.parallel = parallel
@@ -171,18 +173,18 @@ class SmartParallel():
 
     def map(self, worker, items):
         if self.parallel:
-            queue_in = self.manager.Queue()
-            queue_out = self.manager.Queue(1024)
+            self.queue_in = self.manager.Queue()
+            self.queue_out = self.manager.Queue(1024)
 
             for i in items:
-                queue_in.put(i)
+                self.queue_in.put(i)
 
             for i in range(self.cpus):
-                queue_in.put(StopIteration())
+                self.queue_in.put(StopIteration())
 
-            self.pool_results = [self.pool.apply_async(SmartParallel.pool_worker, args=(self.initializer, worker, queue_in, queue_out)) for i in range(self.cpus)]
+            self.pool_results = [self.pool.apply_async(SmartParallel.pool_worker, args=(self.initializer, worker, self.queue_in, self.queue_out)) for i in range(self.cpus)]
 
-            m = IterableQueue(queue_out, len(items))
+            m = IterableQueue(self.queue_out, len(items))
         else:
             if self.initializer is not None:
                 self.initializer()

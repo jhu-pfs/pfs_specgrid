@@ -168,7 +168,6 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
         # those to the output grid.
 
         if self.params_grid is not None:
-            self.copy_wave(self.input_grid, self.output_grid)
             self.copy_constants(self.params_grid, self.output_grid)
 
             if self.rbf:
@@ -179,7 +178,6 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
                 self.fit_params(self.params_grid, self.output_grid)
         else:
             # Run interpolation of continuum parameters taken from the PCA grid
-            self.copy_wave(self.input_grid, self.output_grid)
             self.copy_constants(self.input_grid, self.output_grid)
 
             self.fit_params(self.input_grid, self.output_grid)
@@ -190,7 +188,8 @@ class ModelRbfGridBuilder(RbfGridBuilder, ModelGridBuilder):
             if self.input_grid.grid.has_value(name):
                 self.build_rbf(self.input_grid.grid.grid, self.output_grid.grid.grid, name)
 
-        # Copy eigenvalues and eigenvectors
+        # Copy wave vector, eigenvalues and eigenvectors
+        self.copy_wave(self.input_grid, self.output_grid)
         for name in ['flux', 'cont']:
             self.output_grid.grid.eigs[name] = self.input_grid.grid.eigs[name]
             self.output_grid.grid.eigv[name] = self.input_grid.grid.eigv[name]

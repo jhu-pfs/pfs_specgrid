@@ -49,16 +49,16 @@ class Spectrum(PfsObject):
             self.id = 0
             self.redshift = 0.0
             self.redshift_err = 0.0
-            self.exp_count = 1
-            self.exp_time = 450
-            self.extinction = 0.0
+            self.exp_count = None
+            self.exp_time = None
+            self.extinction = None
             self.target_zenith_angle = None
             self.target_field_angle = None
             self.moon_zenith_angle = None
             self.moon_target_angle = None
             self.moon_phase = None
-            self.snr = 0
-            self.mag = 0
+            self.snr = None
+            self.mag = None
             self.wave = None
             self.flux = None
             self.flux_err = None
@@ -118,7 +118,7 @@ class Spectrum(PfsObject):
     def set_redshift(self, z):
         # Assume zero redshift at start
         self.redshift = z
-        self.wave *= 1 + z
+        self.wave = (1 + z) * self.wave
 
     @staticmethod
     def rebin_vector(wave, nwave, data):
@@ -201,11 +201,7 @@ class Spectrum(PfsObject):
 
     def normalize_to_mag(self, filt, mag):
         try:
-            m = self.synthmag_bosz(filt)
-            if m <= -10: #checking that not really negative number, which happens when flux is from
-            #phoenix but isn't properly re-scaled - i.e. flux is ~1e8 too big
-            #this step probably isn't really catching everything - must look into better way
-                m = self.synthmag_phoenix(filt)
+            m = self.synthmag(filt)
         except Exception as ex:
             print('flux max', np.max(self.flux))
             print('mag', mag)
@@ -487,8 +483,9 @@ class Spectrum(PfsObject):
             self.snr = 0
         
     def redden(self, extval=None):
-        if extval is None:
-            extval = self.extinction
+        extval = extval or self.extinction
+        self.extinction = extval
+        
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True)
         # Cardelli, Clayton, & Mathis (1989, ApJ, 345, 245) R_V = 3.10.
         obs = spec * pysynphot.reddening.Extinction(extval, 'mwavg')
@@ -504,63 +501,23 @@ class Spectrum(PfsObject):
         filt = pysynphot.spectrum.ArraySpectralElement(filter.wave, filter.thru, waveunits='angstrom')
         spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True, fluxunits='flam')
         
-        filt.binset = spec.wave     # supress warning from pysynphot
-        obs = pysynphot.observation.Observation(spec, filt)
-        return obs.effstim('Jy')
-       
-   # def synthmag(self, filter, norm=1.0):
-    #    flux = norm * self.synthflux(filter)
-     #   return -2.5 * np.log10(flux) + 8.90
-    ###### replacing old synthmag with my own - is right :) 
-    def getrad(self, lum,temp):
-        sb = 5.67e-5 #grams s^-3 kelvin^-4
-        lsun = 3.8e33 #erg/s 
-        l = lsun*(10**lum) #luminosity from isochrone is in log(L/lsun)
-        t = np.round(10**temp) #teff from isochrone is in log(teff)
-        radius = np.sqrt(l/(4*np.pi*sb*t**4))
-        return radius
+        # Binning of the filter should be the same as the spectrum but trimmed
+        # to the coverage of the spectrum.
+        # Setting binset manually will supress the warning from pysynphot
+        mask = (filt.wave.min() <= spec.wave) & (spec.wave <= filt.wave.max())
+        filt.binset = spec.wave[mask]
 
-    def synthmag_bosz(self, filte,lum,temp):
-        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux, keepneg=True, fluxunits='flam')
-        filt = pysynphot.spectrum.ArraySpectralElement(filte.wave, filte.thru, waveunits='angstrom')
-        #normalising spectra
-        #getting bounds of integral
-        lam = spec.wave[(spec.wave<=filt.wave.max())&(spec.wave>=filt.wave.min())]
-        T = np.interp(lam,filt.wave,filt.throughput)
-        T = np.where(T<.001, 0, T)
-        R = self.getrad(lum,temp) 
-        #1/(3.08567758128*10**(19))**2 is just 1/10pc^2 in cm! (1/(3.086e19)**2)
-        s = spec.flux[(spec.wave<=filt.wave.max())&(spec.wave>=filt.wave.min())]
-        s = s*np.pi*(R/3.086e19)**2 #multiply by pi!!
-        #doin classic integral to get flux in bandpass
-        stzp = 3.631e-9
+        try:
+            obs = pysynphot.observation.Observation(spec, filt)
+            flux = obs.effstim('Jy')
+        except Exception as ex:
+            raise ex
+        return flux
 
-        a = -2.5*np.log10((simps(s*T*lam,lam)/(stzp*simps(T*lam,lam))))
-        b = -2.5*np.log10((simps(T*lam,lam)/simps(T/lam,lam)))
-        return a+b+18.6921
-    
-    #phoenix is slightly different than bosz
-    def synthmag_phoenix(self, filte,lum,temp):
-        spec = pysynphot.spectrum.ArraySourceSpectrum(wave=self.wave, flux=self.flux*1e-8, keepneg=True, fluxunits='flam')
-        #remember - phoenix flux needs to be multiplied by *1e-8
-        filt = pysynphot.spectrum.ArraySpectralElement(filte.wave, filte.thru, waveunits='angstrom')
-        #normalising spectra
-        #getting bounds of integral
-        lam = spec.wave[(spec.wave<=filt.wave.max())&(spec.wave>=filt.wave.min())]
-        T = np.interp(lam,filt.wave,filt.throughput)
-        T = np.where(T<.001, 0, T)
-        R = self.getrad(lum,temp)
-        #1/(3.08567758128*10**(19))**2 is just 1/10pc^2 in cm! (1/(3.086e19)**2)
-        s = spec.flux[(spec.wave<=filt.wave.max())&(spec.wave>=filt.wave.min())]
-        s = s*(R/3.086e19)**2 #NOT multiplied by pi!
-        #interpolating to get filter data on same scale as spectral data
-        #doin classic integral to get flux in bandpass
-        stzp = 3.631e-9
-
-        a = -2.5*np.log10((simps(s*T*lam,lam)/(stzp*simps(T*lam,lam))))
-        b = -2.5*np.log10((simps(T*lam,lam)/simps(T/lam,lam)))
-        return a+b+18.6921
-    
+    def synthmag(self, filter, norm=1.0):
+        flux = norm * self.synthflux(filter)
+        return -2.5 * np.log10(flux) + 8.90
+           
     @staticmethod
     def running_filter(wave, data, func, dlambda=None, vdisp=None):
         # TODO: use get_dispersion

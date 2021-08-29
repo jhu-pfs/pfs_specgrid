@@ -199,19 +199,15 @@ class RbfGrid(Grid):
                 self.values[name] = None
                 self.logger.info('Skipped loading RBF "{}" of size {}'.format(name, s))
             
-    def set_object_params(self, obj, idx=None, **kwargs):
-        # idx is squeezed
-        if idx is not None:
-            i = 0
-            for p in self.axes:
-                if self.axes[p].values.shape[0] > 1:
-                    setattr(obj, p, float(self.axes[p].ip_to_value(idx[i])))
-                    i += 1
-                else:
-                    setattr(obj, p, float(self.axes[p].values[0]))
-        if kwargs is not None:
-            for p in kwargs:
-                setattr(obj, p, float(kwargs[p]))
+    def set_object_params_idx(self, obj, idx):
+        # idx can be squeezed
+        i = 0
+        for p in self.axes:
+            if self.axes[p].values.shape[0] > 1:
+                setattr(obj, p, float(self.axes[p].ip_to_value(idx[i])))
+                i += 1
+            else:
+                setattr(obj, p, float(self.axes[p].values[0]))
 
     def interpolate_value_rbf(self, name, **kwargs):
         return self.get_value(name, s=None, **kwargs)
