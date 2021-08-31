@@ -103,7 +103,8 @@ class ModelGrid(PfsObject):
 
     def allocate_values(self):
         self.config.allocate_values(self.grid, self.wave)
-        self.continuum_model.allocate_values(self.grid)
+        if self.continuum_model is not None:
+            self.continuum_model.allocate_values(self.grid)
 
     def set_continuum_model(self, continuum_model):
         self.continuum_model = continuum_model

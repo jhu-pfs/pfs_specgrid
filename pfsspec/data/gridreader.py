@@ -79,7 +79,7 @@ class GridReader(Importer):
         if isinstance(orig, GridReader):
             self.parallel = orig.parallel
             self.threads = orig.threads
-            self.resume = resume
+            self.resume = orig.resume
 
             self.top = orig.top
             self.preload_arrays = orig.preload_arrays

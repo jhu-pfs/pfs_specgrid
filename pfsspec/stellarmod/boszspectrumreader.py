@@ -8,7 +8,7 @@ import multiprocessing
 import time
 
 from pfsspec.data.spectrumreader import SpectrumReader
-from pfsspec.stellarmod.kuruczspectrum import KuruczSpectrum
+from pfsspec.stellarmod.boszspectrum import BoszSpectrum
 
 class BoszSpectrumReader(SpectrumReader):
     MAP_FE_H = {
@@ -53,11 +53,16 @@ class BoszSpectrumReader(SpectrumReader):
 
     def __init__(self, path=None, wave_lim=None, resolution=None):
         super(BoszSpectrumReader, self).__init__()
+
         self.path = path
         self.wave_lim = wave_lim
         self.resolution = resolution
 
     def correct_wave_grid(self, wlim):
+        # BOSZ spectra are written to the disk with 3 decimals which aren't
+        # enough to represent wavelength at high resolutions. This code is
+        # from the original Kurucz SYNTHE to recalculate the wavelength grid.
+
         RESOLU = self.resolution
         WLBEG = wlim[0]  # nm
         WLEND = wlim[1]  # nm
@@ -98,8 +103,6 @@ class BoszSpectrumReader(SpectrumReader):
         df = pd.read_csv(file, delimiter=r'\s+', header=None, compression=compression)
         df.columns = ['wave', 'flux', 'cont']
 
-        spec = KuruczSpectrum()
-
         # NOTE: wavelength values in the files have serious round-off errors
         # Correct wavelength grid here
         #spec.wave = np.array(df['wave'][filt])
@@ -110,18 +113,25 @@ class BoszSpectrumReader(SpectrumReader):
         else:
             filt = slice(None)
 
+        spec = BoszSpectrum()
         spec.wave = np.array(df['wave'][filt])
-
         spec.cont = np.array(df['cont'][filt])
         spec.flux = np.array(df['flux'][filt])
 
         return spec
 
     @staticmethod
-    def get_filename(Fe_H, C_M, O_M, T_eff, log_g, v_turb=0.2, v_rot=0, R=None):
+    def get_filename(**kwargs):
         # amm03cm03om03t3500g25v20modrt0b5000rs.asc.bz2
 
-        R = R or 5000
+        Fe_H = kwargs.pop('Fe_H')
+        C_M = kwargs.pop('C_M')
+        O_M = kwargs.pop('O_M')
+        T_eff = kwargs.pop('T_eff')
+        log_g = kwargs.pop('log_g')
+        v_turb = kwargs.pop('v_turb', 0.2)
+        v_rot = kwargs.pop('v_rop', 0)
+        R = kwargs.pop('R', 5000)
 
         fn = 'a'
 

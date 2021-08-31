@@ -31,7 +31,14 @@ class KuruczGridReader(ModelGridReader):
         self.logger.info("Grid loaded with flux shape {}".format(self.grid.get_value_shape('flux')))
 
     @staticmethod
-    def get_filename(Fe_H, v_turb, alpha=False, nover=False, odfnew=False):
+    def get_filename(**kwargs):
+
+        Fe_H = kwargs.pop('Fe_H')
+        v_turb = kwargs.pop('v_turb')
+        alpha = kwargs.pop('alpha',False)
+        nover = kwargs.pop('nover', False)
+        odfnew = kwargs.pop('odfnew', False)
+
         mh = "%02d" % (abs(Fe_H) * 10)
 
         dir = 'grid'
