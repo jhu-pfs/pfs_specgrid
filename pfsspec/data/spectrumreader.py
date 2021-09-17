@@ -11,4 +11,4 @@ class SpectrumReader():
         raise NotImplementedError()
 
     def read_all(self):
-        return [read(),]
+        return [self.read(),]
