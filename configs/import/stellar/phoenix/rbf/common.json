@@ -1,0 +1,7 @@
+{
+    "in": "${PFSSPEC_DATA}/import/stellar/grid/phoenix_5000",
+    "lambda": [3000, 12500],
+    "Fe_H": null,
+    "T_eff": null,
+    "log_g": null
+}

@@ -1,0 +1,11 @@
+{
+    "type": "grid",
+    "source": "phoenix",
+    "in": "${PFSSPEC_DATA}/models/stellar/grid/phoenix",
+    "out": "${PFSSPEC_DATA}/import/stellar/grid/phoenix_5000",
+    "lambda": [
+        3000.0,
+        12500.0
+    ],
+    "resolution": 5000
+}
