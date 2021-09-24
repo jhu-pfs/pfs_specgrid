@@ -120,6 +120,7 @@ class Spectrum(PfsObject):
         self.redshift = z
         self.wave = (1 + z) * self.wave
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def rebin_vector(wave, nwave, data):
         if data is None:
@@ -215,10 +216,12 @@ class Spectrum(PfsObject):
     def normalize_by_continuum(self):
         self.multiply(1.0 / self.cont)
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def vdisp_to_z(vdisp):
         return vdisp * 1e3 / Physics.c
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def get_dispersion(dlambda=None, vdisp=None):
         if dlambda is not None and vdisp is not None:
@@ -235,6 +238,7 @@ class Spectrum(PfsObject):
             z = Spectrum.vdisp_to_z(Constants.DEFAULT_FILTER_VDISP)
             return None, z
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def convolve_vector(wave, data, kernel_func, dlambda=None, vdisp=None, wlim=None):
         """
@@ -319,6 +323,7 @@ class Spectrum(PfsObject):
         if self.cont is not None:
             self.cont = res[1]
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def convolve_vector_log(wave, data, kernel, wlim=None):
         # Start and end of convolution
@@ -382,6 +387,7 @@ class Spectrum(PfsObject):
         if self.cont is not None:
             self.cont = res[1]
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def convolve_vector_varying_kernel(wave, data, kernel_func, size=None, wlim=None):
         """
@@ -410,6 +416,7 @@ class Spectrum(PfsObject):
         res = [np.zeros(d.shape) for d in data]
 
         # Do the convolution
+        # TODO: can we optimize it further?
         offset = 0 - kernel.shape[0] // 2
         for i in range(idx_lim[0], idx_lim[1]):
             kernel = kernel_func(wave[i], size=size)
@@ -438,6 +445,7 @@ class Spectrum(PfsObject):
         if self.cont is not None:
             self.cont = res[1]
 
+    # TODO: Is it used with both, a Psf object and a number? Separate!
     def convolve_psf(self, psf, model_res, wlim):
         # Note, that this is in addition to model spectrum resolution
         if isinstance(psf, Psf):
@@ -458,6 +466,7 @@ class Spectrum(PfsObject):
         else:
             raise NotImplementedError()
 
+    # TODO: Move to spectrum tools
     @staticmethod
     def generate_noise(flux, noise, error=None, random_seed=None):
         # Noise have to be reproducible when multiple datasets with different
@@ -518,6 +527,7 @@ class Spectrum(PfsObject):
         flux = norm * self.synthflux(filter)
         return -2.5 * np.log10(flux) + 8.90
            
+    # TODO: Move to spectrum tools
     @staticmethod
     def running_filter(wave, data, func, dlambda=None, vdisp=None):
         # TODO: use get_dispersion
@@ -560,6 +570,7 @@ class Spectrum(PfsObject):
         if self.flux_sky is not None:
             self.flux_sky -= Spectrum.running_filter(self.wave, self.flux_sky, func, vdisp)
 
+    # TODO: Move to stellarmod mixin
     def fit_envelope_chebyshev(self, wlim=None, iter=10, order=4, clip_top=3.0, clip_bottom=0.1):
         # TODO: use mask from spectrum
         wave = self.wave
@@ -587,6 +598,7 @@ class Spectrum(PfsObject):
 
         return p, c
 
+    # TODO: Move to obsmod mixin
     @staticmethod
     def generate_calib_bias(wave, bandwidth=200, amplitude=0.05):
         """
@@ -631,6 +643,7 @@ class Spectrum(PfsObject):
 
         return bias
 
+    # TODO: Move to obsmod mixin
     def add_calib_bias(self, bandwidth=200, amplitude=0.05):
         bias = Spectrum.generate_calib_bias(self.wave, bandwidth=bandwidth, amplitude=amplitude)
         self.multiply(bias)

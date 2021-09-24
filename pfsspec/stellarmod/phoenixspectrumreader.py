@@ -54,6 +54,8 @@ class PhoenixSpectrumReader(SpectrumReader):
         # a log grid and then do the convolution.
         if self.resolution is not None:
             if self.wave_log is None:
+                # TODO: move this to Spectrum class
+
                 ratio = 1 + 1 / PhoenixSpectrumReader.INPUT_RESOLUTION
 
                 # Allow and additional 10 angstroms at each end for convolution

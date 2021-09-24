@@ -150,7 +150,10 @@ class Alex(ContinuumModel):
 
         # Fit the spectrum and return the parameters
         log_flux = self.safe_log(spec.flux[self.wave_mask])
-        log_cont = self.safe_log(spec.cont[self.wave_mask])
+        if spec.cont is not None:
+            log_cont = self.safe_log(spec.cont[self.wave_mask])
+        else:
+            log_cont = None
         
         # Fit continuum and normalize spectrum to fit blended lines as a next step
         try:
